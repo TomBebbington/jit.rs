@@ -1,3 +1,6 @@
+env:
+  global:
+    - secure: o1PpGrcSWvluiK1m3VydfHiwZjmXApmX5BIZkVF4psCEZjhyEKBk6Uq9g9JAgs2suA+GereVVnVcjdTjCbDzLbXyU2bWg8FfU23hjFVZtil4gMsd3e1cta5AMgohGO8nc8IWEdr6qnybTOtBlbklnf3I88Yak1NE6pWkqHpVTfg=
 before_install:
   - wget http://static.rust-lang.org/dist/rust-nightly-x86_64-unknown-linux-gnu.tar.gz
   - tar -xzvf rust-nightly-x86_64-unknown-linux-gnu.tar.gz
@@ -17,3 +20,5 @@ script:
 notifications:
   email:
     - tophattedcoder@gmail.com
+after_script:
+  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
