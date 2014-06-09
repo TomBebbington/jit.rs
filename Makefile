@@ -8,7 +8,10 @@ libjit_macro:
 libjit:
 	mkdir -p target
 	cd target && $(RUSTC) ../src/libjit/jit.rs -L .
-build: libjit libjit_macro
+test:
+	mkdir -p target
+	cd target && $(RUSTC) --test ../src/libjit/jit.rs -L . -o jit_tests
+build: libjit libjit_macro test
 install:
 	sudo cp -f target/libjit*.so /usr/local/lib
 doc:

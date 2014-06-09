@@ -1,3 +1,6 @@
+use function::{CDECL, Function};
+use context::Context;
+use types::{Type, Types};
 use libc::c_void;
 /// A structure that wraps a native object
 pub trait NativeRef {
@@ -14,4 +17,13 @@ pub trait NativeRef {
 			Some(NativeRef::from_ptr(ptr))
 		}
 	}
+}
+#[cfg(test)]
+pub fn with_empty_func(cb:|&Context, &Function| -> ()) -> () {
+	let ctx = Context::new();
+	ctx.build(|| {
+		let sig = Type::create_signature(CDECL, &Types::get_void(), &mut[]);
+		let func = Function::new(&ctx, &sig);
+		cb(&ctx, &func)
+	})
 }
