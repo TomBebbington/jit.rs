@@ -151,7 +151,18 @@ impl Type {
 		Fields::new(self)
 	}
 }
-
+#[test]
+fn test_struct() {
+	::init();
+	let float_t = Types::get_float64();
+	let double_float_t = Type::create_struct(&mut [&float_t, &float_t]);
+	let first_name = "first".into_string();
+	let second_name = "second".into_string();
+	double_float_t.set_names(&[first_name.clone(), second_name.clone()]);
+	let mut iter = double_float_t.iter_fields();
+	assert!(iter.next() == Some((first_name, float_t.clone())));
+	assert!(iter.next() == Some((second_name, float_t)));
+}
 /// Holds type constructors
 pub struct Types;
 impl Types {

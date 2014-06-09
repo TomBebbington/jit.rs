@@ -111,6 +111,7 @@ pub fn supports_virtual_memory() -> bool {
 }
 macro_rules! native_ref(
 	($name:ident, $field:ident, $pointer_ty:ty) => (
+		#[deriving(PartialEq)]
 		pub struct $name {
 			$field: $pointer_ty
 		}
