@@ -3,8 +3,6 @@ use function::Function;
 use value::Value;
 use types::*;
 use util::NativeRef;
-use std::default::Default;
-use util::with_empty_func;
 /// A type that can be compiled into a LibJIT representation
 pub trait Compilable {
 	/// Get a JIT representation of this value
