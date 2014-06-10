@@ -1,5 +1,6 @@
 use bindings::{
 	jit_value_t,
+	jit_value_is_addressable,
 	jit_value_is_temporary,
 	jit_value_get_context,
 	jit_value_get_type,
@@ -36,6 +37,12 @@ impl Value {
 	pub fn is_temp(&self) -> bool {
 		unsafe {
 			jit_value_is_temporary(self.as_ptr()) != 0
+		}
+	}
+	/// Return true if the value can have its address taken from it
+	pub fn is_addressable(&self) -> bool {
+		unsafe {
+			jit_value_is_addressable(self.as_ptr()) != 0
 		}
 	}
 }
