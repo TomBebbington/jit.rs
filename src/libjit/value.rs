@@ -1,5 +1,6 @@
 use bindings::{
 	jit_value_t,
+	jit_value_is_temporary,
 	jit_value_get_context,
 	jit_value_get_type,
 	jit_value_get_function
@@ -29,6 +30,12 @@ impl Value {
 	pub fn get_context(&self) -> Context {
 		unsafe {
 			NativeRef::from_ptr(jit_value_get_context(self.as_ptr()))
+		}
+	}
+	/// Return true if the value is temporary so its scope extends over a single block within its function
+	pub fn is_temp(&self) -> bool {
+		unsafe {
+			jit_value_is_temporary(self.as_ptr()) != 0
 		}
 	}
 }
