@@ -1,7 +1,9 @@
 use bindings::{
 	jit_value_t,
-	jit_value_get_type
+	jit_value_get_type,
+	jit_value_get_function
 };
+use function::Function;
 use types::Type;
 use util::NativeRef;
 #[deriving(Clone)]
@@ -13,6 +15,12 @@ impl Value {
 		unsafe {
 			let ty = jit_value_get_type(self.as_ptr());
 			NativeRef::from_ptr(ty)
+		}
+	}
+	/// Get the function which owns this value
+	pub fn get_function(&self) -> Function {
+		unsafe {
+			NativeRef::from_ptr(jit_value_get_function(self.as_ptr()))
 		}
 	}
 }
