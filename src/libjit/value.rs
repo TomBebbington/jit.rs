@@ -1,8 +1,10 @@
 use bindings::{
 	jit_value_t,
+	jit_value_get_context,
 	jit_value_get_type,
 	jit_value_get_function
 };
+use context::Context;
 use function::Function;
 use types::Type;
 use util::NativeRef;
@@ -21,6 +23,12 @@ impl Value {
 	pub fn get_function(&self) -> Function {
 		unsafe {
 			NativeRef::from_ptr(jit_value_get_function(self.as_ptr()))
+		}
+	}
+	/// Get the context which this value belongs to
+	pub fn get_context(&self) -> Context {
+		unsafe {
+			NativeRef::from_ptr(jit_value_get_context(self.as_ptr()))
 		}
 	}
 }
