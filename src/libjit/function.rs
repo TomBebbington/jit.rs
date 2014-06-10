@@ -1,5 +1,8 @@
 use bindings::*;
-use context::Context;
+use context::{
+	Context,
+	InContext
+};
 use compilable::Compilable;
 use label::Label;
 use types::Type;
@@ -37,6 +40,15 @@ impl Drop for Function {
 		}
 	}
 }
+impl InContext for Function {
+	/// Get the context this function was made in
+	fn get_context(&self) -> Context {
+		unsafe {
+			let context = jit_function_get_context(self.as_ptr());
+			NativeRef::from_ptr(context)
+		}
+	}
+}
 impl Function {
 	/// Create a function in the context with the type signature given
 	pub fn new(context:&Context, signature: &Type) -> Function {
@@ -61,13 +73,6 @@ impl Function {
 		unsafe {
 			let value = f(self.as_ptr(), value.as_ptr());
 			NativeRef::from_ptr(value)
-		}
-	}
-	/// Get the context this function was made in
-	pub fn get_context(&self) -> Context {
-		unsafe {
-			let context = jit_function_get_context(self.as_ptr());
-			NativeRef::from_ptr(context)
 		}
 	}
 	/// Set the optimization level of the function, where the bigger the level, the more effort should be spent optimising

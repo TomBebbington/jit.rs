@@ -8,13 +8,24 @@ use bindings::{
 	jit_value_get_function,
 	jit_value_set_addressable
 };
-use context::Context;
+use context::{
+	Context,
+	InContext
+};
 use function::Function;
 use types::Type;
 use util::NativeRef;
 #[deriving(Clone)]
 /// A Value that is being JIT compiled
 native_ref!(Value, _value, jit_value_t)
+impl InContext for Value {
+	/// Get the context which this value belongs to
+	fn get_context(&self) -> Context {
+		unsafe {
+			NativeRef::from_ptr(jit_value_get_context(self.as_ptr()))
+		}
+	}
+}
 impl Value {
 	/// Create a new value with the given type
 	pub fn new(func:&Function, value_type:&Type) -> Value {
@@ -34,12 +45,6 @@ impl Value {
 	pub fn get_function(&self) -> Function {
 		unsafe {
 			NativeRef::from_ptr(jit_value_get_function(self.as_ptr()))
-		}
-	}
-	/// Get the context which this value belongs to
-	pub fn get_context(&self) -> Context {
-		unsafe {
-			NativeRef::from_ptr(jit_value_get_context(self.as_ptr()))
 		}
 	}
 	/// Return true if the value is temporary so its scope extends over a single block within its function

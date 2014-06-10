@@ -69,6 +69,7 @@ pub use bindings::{
 pub use compilable::Compilable;
 pub use context::{
 	Context,
+	InContext,
 	Functions
 };
 pub use function::{

@@ -44,7 +44,11 @@ impl Drop for Context {
 		}
 	}
 }
-
+/// Any JIT object which is in a context
+pub trait InContext {
+	/// Get the context for this object
+	fn get_context(&self) -> Context;
+}
 
 /// An iterator over a context's functions
 pub struct Functions<'a> {
