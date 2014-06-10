@@ -164,7 +164,7 @@ impl<'t> Compilable for &'t str {
 	fn compile(&self, func:&Function) -> Value {
 		let cstring_t = Types::get_cstring();
 		let strlen_i = (self.len() as i32).compile(func);
-		let bufptr = func.create_value(&cstring_t);
+		let bufptr = Value::new(func, &cstring_t);
 		func.insn_store(&bufptr, &func.insn_alloca(&strlen_i));
 		for i in range(0, self.len()) {
 			let char_i = self.char_at(i).compile(func);

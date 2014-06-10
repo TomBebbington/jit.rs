@@ -1,5 +1,6 @@
 use bindings::{
 	jit_value_t,
+	jit_value_create,
 	jit_value_is_addressable,
 	jit_value_is_temporary,
 	jit_value_get_context,
@@ -15,6 +16,13 @@ use util::NativeRef;
 /// A Value that is being JIT compiled
 native_ref!(Value, _value, jit_value_t)
 impl Value {
+	/// Create a new value with the given type
+	pub fn new(func:&Function, value_type:&Type) -> Value {
+		unsafe {
+			let value = jit_value_create(func.as_ptr(), value_type.as_ptr());
+			NativeRef::from_ptr(value)
+		}
+	}
 	/// Get the type of the value
 	pub fn get_type(&self) -> Type {
 		unsafe {

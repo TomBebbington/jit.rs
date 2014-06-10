@@ -323,13 +323,6 @@ impl Function {
 			transmute(jit_function_to_closure(self.as_ptr()))
 		}
 	}
-	/// Create a new value with the given type
-	pub fn create_value(&self, value_type: &Type) -> Value {
-		unsafe {
-			let value = jit_value_create(self.as_ptr(), value_type.as_ptr());
-			NativeRef::from_ptr(value)
-		}
-	}
 	/// Make an instruction that converts the value to the type given
 	pub fn insn_convert(&self, v: &Value, t:&Type, overflow_check:bool) -> Value {
 		unsafe {
