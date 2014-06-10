@@ -2,7 +2,7 @@
 #![comment = "LibJIT Macro"]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
-#![feature(quote, globs, macro_registrar, managed_boxes)]
+#![feature(quote, globs, plugin_registrar, managed_boxes)]
 #![deny(non_uppercase_statics, missing_doc, unnecessary_parens, unrecognized_lint, unreachable_code, unnecessary_allocation, unnecessary_typecast, unnecessary_allocation, uppercase_variables, non_camel_case_types, unused_must_use)]
 //! This crate provides a macro `jit_type` which can compile a Rust type
 //! into its LibJIT counterpart. It even supports functions *and* structs!
@@ -34,9 +34,9 @@ use syntax::parse::token;
 use syntax::parse::token::*;
 use std::iter::Peekable;
 use std::slice::Items;
-#[macro_registrar]
+#[plugin_registrar]
 #[doc(hidden)]
-pub fn macro_registrar(register: |Name, SyntaxExtension|) {
+pub fn plugin_registrar(register: |Name, SyntaxExtension|) {
 	let expander = box BasicMacroExpander { expander: jit_type, span: None };
 	register(token::intern("jit_type"), NormalTT(expander, None))
 }
