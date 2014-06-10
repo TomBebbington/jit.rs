@@ -3,6 +3,7 @@ use function::Function;
 use value::Value;
 use types::*;
 use util::NativeRef;
+use std::default::Default;
 /// A type that can be compiled into a LibJIT representation
 pub trait Compilable {
 	/// Get a JIT representation of this value
@@ -10,7 +11,7 @@ pub trait Compilable {
 }
 #[cfg(test)]
 fn test_compile<T:Compilable+Default>(kind:TypeKind) {
-	with_empty_func(|_, func| {
+	::with_empty_func(|_, func| {
 		let pval:T = Default::default();
 		let val = pval.compile(func);
 		assert!(val.get_type().get_kind().contains(kind));
