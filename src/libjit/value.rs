@@ -4,7 +4,8 @@ use bindings::{
 	jit_value_is_temporary,
 	jit_value_get_context,
 	jit_value_get_type,
-	jit_value_get_function
+	jit_value_get_function,
+	jit_value_set_addressable
 };
 use context::Context;
 use function::Function;
@@ -43,6 +44,12 @@ impl Value {
 	pub fn is_addressable(&self) -> bool {
 		unsafe {
 			jit_value_is_addressable(self.as_ptr()) != 0
+		}
+	}
+	/// Set a flag on the value that its address can be taken from it
+	pub fn set_addressable(&self) -> () {
+		unsafe {
+			jit_value_set_addressable(self.as_ptr())
 		}
 	}
 }
