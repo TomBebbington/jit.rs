@@ -174,6 +174,20 @@ impl Types {
 		}
 	}
 	#[inline]
+	/// 16-bit integer type
+	pub fn get_short() -> Type {
+		unsafe {
+			NativeRef::from_ptr(jit_type_short)
+		}
+	}
+	#[inline]
+	/// 16-bit unsigned integer type
+	pub fn get_ushort() -> Type {
+		unsafe {
+			NativeRef::from_ptr(jit_type_ushort)
+		}
+	}
+	#[inline]
 	/// Native integer type
 	pub fn get_nint() -> Type {
 		unsafe {
