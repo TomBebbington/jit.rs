@@ -145,6 +145,7 @@ mod util;
 mod bindings;
 mod context;
 mod compilable;
+mod elf;
 mod function;
 mod label;
 mod types;
