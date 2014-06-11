@@ -188,28 +188,28 @@ impl Types {
 		}
 	}
 	#[inline]
-	/// Integer type
+	/// 32-bit integer type
 	pub fn get_int() -> Type {
 		unsafe {
 			NativeRef::from_ptr(jit_type_int)
 		}
 	}
 	#[inline]
-	/// Unsigned integer type
+	/// 32-bit unsigned integer type
 	pub fn get_uint() -> Type {
 		unsafe {
 			NativeRef::from_ptr(jit_type_uint)
 		}
 	}
 	#[inline]
-	/// Long integer type
+	/// 64-bit integer type
 	pub fn get_long() -> Type {
 		unsafe {
 			NativeRef::from_ptr(jit_type_long)
 		}
 	}
 	#[inline]
-	/// Unsigned long integer type
+	/// 64-bit unsigned integer type
 	pub fn get_ulong() -> Type {
 		unsafe {
 			NativeRef::from_ptr(jit_type_ulong)
@@ -230,7 +230,7 @@ impl Types {
 		}
 	}
 	#[inline]
-	/// Default floating point type
+	/// Native floating point type
 	pub fn get_float() -> Type {
 		unsafe {
 			NativeRef::from_ptr(jit_type_nfloat)
