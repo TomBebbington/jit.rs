@@ -1,7 +1,6 @@
 #![crate_id = "jit_macro"]
 #![comment = "LibJIT Macro"]
 #![crate_type = "dylib"]
-#![crate_type = "rlib"]
 #![feature(quote, globs, plugin_registrar, managed_boxes)]
 #![deny(non_uppercase_statics, missing_doc, unnecessary_parens, unrecognized_lint, unreachable_code, unnecessary_allocation, unnecessary_typecast, unnecessary_allocation, uppercase_variables, non_camel_case_types, unused_must_use)]
 //! This crate provides a macro `jit_type` which can compile a Rust type
@@ -25,20 +24,20 @@
 //! }
 //! ```
 extern crate syntax;
+extern crate rustc;
+use rustc::plugin::Registry;
 use syntax::ext::quote::rt::ToSource;
 use syntax::ast::*;
 use syntax::codemap::Span;
 use syntax::ext::base::*;
 use syntax::ext::build::AstBuilder;
-use syntax::parse::token;
 use syntax::parse::token::*;
 use std::iter::Peekable;
 use std::slice::Items;
 #[plugin_registrar]
-#[doc(hidden)]
-pub fn plugin_registrar(register: |Name, SyntaxExtension|) {
-	let expander = box BasicMacroExpander { expander: jit_type, span: None };
-	register(token::intern("jit_type"), NormalTT(expander, None))
+/// Register the `jit_type` macro on the registry
+pub fn plugin_registrar(reg:&mut Registry) {
+	reg.register_macro("jit_type", jit_type)
 }
 fn error(e:Option<TokenTree>, tok:Token) -> Result<(), String> {
 	match e {
