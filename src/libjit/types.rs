@@ -147,11 +147,17 @@ impl Type {
 			jit_type_set_names(self.as_ptr(), native_names.as_ptr() as *mut *mut i8, names.len() as u32) != 0
 		}
 	}
-
 	#[inline]
 	/// Iterator over the type's fields
 	pub fn iter_fields<'a>(&'a self) -> Fields<'a> {
 		Fields::new(self)
+	}
+	#[inline]
+	/// Get a field's index in the struct type
+	pub fn find_name<'t>(&self, name:&'t str) -> uint {
+		unsafe {
+			jit_type_find_name(self.as_ptr(), name.to_c_str().unwrap()) as uint
+		}
 	}
 }
 #[test]
