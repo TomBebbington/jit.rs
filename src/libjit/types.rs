@@ -174,6 +174,20 @@ impl Types {
 		}
 	}
 	#[inline]
+	/// 8-bit integer type
+	pub fn get_sbyte() -> Type {
+		unsafe {
+			NativeRef::from_ptr(jit_type_sbyte)
+		}
+	}
+	#[inline]
+	/// 8-bit unsigned integer type
+	pub fn get_ubyte() -> Type {
+		unsafe {
+			NativeRef::from_ptr(jit_type_ubyte)
+		}
+	}
+	#[inline]
 	/// 16-bit integer type
 	pub fn get_short() -> Type {
 		unsafe {

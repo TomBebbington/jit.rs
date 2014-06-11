@@ -155,6 +155,8 @@ fn jit_parse_type<'a>(cx: &mut ExtCtxt, tts:&mut Peekable<&'a TokenTree, Items<'
 						"void" => "void",
 						"int" => "nint",
 						"uint" => "nuint",
+						"i8" => "sbyte",
+						"u8" => "ubyte",
 						"i16" => "short",
 						"u16" => "ushort",
 						"i32" => "int",
