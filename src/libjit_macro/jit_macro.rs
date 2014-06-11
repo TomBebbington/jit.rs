@@ -37,7 +37,7 @@ use std::slice::Items;
 #[plugin_registrar]
 /// Register the `jit_type` macro on the registry
 pub fn plugin_registrar(reg:&mut Registry) {
-	reg.register_macro("jit_type", jit_type)
+	reg.register_macro("jit_type", expand_jit_type)
 }
 fn error(e:Option<TokenTree>, tok:Token) -> Result<(), String> {
 	match e {
@@ -200,7 +200,7 @@ fn jit_parse_type<'a>(cx: &mut ExtCtxt, tts:&mut Peekable<&'a TokenTree, Items<'
 			Err("Not a type".into_string())
 	}
 }
-fn jit_type(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree]) -> Box<MacResult> {
+fn expand_jit_type(cx: &mut ExtCtxt, sp: Span, tts: &[TokenTree]) -> Box<MacResult> {
 	let mut iter = tts.iter().peekable();
 	MacExpr::new(match jit_parse_type(cx, &mut iter) {
 		Ok(v) => v,
