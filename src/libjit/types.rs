@@ -39,6 +39,7 @@ pub struct Fields<'a> {
 	marker: ContravariantLifetime<'a>
 }
 impl<'a> Fields<'a> {
+	#[inline]
 	fn new(ty:&'a Type) -> Fields<'a> {
 		unsafe {
 			Fields {
@@ -146,6 +147,8 @@ impl Type {
 			jit_type_set_names(self.as_ptr(), native_names.as_ptr() as *mut *mut i8, names.len() as u32) != 0
 		}
 	}
+
+	#[inline]
 	/// Iterator over the type's fields
 	pub fn iter_fields<'a>(&'a self) -> Fields<'a> {
 		Fields::new(self)
