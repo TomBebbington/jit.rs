@@ -174,6 +174,20 @@ impl Types {
 		}
 	}
 	#[inline]
+	/// Native integer type
+	pub fn get_nint() -> Type {
+		unsafe {
+			NativeRef::from_ptr(jit_type_nint)
+		}
+	}
+	#[inline]
+	/// Unsigned native integer type
+	pub fn get_nuint() -> Type {
+		unsafe {
+			NativeRef::from_ptr(jit_type_nuint)
+		}
+	}
+	#[inline]
 	/// Integer type
 	pub fn get_int() -> Type {
 		unsafe {

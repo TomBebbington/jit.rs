@@ -153,8 +153,10 @@ fn jit_parse_type<'a>(cx: &mut ExtCtxt, tts:&mut Peekable<&'a TokenTree, Items<'
 					let ident = ident.to_source();
 					let type_id = match ident.as_slice() {
 						"void" => "void",
-						"int" | "i32" => "int",
-						"uint" | "u32" => "uint",
+						"int" => "nint",
+						"uint" => "nuint",
+						"i32" => "int",
+						"u32" => "uint",
 						"i64" => "long",
 						"u64" => "ulong",
 						"char" => "char",
