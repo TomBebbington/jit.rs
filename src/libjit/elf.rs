@@ -1,5 +1,4 @@
 use bindings::*;
-use compilable::Compilable;
 use context::Context;
 use function::Function;
 use util::NativeRef;
@@ -10,9 +9,13 @@ impl ReadElf {
 	/// Open a new ELF binary
 	pub fn new(filename:&str) -> ReadElf {
 		unsafe {
-			let this:ReadElf = NativeRef::from_ptr(RawPtr::null());
-			jit_readelf_open(&mut this.as_ptr(), filename.to_c_str().unwrap(), 0);
-			this
+			let mut this = RawPtr::null();
+			let code = jit_readelf_open(&mut this, filename.to_c_str().unwrap(), 0);
+			if this.is_null() {
+				fail!("'{}' couldn't be opened due to {}", filename, code);
+			} else {
+				NativeRef::from_ptr(this)
+			}
 		}
 	}
 	#[inline]
@@ -54,7 +57,7 @@ impl WriteElf {
 		}
 	}
 	#[inline]
-	/// Write to the filename given
+	/// Write to the filename given (not implemented by LibJIT yet)
 	pub fn write(&self, filename:&str) -> bool {
 		unsafe {
 			jit_writeelf_write(self.as_ptr(), filename.to_c_str().unwrap()) != 0
@@ -82,4 +85,9 @@ impl Drop for WriteElf {
 			jit_writeelf_destroy(self.as_ptr())
 		}
 	}
+}
+#[test]
+fn test_elf() {
+	let elf = ReadElf::new("/usr/lib/libjit.so.0");
+	assert_eq!(elf.get_name().as_slice(), "libjit.so.0");
 }
