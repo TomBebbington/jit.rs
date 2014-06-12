@@ -322,11 +322,30 @@ impl Function {
 			jit_function_apply(self.as_ptr(), args.as_mut_ptr(), mut_null());
 		}
 	}
+	#[inline]
 	/// Turn this function into a closure
-	pub fn closure<T>(&self) -> T {
-		unsafe {
-			transmute(jit_function_to_closure(self.as_ptr()))
-		}
+	pub unsafe fn closure<T>(&self) -> T {
+		transmute(jit_function_to_closure(self.as_ptr()))
+	}
+	#[inline]
+	/// Turn this function into a closure with 0 arguments
+	pub unsafe fn closure0<Z>(&self) -> fn() -> Z {
+		self.closure()
+	}
+	#[inline]
+	/// Turn this function into a closure with 1 argument
+	pub unsafe fn closure1<A, Z>(&self) -> fn(A) -> Z {
+		self.closure()
+	}
+	#[inline]
+	/// Turn this function into a closure with 2 arguments
+	pub unsafe fn closure2<A, B, Z>(&self) -> fn(A, B) -> Z {
+		self.closure()
+	}
+	#[inline]
+	/// Turn this function into a closure with 3 arguments
+	pub unsafe fn closure3<A, B, C, Z>(&self) -> fn(A, B, C) -> Z {
+		self.closure()
 	}
 	/// Make an instruction that converts the value to the type given
 	pub fn insn_convert(&self, v: &Value, t:&Type, overflow_check:bool) -> Value {
