@@ -67,7 +67,7 @@ impl<'a> Functions<'a> {
 		}
 	}
 }
-impl<'a> Iterator<Function> for Functions<'a> {
+impl<'a> Iterator<Function<'a>> for Functions<'a> {
 	fn next(&mut self) -> Option<Function> {
 		unsafe {
 			let native_next = jit_function_next(self.ctx, self.last);
