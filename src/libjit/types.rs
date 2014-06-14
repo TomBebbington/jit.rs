@@ -156,9 +156,9 @@ impl Type {
 	#[inline]
 	/// Get a field's index in the struct type
 	pub fn find_name<'t>(&self, name:&'t str) -> uint {
-		unsafe {
-			jit_type_find_name(self.as_ptr(), name.to_c_str().unwrap()) as uint
-		}
+		name.with_c_str(|c_name| unsafe {
+			jit_type_find_name(self.as_ptr(), c_name) as uint
+		})
 	}
 }
 #[test]
@@ -169,6 +169,8 @@ fn test_struct() {
 	let first_name = "first".into_string();
 	let second_name = "second".into_string();
 	double_float_t.set_names(&[first_name.clone(), second_name.clone()]);
+	assert_eq!(double_float_t.find_name("first"), 0);
+	assert_eq!(double_float_t.find_name("second"), 1);
 	let mut iter = double_float_t.iter_fields();
 	assert!(iter.next() == Some((first_name, float_t.clone())));
 	assert!(iter.next() == Some((second_name, float_t)));

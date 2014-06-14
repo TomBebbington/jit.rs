@@ -10,7 +10,9 @@ impl ReadElf {
 	pub fn new(filename:&str) -> ReadElf {
 		unsafe {
 			let mut this = RawPtr::null();
-			let code = jit_readelf_open(&mut this, filename.to_c_str().unwrap(), 0);
+			let code = filename.with_c_str(|c_name| unsafe {
+				jit_readelf_open(&mut this, c_name, 0)
+			});
 			if this.is_null() {
 				fail!("'{}' couldn't be opened due to {}", filename, code);
 			} else {
@@ -34,7 +36,9 @@ impl ReadElf {
 	#[inline]
 	/// Get a simple in the ELF binary
 	pub unsafe fn get_symbol<T>(&self, symbol:&str) -> *T {
-		jit_readelf_get_symbol(self.as_ptr(), symbol.to_c_str().unwrap()) as *T
+		symbol.with_c_str(|c_symbol| unsafe {
+			jit_readelf_get_symbol(self.as_ptr(), c_symbol) as *T
+		})
 	}
 }
 impl Drop for ReadElf {
@@ -52,30 +56,30 @@ impl WriteElf {
 	#[inline]
 	/// Create a new ELF binary reader
 	pub fn new(lib_name:&str) -> WriteElf {
-		unsafe {
-			NativeRef::from_ptr(jit_writeelf_create(lib_name.to_c_str().unwrap()))
-		}
+		lib_name.with_c_str(|c_lib_name| unsafe {
+			NativeRef::from_ptr(jit_writeelf_create(c_lib_name))
+		})
 	}
 	#[inline]
 	/// Write to the filename given (not implemented by LibJIT yet)
 	pub fn write(&self, filename:&str) -> bool {
-		unsafe {
-			jit_writeelf_write(self.as_ptr(), filename.to_c_str().unwrap()) != 0
-		}
+		filename.with_c_str(|c_filename| unsafe {
+			jit_writeelf_write(self.as_ptr(), c_filename) != 0
+		})
 	}
 	#[inline]
 	/// Add a function to the ELF
 	pub fn add_function(&self, func:&Function, name:&str) -> bool {
-		unsafe {
-			jit_writeelf_add_function(self.as_ptr(), func.as_ptr(), name.to_c_str().unwrap()) != 0
-		}
+		name.with_c_str(|c_name| unsafe {
+			jit_writeelf_add_function(self.as_ptr(), func.as_ptr(), c_name) != 0
+		})
 	}
 	#[inline]
 	/// Add a dependency to the ELF
 	pub fn add_needed(&self, lib_name:&str) -> bool {
-		unsafe  {
-			jit_writeelf_add_needed(self.as_ptr(), lib_name.to_c_str().unwrap()) != 0
-		}
+		lib_name.with_c_str(|c_lib_name| unsafe {
+			jit_writeelf_add_needed(self.as_ptr(), c_lib_name) != 0
+		})
 	}
 }
 impl Drop for WriteElf {
