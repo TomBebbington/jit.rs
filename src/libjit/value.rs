@@ -13,12 +13,13 @@ use context::{
 	InContext
 };
 use function::Function;
+use std::kinds::marker::ContravariantLifetime;
 use types::Type;
 use util::NativeRef;
 #[deriving(Clone)]
 /// A Value that is being JIT compiled
-native_ref!(Value, _value, jit_value_t)
-impl InContext for Value {
+native_ref!(Value, _value, jit_value_t, ContravariantLifetime)
+impl<'a> InContext for Value<'a> {
 	/// Get the context which this value belongs to
 	fn get_context(&self) -> Context {
 		unsafe {
@@ -26,7 +27,7 @@ impl InContext for Value {
 		}
 	}
 }
-impl Value {
+impl<'a> Value<'a> {
 	/// Create a new value with the given type
 	pub fn new(func:&Function, value_type:&Type) -> Value {
 		unsafe {
