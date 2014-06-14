@@ -36,7 +36,7 @@ impl ReadElf {
 		}
 	}
 	#[inline]
-	/// Get a simple in the ELF binary
+	/// Get a symbol in the ELF binary
 	pub unsafe fn get_symbol<T, S:ToCStr>(&self, symbol:S) -> *T {
 		symbol.with_c_str(|c_symbol|
 			jit_readelf_get_symbol(self.as_ptr(), c_symbol) as *T
