@@ -318,9 +318,7 @@ impl<T:Compilable> Compilable for *T {
 	}
 	#[inline]
 	fn jit_type(_:Option<*T>) -> Type {
-		unsafe {
-			Type::create_pointer(&::get_type::<T>())
-		}
+		Type::create_pointer(&::get_type::<T>())
 	}
 }
 impl<R:Compilable> Compilable for fn() -> R {
