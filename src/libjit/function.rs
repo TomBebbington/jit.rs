@@ -15,6 +15,7 @@ use libc::{
 };
 use std::mem::transmute;
 use std::ptr::mut_null;
+use std::c_str::ToCStr;
 /// A platform's application binary interface
 pub enum ABI {
 	/// The C application binary interface
@@ -265,41 +266,43 @@ impl Function {
 		}
 	}
 	/// Make an instruction that calls a native function that has the signature given with some arguments
-	fn insn_call_native(&self, name: &'static str, native_func: *mut c_void,
+	fn insn_call_native<S:ToCStr>(&self, name: S, native_func: *mut c_void,
 						signature: &Type, args: &mut [&Value]) -> Value {
 		unsafe {
 			let mut native_args:Vec<jit_value_t> = args.iter().map(|arg| arg.as_ptr()).collect();
-			NativeRef::from_ptr(jit_insn_call_native(self.as_ptr(), name.to_c_str().unwrap(), native_func,
+			name.with_c_str(|c_name|
+				NativeRef::from_ptr(jit_insn_call_native(self.as_ptr(), c_name, native_func,
 											signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint,
 											JitCallNothrow as c_int))
+			)
 		}
 	}
 	/// Make an instruction that calls a Rust function that has the signature given with no arguments and expects a return value
-	pub fn insn_call_native0<R>(&self, name: &'static str,
+	pub fn insn_call_native0<R, S:ToCStr>(&self, name: S,
 								native_func: fn() -> R,
 								signature: &Type, args: &mut [&Value]) -> Value {
 		self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
 	}
 	/// Make an instruction that calls a Rust function that has the signature given with a single argument and expects a return value
-	pub fn insn_call_native1<A,R>(&self, name: &'static str,
+	pub fn insn_call_native1<A,R, S:ToCStr>(&self, name: S,
 								  native_func: fn(A) -> R,
 								  signature: &Type, args: &mut [&Value]) -> Value {
 		self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
 	}
 	/// Make an instruction that calls a Rust function that has the signature given with two arguments and expects a return value
-	pub fn insn_call_native2<A,B,R>(&self, name: &'static str,
+	pub fn insn_call_native2<A,B,R, S:ToCStr>(&self, name: S,
 								  native_func: fn(A, B) -> R,
 								  signature: &Type, args: &mut [&Value]) -> Value {
 		self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
 	}
 	/// Make an instruction that calls a Rust function that has the signature given with three arguments and expects a return value
-	pub fn insn_call_native3<A,B,C,R>(&self, name: &'static str,
+	pub fn insn_call_native3<A,B,C,R, S:ToCStr>(&self, name: S,
 								  native_func: fn(A, B, C) -> R,
 								  signature: &Type, args: &mut [&Value]) -> Value {
 		self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
 	}
 	/// Make an instruction that calls a Rust function that has the signature given with four arguments and expects a return value
-	pub fn insn_call_native4<A,B,C,D,R>(&self, name: &'static str,
+	pub fn insn_call_native4<A,B,C,D,R, S:ToCStr>(&self, name: S,
 								  native_func: fn(A, B, C, D) -> R,
 								  signature: &Type, args: &mut [&Value]) -> Value {
 		self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
