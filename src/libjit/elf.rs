@@ -1,10 +1,46 @@
 use bindings::*;
 use context::Context;
 use function::Function;
+use libc::c_uint;
 use util::NativeRef;
 use std::fmt::Show;
+use std::kinds::marker::ContravariantLifetime;
+use std::iter::Iterator;
 use std::str::raw::from_c_str;
 use std::c_str::ToCStr;
+/// An ELF dependency iterator
+pub struct Needed<'a> {
+	_reader: jit_readelf_t,
+	index: c_uint,
+	marker: ContravariantLifetime<'a>
+}
+impl<'a> Needed<'a> {
+	#[inline]
+	fn new(read:&'a ReadElf) -> Needed<'a> {
+		unsafe {
+			Needed {
+				_reader: read.as_ptr(),
+				index: 0 as c_uint,
+				marker: ContravariantLifetime::<'a>
+			}
+		}
+	}
+}
+impl<'a> Iterator<String> for Needed<'a> {
+	fn next(&mut self) -> Option<String> {
+		let index = self.index;
+		self.index += 1;
+		unsafe {
+			if index < jit_readelf_num_needed(self._reader) {
+				let c_name = jit_readelf_get_needed(self._reader, index);
+				let name = from_c_str(c_name);
+				Some(name)
+			} else {
+				None
+			}
+		}
+	}
+}
 /// An ELF binary reader
 native_ref!(ReadElf, _reader, jit_readelf_t)
 impl ReadElf {
@@ -41,6 +77,11 @@ impl ReadElf {
 		symbol.with_c_str(|c_symbol|
 			jit_readelf_get_symbol(self.as_ptr(), c_symbol) as *T
 		)
+	}
+	#[inline]
+	/// Iterate over the needed libraries
+	pub fn iter_needed<'a>(&'a self) -> Needed<'a> {
+		Needed::new(self)
 	}
 }
 impl Drop for ReadElf {
