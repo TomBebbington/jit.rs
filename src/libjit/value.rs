@@ -16,9 +16,33 @@ use function::Function;
 use std::kinds::marker::ContravariantLifetime;
 use types::Type;
 use util::NativeRef;
-#[deriving(Clone)]
-/// A Value that is being JIT compiled
-native_ref!(Value, _value, jit_value_t, ContravariantLifetime)
+/**
+ * Values form the backbone of the storage system in `libjit`.
+ * Every value in the system, be it a constant, a local variable,
+ * or a temporary result, is represented by an object of type
+ * `Value`. The JIT then allocates registers or memory
+ * locations to the values as appropriate.
+*/
+#[deriving(Clone, PartialEq)]
+pub struct Value<'a> {
+	_value: jit_value_t,
+	marker: ContravariantLifetime<'a>
+}
+impl<'a> NativeRef for Value<'a> {
+	#[inline]
+	/// Convert to a native pointer
+	unsafe fn as_ptr(&self) -> jit_value_t {
+		self._value
+	}
+	#[inline]
+	/// Convert from a native pointer
+	unsafe fn from_ptr(ptr:jit_value_t) -> Value {
+		Value {
+			_value: ptr,
+			marker: ContravariantLifetime::<'a>
+		}
+	}
+}
 impl<'a> InContext for Value<'a> {
 	/// Get the context which this value belongs to
 	fn get_context(&self) -> Context {
@@ -28,7 +52,12 @@ impl<'a> InContext for Value<'a> {
 	}
 }
 impl<'a> Value<'a> {
-	/// Create a new value with the given type
+	/**
+	 * Create a new value in the context of a function's current block.
+	 * The value initially starts off as a block-specific temporary.
+	 * It will be converted into a function-wide local variable if
+	 * it is ever referenced from a different block.
+	 */
 	pub fn new(func:&Function, value_type:&Type) -> Value {
 		unsafe {
 			let value = jit_value_create(func.as_ptr(), value_type.as_ptr());
@@ -43,24 +72,35 @@ impl<'a> Value<'a> {
 		}
 	}
 	/// Get the function which owns this value
+	#[inline]
 	pub fn get_function(&self) -> Function {
 		unsafe {
 			NativeRef::from_ptr(jit_value_get_function(self.as_ptr()))
 		}
 	}
-	/// Return true if the value is temporary so its scope extends over a single block within its function
+	/**
+	 * Determine if a value is temporary.  i.e. its scope extends
+	 * over a single block within its function.
+	 */
+	#[inline]
 	pub fn is_temp(&self) -> bool {
 		unsafe {
 			jit_value_is_temporary(self.as_ptr()) != 0
 		}
 	}
-	/// Return true if the value can have its address taken from it
+	/// Determine if a value is addressable.
+	#[inline]
 	pub fn is_addressable(&self) -> bool {
 		unsafe {
 			jit_value_is_addressable(self.as_ptr()) != 0
 		}
 	}
-	/// Set a flag on the value that its address can be taken from it
+	/* Set a flag on a value to indicate that it is addressable.
+	 * This should be used when you want to take the address of a
+	 * value (e.g. `&variable` in Rust/C).  The value is guaranteed
+	 * to not be stored in a register across a function call.
+	 */
+	#[inline]
 	pub fn set_addressable(&self) -> () {
 		unsafe {
 			jit_value_set_addressable(self.as_ptr())

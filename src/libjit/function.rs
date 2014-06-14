@@ -31,10 +31,33 @@ pub enum CallFlags {
 	/// When the function is tail-recursive
 	JitCallTail = 4,
 }
-
-#[deriving(Clone)]
-/// A function to JIT compile
-native_ref!(Function, _function, jit_function_t, ContravariantLifetime)
+#[deriving(Clone, PartialEq)]
+/**
+ * A function persists for the lifetime of its containing context.
+ * It initially starts life in the "building" state, where the user
+ * constructs instructions that represents the function body.
+ * Once the build process is complete, the user calls
+ * `function.compile()` to convert it into its executable form.
+*/
+pub struct Function<'a> {
+	_func: jit_function_t,
+	marker: ContravariantLifetime<'a>
+}
+impl<'a> NativeRef for Function<'a> {
+	#[inline]
+	/// Convert to a native pointer
+	unsafe fn as_ptr(&self) -> jit_function_t {
+		self._func
+	}
+	#[inline]
+	/// Convert from a native pointer
+	unsafe fn from_ptr(ptr:jit_function_t) -> Function<'a> {
+		Function {
+			_func: ptr,
+			marker: ContravariantLifetime::<'a>
+		}
+	}
+}
 #[unsafe_destructor]
 impl<'a> Drop for Function<'a> {
 	fn drop(&mut self) {
@@ -53,13 +76,30 @@ impl<'a> InContext for Function<'a> {
 	}
 }
 impl<'a> Function<'a> {
-	/// Create a function in the context with the type signature given
+	/**
+	 * Create a new function block and associate it with a JIT context.
+	 *
+	 * It is recommended that you call `Function::new` and
+	 * `function.compile()` in the closure you give to `context.build(...)`.
+	 * This will protect the JIT's internal data structures within a
+	 * multi-threaded environment.
+	*/
 	pub fn new(context:&'a Context, signature: &Type) -> Function<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_function_create(context.as_ptr(), signature.as_ptr()))
 		}
 	}
-	/// Create a function in the context with the type signature given nested inside the parent function so it can access its local variables
+	/**
+	 * Create a new function block and associate it with a JIT context.
+	 * In addition, this function is nested inside the specified
+	 * *parent* function and is able to access its parent's
+	 * (and grandparent's) local variables.
+	 *
+	 * The front end is responsible for ensuring that the nested function can
+	 * never be called by anyone except its parent and sibling functions.
+	 * The front end is also responsible for ensuring that the nested function
+	 * is compiled before its parent.
+	*/
 	pub fn new_nested(context:&'a Context, signature: &Type, parent: &Function<'a>) -> Function<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_function_create_nested(context.as_ptr(), signature.as_ptr(), parent.as_ptr()))
@@ -96,7 +136,7 @@ impl<'a> Function<'a> {
 			jit_function_compile(self.as_ptr());
 		}
 	}
-	/// Get a parameter of the function as a JIT Value
+	/// Get the value that corresponds to a specified function parameter.
 	pub fn get_param(&self, param: uint) -> Value<'a> {
 		unsafe {
 			let value = jit_value_get_param(self.as_ptr(), param as c_uint);

@@ -2,7 +2,10 @@ use bindings::*;
 use compilable::Compilable;
 use function::ABI;
 use libc::c_uint;
-use std::kinds::marker::ContravariantLifetime;
+use std::kinds::marker::{
+	ContravariantLifetime,
+	Managed
+};
 use std::str::raw::from_c_str;
 use std::c_str::ToCStr;
 use util::NativeRef;
@@ -72,18 +75,49 @@ impl<'a> Iterator<(String, Type)> for Fields<'a> {
 		}
 	}
 }
-/// A type of a value to JIT compile
-native_ref!(Type, _type, jit_type_t)
+/**
+ * An object that represents a native system type.
+ *
+ * Each `Type` represents a basic system type,
+ * be it a primitive, a struct, a union, a pointer, or a function signature.
+ * The library uses this information to lay out values in memory.
+*/
+#[deriving(PartialEq)]
+pub struct Type {
+	_type: jit_type_t,
+	marker: Managed
+}
+impl NativeRef for Type {
+	#[inline]
+	unsafe fn as_ptr(&self) -> jit_type_t {
+		self._type
+	}
+	#[inline]
+	unsafe fn from_ptr(ptr:jit_type_t) -> Type {
+		Type {
+			_type: ptr,
+			marker: Managed
+		}
+	}
+}
 impl Clone for Type {
 	#[inline]
+	/// Make a copy of the type descriptor by increasing its reference count.
 	fn clone(&self) -> Type {
 		unsafe {
 			NativeRef::from_ptr(jit_type_copy(self.as_ptr()))
 		}
 	}
 }
+#[unsafe_destructor]
 impl Drop for Type {
 	#[inline]
+	/**
+	 * Free a type descriptor by decreasing its reference count.
+	 *
+	 * This function is save to use on pre-defined types, which
+	 * are never actually freed.
+	 */
 	fn drop(&mut self) {
 		unsafe {
 			jit_type_free(self.as_ptr());
@@ -91,7 +125,7 @@ impl Drop for Type {
 	}
 }
 impl Type {
-	/// Create a function signature, with the given ABI, return type and parameters
+	/// Create a type descriptor for a function signature.
 	pub fn create_signature(abi: ABI, return_type: &Type, params: &mut [&Type]) -> Type {
 		unsafe {
 			let mut native_params:Vec<jit_type_t> = params.iter().map(|param| param.as_ptr()).collect();
@@ -108,41 +142,48 @@ impl Type {
 			NativeRef::from_ptr(ty)
 		}
 	}
-	/// Create a struct type with the given field types
+	/// Create a type descriptor for a structure.
 	pub fn create_struct(fields: &mut [&Type]) -> Type {
 		Type::create_complex(fields, false)
 	}
-	/// Create a union type with the given field types
+	/// Create a type descriptor for a union.
 	pub fn create_union(fields: &mut [&Type]) -> Type {
 		let inner = Type::create_complex(fields, true);
 		Type::create_struct(&mut [&get::<int>(), &inner])
 	}
-	/// Create a pointer type with the given pointee type
+	/// Create a type descriptor for a pointer to another type.
 	pub fn create_pointer(pointee: &Type) -> Type {
 		unsafe {
 			let ptr = jit_type_create_pointer(pointee.as_ptr(), 1);
 			NativeRef::from_ptr(ptr)
 		}
 	}
-	/// Work out the size of this type
+	#[inline]
+	/// Get the size of this type in bytes.
 	pub fn get_size(&self) -> jit_nuint {
 		unsafe {
 			jit_type_get_size(self.as_ptr())
 		}
 	}
-	/// Get the kind of this type
+	/**
+	 * Get a value that indicates the kind of this type. This allows
+	 * callers to quickly classify a type to determine how it should
+	 * be handled further.
+	 */
+	#[inline]
 	pub fn get_kind(&self) -> TypeKind {
 		unsafe {
 			TypeKind::from_bits(jit_type_get_kind(self.as_ptr())).unwrap()
 		}
 	}
-	/// Get the reference this pointer points to
+	#[inline]
+	/// Get the type that is referred to by this pointer type.
 	pub fn get_ref(&self) -> Type {
 		unsafe {
 			NativeRef::from_ptr(jit_type_get_ref(self.as_ptr()))
 		}
 	}
-	/// Set the field names of this type
+	/// Set the field or parameter names of this type.
 	pub fn set_names<T:ToCStr>(&self, names:&[T]) -> bool {
 		unsafe {
 			let native_names : Vec<*i8> = names.iter().map(|name| name.to_c_str().unwrap()).collect();
@@ -155,7 +196,7 @@ impl Type {
 		Fields::new(self)
 	}
 	#[inline]
-	/// Get a field's index in the struct type
+	/// Find the field/parameter index for a particular name.
 	pub fn find_name<T:ToCStr>(&self, name:T) -> uint {
 		name.with_c_str(|c_name| unsafe {
 			jit_type_find_name(self.as_ptr(), c_name) as uint
@@ -175,7 +216,7 @@ fn test_struct() {
 	assert!(iter.next() == Some(("second".into_string(), float_t)));
 }
 #[inline]
-/// Get the type specified as a JIT type
+/// Get the Rust type given as a type descriptor
 pub fn get<T:Compilable>() -> Type {
 	Compilable::jit_type(None::<T>)
 }
