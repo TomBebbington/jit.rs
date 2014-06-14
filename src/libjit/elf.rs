@@ -10,9 +10,9 @@ impl ReadElf {
 	pub fn new(filename:&str) -> ReadElf {
 		unsafe {
 			let mut this = RawPtr::null();
-			let code = filename.with_c_str(|c_name| unsafe {
+			let code = filename.with_c_str(|c_name|
 				jit_readelf_open(&mut this, c_name, 0)
-			});
+			);
 			if this.is_null() {
 				fail!("'{}' couldn't be opened due to {}", filename, code);
 			} else {
@@ -36,9 +36,9 @@ impl ReadElf {
 	#[inline]
 	/// Get a simple in the ELF binary
 	pub unsafe fn get_symbol<T>(&self, symbol:&str) -> *T {
-		symbol.with_c_str(|c_symbol| unsafe {
+		symbol.with_c_str(|c_symbol|
 			jit_readelf_get_symbol(self.as_ptr(), c_symbol) as *T
-		})
+		)
 	}
 }
 impl Drop for ReadElf {
