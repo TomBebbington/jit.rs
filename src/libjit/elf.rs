@@ -2,12 +2,14 @@ use bindings::*;
 use context::Context;
 use function::Function;
 use util::NativeRef;
+use std::fmt::Show;
 use std::str::raw::from_c_str;
+use std::c_str::ToCStr;
 /// An ELF binary reader
 native_ref!(ReadElf, _reader, jit_readelf_t)
 impl ReadElf {
 	/// Open a new ELF binary
-	pub fn new(filename:&str) -> ReadElf {
+	pub fn new<S:ToCStr+Show>(filename:S) -> ReadElf {
 		unsafe {
 			let mut this = RawPtr::null();
 			let code = filename.with_c_str(|c_name|
@@ -35,7 +37,7 @@ impl ReadElf {
 	}
 	#[inline]
 	/// Get a simple in the ELF binary
-	pub unsafe fn get_symbol<T>(&self, symbol:&str) -> *T {
+	pub unsafe fn get_symbol<T, S:ToCStr>(&self, symbol:S) -> *T {
 		symbol.with_c_str(|c_symbol|
 			jit_readelf_get_symbol(self.as_ptr(), c_symbol) as *T
 		)
@@ -55,28 +57,28 @@ native_ref!(WriteElf, _writer, jit_writeelf_t)
 impl WriteElf {
 	#[inline]
 	/// Create a new ELF binary reader
-	pub fn new(lib_name:&str) -> WriteElf {
+	pub fn new<S:ToCStr>(lib_name:S) -> WriteElf {
 		lib_name.with_c_str(|c_lib_name| unsafe {
 			NativeRef::from_ptr(jit_writeelf_create(c_lib_name))
 		})
 	}
 	#[inline]
 	/// Write to the filename given (not implemented by LibJIT yet)
-	pub fn write(&self, filename:&str) -> bool {
+	pub fn write<S:ToCStr>(&self, filename:S) -> bool {
 		filename.with_c_str(|c_filename| unsafe {
 			jit_writeelf_write(self.as_ptr(), c_filename) != 0
 		})
 	}
 	#[inline]
 	/// Add a function to the ELF
-	pub fn add_function(&self, func:&Function, name:&str) -> bool {
+	pub fn add_function<S:ToCStr>(&self, func:&Function, name:S) -> bool {
 		name.with_c_str(|c_name| unsafe {
 			jit_writeelf_add_function(self.as_ptr(), func.as_ptr(), c_name) != 0
 		})
 	}
 	#[inline]
 	/// Add a dependency to the ELF
-	pub fn add_needed(&self, lib_name:&str) -> bool {
+	pub fn add_needed<S:ToCStr>(&self, lib_name:S) -> bool {
 		lib_name.with_c_str(|c_lib_name| unsafe {
 			jit_writeelf_add_needed(self.as_ptr(), c_lib_name) != 0
 		})
