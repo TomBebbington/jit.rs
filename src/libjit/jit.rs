@@ -79,6 +79,7 @@ pub use function::{
 };
 pub use label::Label;
 pub use types::*;
+pub use get_type = types::get;
 pub use util::NativeRef;
 pub use value::Value;
 
@@ -136,7 +137,7 @@ macro_rules! native_ref(
 pub fn with_empty_func(cb:|&Context, &Function| -> ()) -> () {
 	let ctx = Context::new();
 	ctx.build(|| {
-		let sig = Type::create_signature(CDECL, &Types::get_void(), &mut[]);
+		let sig = Type::create_signature(CDECL, &get_type::<()>(), &mut[]);
 		let func = Function::new(&ctx, &sig);
 		cb(&ctx, &func)
 	})

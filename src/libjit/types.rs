@@ -1,4 +1,5 @@
 use bindings::*;
+use compilable::Compilable;
 use function::ABI;
 use libc::c_uint;
 use std::kinds::marker::ContravariantLifetime;
@@ -113,7 +114,7 @@ impl Type {
 	/// Create a union type with the given field types
 	pub fn create_union(fields: &mut [&Type]) -> Type {
 		let inner = Type::create_complex(fields, true);
-		Type::create_struct(&mut [&Types::get_int(), &inner])
+		Type::create_struct(&mut [&get::<int>(), &inner])
 	}
 	/// Create a pointer type with the given pointee type
 	pub fn create_pointer(pointee: &Type) -> Type {
@@ -163,7 +164,7 @@ impl Type {
 #[test]
 fn test_struct() {
 	::init();
-	let float_t = Types::get_float64();
+	let float_t = get::<f64>();
 	let double_float_t = Type::create_struct(&mut [&float_t, &float_t]);
 	let first_name = "first".into_string();
 	let second_name = "second".into_string();
@@ -172,131 +173,8 @@ fn test_struct() {
 	assert!(iter.next() == Some((first_name, float_t.clone())));
 	assert!(iter.next() == Some((second_name, float_t)));
 }
-/// Holds type constructors
-pub struct Types;
-impl Types {
-	#[inline]
-	/// Void type
-	pub fn get_void() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_void)
-		}
-	}
-	#[inline]
-	/// 8-bit integer type
-	pub fn get_sbyte() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_sbyte)
-		}
-	}
-	#[inline]
-	/// 8-bit unsigned integer type
-	pub fn get_ubyte() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_ubyte)
-		}
-	}
-	#[inline]
-	/// 16-bit integer type
-	pub fn get_short() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_short)
-		}
-	}
-	#[inline]
-	/// 16-bit unsigned integer type
-	pub fn get_ushort() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_ushort)
-		}
-	}
-	#[inline]
-	/// Native integer type
-	pub fn get_nint() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_nint)
-		}
-	}
-	#[inline]
-	/// Unsigned native integer type
-	pub fn get_nuint() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_nuint)
-		}
-	}
-	#[inline]
-	/// 32-bit integer type
-	pub fn get_int() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_int)
-		}
-	}
-	#[inline]
-	/// 32-bit unsigned integer type
-	pub fn get_uint() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_uint)
-		}
-	}
-	#[inline]
-	/// 64-bit integer type
-	pub fn get_long() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_long)
-		}
-	}
-	#[inline]
-	/// 64-bit unsigned integer type
-	pub fn get_ulong() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_ulong)
-		}
-	}
-	#[inline]
-	/// 32-bit floating point type
-	pub fn get_float32() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_float32)
-		}
-	}
-	#[inline]
-	/// 64-bit floating point type
-	pub fn get_float64() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_float64)
-		}
-	}
-	#[inline]
-	/// Native floating point type
-	pub fn get_float() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_nfloat)
-		}
-	}
-	#[inline]
-	/// A void pointer, which can represent any kind of pointer
-	pub fn get_void_ptr() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_void_ptr)
-		}
-	}
-	#[inline]
-	/// Character type
-	pub fn get_char() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_sys_char)
-		}
-	}
-	#[inline]
-	/// C String type
-	pub fn get_cstring() -> Type {
-		Type::create_pointer(&Types::get_char())
-	}
-	#[inline]
-	/// Boolean type
-	pub fn get_bool() -> Type {
-		unsafe {
-			NativeRef::from_ptr(jit_type_sys_bool)
-		}
-	}
+#[inline]
+/// Get the type specified as a JIT type
+pub fn get<T:Compilable>() -> Type {
+	Compilable::jit_type(None::<T>)
 }
