@@ -3,18 +3,21 @@ use bindings::{
 	jit_function_reserve_label
 };
 use function::Function;
+use std::kinds::marker::ContravariantLifetime;
 use util::NativeRef;
 #[deriving(PartialEq)]
 /// A label in the code that can be branched to in instructions
-pub struct Label {
-	_label: jit_label_t
+pub struct Label<'a> {
+	_label: jit_label_t,
+	marker: ContravariantLifetime<'a>
 }
-impl Label {
+impl<'a> Label<'a> {
 	/// Create a new label
-	pub fn new(func:&Function) -> Label {
+	pub fn new(func:&'a Function) -> Label<'a> {
 		unsafe {
 			Label {
-				_label: jit_function_reserve_label(func.as_ptr())
+				_label: jit_function_reserve_label(func.as_ptr()),
+				marker: ContravariantLifetime::<'a>
 			}
 		}
 	}
