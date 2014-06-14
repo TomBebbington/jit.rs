@@ -156,7 +156,7 @@ impl Type {
 	}
 	#[inline]
 	/// Get a field's index in the struct type
-	pub fn find_name<'t>(&self, name:&'t str) -> uint {
+	pub fn find_name<T:ToCStr>(&self, name:T) -> uint {
 		name.with_c_str(|c_name| unsafe {
 			jit_type_find_name(self.as_ptr(), c_name) as uint
 		})
