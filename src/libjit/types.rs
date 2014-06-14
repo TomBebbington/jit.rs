@@ -4,6 +4,7 @@ use function::ABI;
 use libc::c_uint;
 use std::kinds::marker::ContravariantLifetime;
 use std::str::raw::from_c_str;
+use std::c_str::ToCStr;
 use util::NativeRef;
 /// The types that a value can be
 bitflags!(
@@ -142,7 +143,7 @@ impl Type {
 		}
 	}
 	/// Set the field names of this type
-	pub fn set_names(&self, names:&[String]) -> bool {
+	pub fn set_names<T:ToCStr>(&self, names:&[T]) -> bool {
 		unsafe {
 			let native_names : Vec<*i8> = names.iter().map(|name| name.to_c_str().unwrap()).collect();
 			jit_type_set_names(self.as_ptr(), native_names.as_ptr() as *mut *mut i8, names.len() as u32) != 0
@@ -166,14 +167,12 @@ fn test_struct() {
 	::init();
 	let float_t = get::<f64>();
 	let double_float_t = Type::create_struct(&mut [&float_t, &float_t]);
-	let first_name = "first".into_string();
-	let second_name = "second".into_string();
-	double_float_t.set_names(&[first_name.clone(), second_name.clone()]);
+	double_float_t.set_names(&["first", "second"]);
 	assert_eq!(double_float_t.find_name("first"), 0);
 	assert_eq!(double_float_t.find_name("second"), 1);
 	let mut iter = double_float_t.iter_fields();
-	assert!(iter.next() == Some((first_name, float_t.clone())));
-	assert!(iter.next() == Some((second_name, float_t)));
+	assert!(iter.next() == Some(("first".into_string(), float_t.clone())));
+	assert!(iter.next() == Some(("second".into_string(), float_t)));
 }
 #[inline]
 /// Get the type specified as a JIT type
