@@ -35,7 +35,7 @@ impl Context {
 		Functions::new(self)
 	}
 }
-
+#[unsafe_destructor]
 impl Drop for Context {
 	#[inline]
 	fn drop(&mut self) {
