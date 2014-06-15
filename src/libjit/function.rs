@@ -376,21 +376,37 @@ impl<'a> Function<'a> {
 	#[inline]
 	/// Turn this function into a closure with 0 arguments
 	pub unsafe fn closure0<Z>(&self) -> fn() -> Z {
+		debug_assert_eq!({
+			let sig = jit_function_get_signature(self.as_ptr());
+			jit_type_num_params(sig)
+		}, 0);
 		transmute(self.closure())
 	}
 	#[inline]
 	/// Turn this function into a closure with 1 argument
 	pub unsafe fn closure1<A, Z>(&self) -> fn(A) -> Z {
+		debug_assert_eq!({
+			let sig = jit_function_get_signature(self.as_ptr());
+			jit_type_num_params(sig)
+		}, 1);
 		transmute(self.closure())
 	}
 	#[inline]
 	/// Turn this function into a closure with 2 arguments
 	pub unsafe fn closure2<A, B, Z>(&self) -> fn(A, B) -> Z {
+		debug_assert_eq!({
+			let sig = jit_function_get_signature(self.as_ptr());
+			jit_type_num_params(sig)
+		}, 2);
 		transmute(self.closure())
 	}
 	#[inline]
 	/// Turn this function into a closure with 3 arguments
 	pub unsafe fn closure3<A, B, C, Z>(&self) -> fn(A, B, C) -> Z {
+		debug_assert_eq!({
+			let sig = jit_function_get_signature(self.as_ptr());
+			jit_type_num_params(sig)
+		}, 3);
 		transmute(self.closure())
 	}
 	/// Make an instruction that converts the value to the type given
