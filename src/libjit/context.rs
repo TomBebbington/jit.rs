@@ -11,8 +11,8 @@ use function::Function;
 use std::kinds::marker::ContravariantLifetime;
 use util::NativeRef;
 /// Holds all of the functions you have built and compiled. There can be multiple, but normally there is only one.
-native_ref!(Context, _context, jit_context_t)
-impl Context {
+native_ref!(Context, _context, jit_context_t, ContravariantLifetime)
+impl<'a> Context<'a> {
 	/// Create a new JIT Context
 	pub fn new() -> Context {
 		unsafe {
@@ -36,7 +36,7 @@ impl Context {
 	}
 }
 #[unsafe_destructor]
-impl Drop for Context {
+impl<'a> Drop for Context<'a> {
 	#[inline]
 	fn drop(&mut self) {
 		unsafe {
@@ -57,7 +57,7 @@ pub struct Functions<'a> {
 	marker: ContravariantLifetime<'a>
 }
 impl<'a> Functions<'a> {
-	fn new(ctx:&'a Context) -> Functions<'a> {
+	fn new(ctx:&Context<'a>) -> Functions<'a> {
 		unsafe {
 			Functions {
 				ctx: ctx.as_ptr(),
