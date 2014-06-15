@@ -155,21 +155,14 @@ macro_rules! native_ref(
 		}
 	)
 )
-#[cfg(test)]
-pub fn with_empty_func(cb:|&Context, &Function| -> ()) -> () {
-	let ctx = Context::new();
-	ctx.build(|| {
-		let sig = Type::create_signature(CDECL, &get_type::<()>(), &mut[]);
-		let func = Function::new(&ctx, &sig);
-		cb(&ctx, &func)
-	})
-}
-mod util;
 mod bindings;
 mod context;
 mod compilable;
 mod elf;
 mod function;
 mod label;
+#[cfg(test)]
+mod tests;
 mod types;
+mod util;
 mod value;

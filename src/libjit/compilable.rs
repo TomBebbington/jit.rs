@@ -51,14 +51,6 @@ pub trait Compilable {
 	/// Get the JIT type repr of the value
 	fn jit_type(_:Option<Self>) -> Type;
 }
-#[cfg(test)]
-fn test_compile<T:Compilable+Default>(kind:TypeKind) {
-	::with_empty_func(|_, func| {
-		let pval:T = Default::default();
-		let val = pval.compile(func);
-		assert!(val.get_type().get_kind().contains(kind));
-	})
-}
 impl Compilable for () {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
@@ -71,10 +63,6 @@ impl Compilable for () {
 			NativeRef::from_ptr(jit_type_void_ptr)
 		}
 	}
-}
-#[test]
-fn test_compile_unit() {
-	test_compile::<()>(Void)
 }
 impl Compilable for f64 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
@@ -89,10 +77,6 @@ impl Compilable for f64 {
 		}
 	}
 }
-#[test]
-fn test_compile_f64() {
-	test_compile::<f64>(Float64)
-}
 impl Compilable for f32 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
@@ -105,10 +89,6 @@ impl Compilable for f32 {
 			NativeRef::from_ptr(jit_type_float32)
 		}
 	}
-}
-#[test]
-fn test_compile_f32() {
-	test_compile::<f32>(Float32)
 }
 impl Compilable for int {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
@@ -123,10 +103,6 @@ impl Compilable for int {
 		}
 	}
 }
-#[test]
-fn test_compile_int() {
-	test_compile::<int>(NInt)
-}
 impl Compilable for uint {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
@@ -139,10 +115,6 @@ impl Compilable for uint {
 			NativeRef::from_ptr(jit_type_nuint)
 		}
 	}
-}
-#[test]
-fn test_compile_uint() {
-	test_compile::<uint>(NUInt)
 }
 impl Compilable for i32 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
@@ -157,10 +129,6 @@ impl Compilable for i32 {
 		}
 	}
 }
-#[test]
-fn test_compile_i32() {
-	test_compile::<i32>(Int)
-}
 impl Compilable for u32 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
@@ -173,10 +141,6 @@ impl Compilable for u32 {
 			NativeRef::from_ptr(jit_type_uint)
 		}
 	}
-}
-#[test]
-fn test_compile_u32() {
-	test_compile::<u32>(UInt)
 }
 impl Compilable for i16 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
@@ -191,10 +155,6 @@ impl Compilable for i16 {
 		}
 	}
 }
-#[test]
-fn test_compile_i16() {
-	test_compile::<i16>(Short)
-}
 impl Compilable for u16 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
@@ -207,10 +167,6 @@ impl Compilable for u16 {
 			NativeRef::from_ptr(jit_type_ushort)
 		}
 	}
-}
-#[test]
-fn test_compile_u16() {
-	test_compile::<u16>(UShort)
 }
 impl Compilable for i8 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
@@ -225,10 +181,6 @@ impl Compilable for i8 {
 		}
 	}
 }
-#[test]
-fn test_compile_i8() {
-	test_compile::<i8>(SByte)
-}
 impl Compilable for u8 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
@@ -241,10 +193,6 @@ impl Compilable for u8 {
 			NativeRef::from_ptr(jit_type_ubyte)
 		}
 	}
-}
-#[test]
-fn test_compile_u8() {
-	test_compile::<u8>(UByte)
 }
 impl Compilable for bool {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
@@ -259,10 +207,6 @@ impl Compilable for bool {
 		}
 	}
 }
-#[test]
-fn test_compile_bool() {
-	test_compile::<bool>(SysBool)
-}
 impl Compilable for char {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
@@ -275,10 +219,6 @@ impl Compilable for char {
 			NativeRef::from_ptr(jit_type_sys_char)
 		}
 	}
-}
-#[test]
-fn test_compile_char() {
-	test_compile::<char>(SysChar)
 }
 impl<'t> Compilable for &'t str {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {

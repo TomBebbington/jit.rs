@@ -203,18 +203,6 @@ impl Type {
 		})
 	}
 }
-#[test]
-fn test_struct() {
-	::init();
-	let float_t = get::<f64>();
-	let double_float_t = Type::create_struct(&mut [&float_t, &float_t]);
-	double_float_t.set_names(&["first", "second"]);
-	assert_eq!(double_float_t.find_name("first"), 0);
-	assert_eq!(double_float_t.find_name("second"), 1);
-	let mut iter = double_float_t.iter_fields();
-	assert!(iter.next() == Some(("first".into_string(), float_t.clone())));
-	assert!(iter.next() == Some(("second".into_string(), float_t)));
-}
 #[inline]
 /// Get the Rust type given as a type descriptor
 pub fn get<T:Compilable>() -> Type {

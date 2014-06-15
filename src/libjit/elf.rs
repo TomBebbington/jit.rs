@@ -135,8 +135,3 @@ impl<'a> Drop for WriteElf<'a> {
 		}
 	}
 }
-#[test]
-fn test_elf() {
-	let elf = ReadElf::new("/usr/lib/libjit.so.0");
-	assert_eq!(elf.get_name().as_slice(), "libjit.so.0");
-}
