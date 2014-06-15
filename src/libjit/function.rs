@@ -13,6 +13,7 @@ use libc::{
 	c_uint,
 	c_void
 };
+use std::any::Any;
 use std::kinds::marker::ContravariantLifetime;
 use std::mem::transmute;
 use std::ptr::mut_null;
@@ -369,28 +370,28 @@ impl<'a> Function<'a> {
 	}
 	#[inline]
 	/// Turn this function into a closure
-	pub unsafe fn closure<T>(&self) -> T {
-		transmute(jit_function_to_closure(self.as_ptr()))
+	pub unsafe fn closure(&self) -> *mut c_void {
+		jit_function_to_closure(self.as_ptr())
 	}
 	#[inline]
 	/// Turn this function into a closure with 0 arguments
 	pub unsafe fn closure0<Z>(&self) -> fn() -> Z {
-		self.closure()
+		transmute(self.closure())
 	}
 	#[inline]
 	/// Turn this function into a closure with 1 argument
 	pub unsafe fn closure1<A, Z>(&self) -> fn(A) -> Z {
-		self.closure()
+		transmute(self.closure())
 	}
 	#[inline]
 	/// Turn this function into a closure with 2 arguments
 	pub unsafe fn closure2<A, B, Z>(&self) -> fn(A, B) -> Z {
-		self.closure()
+		transmute(self.closure())
 	}
 	#[inline]
 	/// Turn this function into a closure with 3 arguments
 	pub unsafe fn closure3<A, B, C, Z>(&self) -> fn(A, B, C) -> Z {
-		self.closure()
+		transmute(self.closure())
 	}
 	/// Make an instruction that converts the value to the type given
 	pub fn insn_convert(&self, v: &Value<'a>, t:&Type, overflow_check:bool) -> Value<'a> {
