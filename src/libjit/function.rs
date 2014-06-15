@@ -67,9 +67,9 @@ impl<'a> Drop for Function<'a> {
 		}
 	}
 }
-impl<'a> InContext for Function<'a> {
+impl<'a> InContext<'a> for Function<'a> {
 	/// Get the context this function was made in
-	fn get_context(&self) -> Context {
+	fn get_context(&self) -> Context<'a> {
 		unsafe {
 			let context = jit_function_get_context(self.as_ptr());
 			NativeRef::from_ptr(context)
@@ -85,7 +85,7 @@ impl<'a> Function<'a> {
 	 * This will protect the JIT's internal data structures within a
 	 * multi-threaded environment.
 	*/
-	pub fn new(context:&'a Context, signature: &Type) -> Function<'a> {
+	pub fn new(context:&Context<'a>, signature: &Type) -> Function<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_function_create(context.as_ptr(), signature.as_ptr()))
 		}
@@ -101,7 +101,7 @@ impl<'a> Function<'a> {
 	 * The front end is also responsible for ensuring that the nested function
 	 * is compiled before its parent.
 	*/
-	pub fn new_nested(context:&'a Context, signature: &Type, parent: &Function<'a>) -> Function<'a> {
+	pub fn new_nested(context:&Context<'a>, signature: &Type, parent: &Function<'a>) -> Function<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_function_create_nested(context.as_ptr(), signature.as_ptr(), parent.as_ptr()))
 		}
@@ -155,13 +155,13 @@ impl<'a> Function<'a> {
 		}
 	}
 	/// Throw an exception from the function with the value given
-	pub fn insn_throw(&self, retval: &Value) {
+	pub fn insn_throw(&self, retval: &Value<'a>) {
 		unsafe {
 			jit_insn_throw(self.as_ptr(), retval.as_ptr());
 		}
 	}
 	/// Return from the function with the value given
-	pub fn insn_return(&self, retval: &Value) {
+	pub fn insn_return(&self, retval: &Value<'a>) {
 		unsafe {
 			jit_insn_return(self.as_ptr(), retval.as_ptr());
 		}
@@ -375,38 +375,22 @@ impl<'a> Function<'a> {
 	}
 	#[inline]
 	/// Turn this function into a closure with 0 arguments
-	pub unsafe fn closure0<Z>(&self) -> fn() -> Z {
-		debug_assert_eq!({
-			let sig = jit_function_get_signature(self.as_ptr());
-			jit_type_num_params(sig)
-		}, 0);
+	pub unsafe fn closure0<Z>(&self) -> fn<'a>() -> Z {
 		transmute(self.closure())
 	}
 	#[inline]
 	/// Turn this function into a closure with 1 argument
-	pub unsafe fn closure1<A, Z>(&self) -> fn(A) -> Z {
-		debug_assert_eq!({
-			let sig = jit_function_get_signature(self.as_ptr());
-			jit_type_num_params(sig)
-		}, 1);
+	pub unsafe fn closure1<A, Z>(&self) -> fn<'a>(A) -> Z {
 		transmute(self.closure())
 	}
 	#[inline]
 	/// Turn this function into a closure with 2 arguments
-	pub unsafe fn closure2<A, B, Z>(&self) -> fn(A, B) -> Z {
-		debug_assert_eq!({
-			let sig = jit_function_get_signature(self.as_ptr());
-			jit_type_num_params(sig)
-		}, 2);
+	pub unsafe fn closure2<A, B, Z>(&self) -> fn<'a>(A, B) -> Z {
 		transmute(self.closure())
 	}
 	#[inline]
 	/// Turn this function into a closure with 3 arguments
-	pub unsafe fn closure3<A, B, C, Z>(&self) -> fn(A, B, C) -> Z {
-		debug_assert_eq!({
-			let sig = jit_function_get_signature(self.as_ptr());
-			jit_type_num_params(sig)
-		}, 3);
+	pub unsafe fn closure3<A, B, C, Z>(&self) -> fn<'a>(A, B, C) -> Z {
 		transmute(self.closure())
 	}
 	/// Make an instruction that converts the value to the type given

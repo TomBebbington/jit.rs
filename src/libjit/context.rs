@@ -14,7 +14,7 @@ use util::NativeRef;
 native_ref!(Context, _context, jit_context_t, ContravariantLifetime)
 impl<'a> Context<'a> {
 	/// Create a new JIT Context
-	pub fn new() -> Context {
+	pub fn new() -> Context<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_context_create())
 		}
@@ -45,9 +45,9 @@ impl<'a> Drop for Context<'a> {
 	}
 }
 /// Any JIT object which is in a context
-pub trait InContext {
+pub trait InContext<'a> {
 	/// Get the context for this object
-	fn get_context(&self) -> Context;
+	fn get_context(&self) -> Context<'a>;
 }
 
 /// An iterator over a context's functions

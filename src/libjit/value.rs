@@ -43,9 +43,9 @@ impl<'a> NativeRef for Value<'a> {
 		}
 	}
 }
-impl<'a> InContext for Value<'a> {
+impl<'a> InContext<'a> for Value<'a> {
 	/// Get the context which this value belongs to
-	fn get_context(&self) -> Context {
+	fn get_context(&self) -> Context<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_get_context(self.as_ptr()))
 		}
@@ -58,7 +58,7 @@ impl<'a> Value<'a> {
 	 * It will be converted into a function-wide local variable if
 	 * it is ever referenced from a different block.
 	 */
-	pub fn new(func:&Function, value_type:&Type) -> Value {
+	pub fn new(func:&Function<'a>, value_type:&Type) -> Value<'a> {
 		unsafe {
 			let value = jit_value_create(func.as_ptr(), value_type.as_ptr());
 			NativeRef::from_ptr(value)
@@ -73,7 +73,7 @@ impl<'a> Value<'a> {
 	}
 	/// Get the function which owns this value
 	#[inline]
-	pub fn get_function(&self) -> Function {
+	pub fn get_function(&self) -> Function<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_get_function(self.as_ptr()))
 		}

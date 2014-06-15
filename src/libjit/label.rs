@@ -13,7 +13,7 @@ pub struct Label<'a> {
 }
 impl<'a> Label<'a> {
 	/// Create a new label
-	pub fn new(func:&'a Function) -> Label<'a> {
+	pub fn new(func:&Function<'a>) -> Label<'a> {
 		unsafe {
 			Label {
 				_label: jit_function_reserve_label(func.as_ptr()),

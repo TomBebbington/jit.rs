@@ -16,7 +16,7 @@ pub struct Needed<'a> {
 }
 impl<'a> Needed<'a> {
 	#[inline]
-	fn new(read:&'a ReadElf) -> Needed<'a> {
+	fn new(read:&ReadElf<'a>) -> Needed<'a> {
 		unsafe {
 			Needed {
 				_reader: read.as_ptr(),
@@ -42,10 +42,10 @@ impl<'a> Iterator<String> for Needed<'a> {
 	}
 }
 /// An ELF binary reader
-native_ref!(ReadElf, _reader, jit_readelf_t)
-impl ReadElf {
+native_ref!(ReadElf, _reader, jit_readelf_t, ContravariantLifetime)
+impl<'a> ReadElf<'a> {
 	/// Open a new ELF binary
-	pub fn new<S:ToCStr+Show>(filename:S) -> ReadElf {
+	pub fn new<S:ToCStr+Show>(filename:S) -> ReadElf<'a> {
 		unsafe {
 			let mut this = RawPtr::null();
 			let code = filename.with_c_str(|c_name|
@@ -66,7 +66,7 @@ impl ReadElf {
 		}
 	}
 	#[inline]
-	pub fn add_to_context(&self, ctx:&Context) {
+	pub fn add_to_context(&self, ctx:&Context<'a>) {
 		unsafe {
 			jit_readelf_add_to_context(self.as_ptr(), ctx.as_ptr())
 		}
@@ -84,7 +84,8 @@ impl ReadElf {
 		Needed::new(self)
 	}
 }
-impl Drop for ReadElf {
+#[unsafe_destructor]
+impl<'a> Drop for ReadElf<'a> {
 	#[inline]
 	fn drop(&mut self) {
 		unsafe {
@@ -94,11 +95,11 @@ impl Drop for ReadElf {
 }
 
 /// An ELF binary reader
-native_ref!(WriteElf, _writer, jit_writeelf_t)
-impl WriteElf {
+native_ref!(WriteElf, _writer, jit_writeelf_t, ContravariantLifetime)
+impl<'a> WriteElf<'a> {
 	#[inline]
 	/// Create a new ELF binary reader
-	pub fn new<S:ToCStr>(lib_name:S) -> WriteElf {
+	pub fn new<S:ToCStr>(lib_name:S) -> WriteElf<'a> {
 		lib_name.with_c_str(|c_lib_name| unsafe {
 			NativeRef::from_ptr(jit_writeelf_create(c_lib_name))
 		})
@@ -112,7 +113,7 @@ impl WriteElf {
 	}
 	#[inline]
 	/// Add a function to the ELF
-	pub fn add_function<S:ToCStr>(&self, func:&Function, name:S) -> bool {
+	pub fn add_function<S:ToCStr>(&self, func:&Function<'a>, name:S) -> bool {
 		name.with_c_str(|c_name| unsafe {
 			jit_writeelf_add_function(self.as_ptr(), func.as_ptr(), c_name) != 0
 		})
@@ -125,7 +126,8 @@ impl WriteElf {
 		})
 	}
 }
-impl Drop for WriteElf {
+#[unsafe_destructor]
+impl<'a> Drop for WriteElf<'a> {
 	#[inline]
 	fn drop(&mut self) {
 		unsafe {
