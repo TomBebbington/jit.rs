@@ -31,7 +31,7 @@ impl<'a> Context<'a> {
 		rv
 	}
 	/// Iterate through all the functions in this context
-	pub fn iter_funcs<'t>(&'t self) -> Functions<'t> {
+	pub fn iter_funcs(&self) -> Functions<'a> {
 		Functions::new(self)
 	}
 }
