@@ -8,12 +8,14 @@ use bindings::{
 	jit_value_get_function,
 	jit_value_set_addressable
 };
+use compilable::Compilable;
 use context::{
 	Context,
 	InContext
 };
 use function::Function;
 use std::kinds::marker::ContravariantLifetime;
+use std::ops::*;
 use types::Type;
 use util::NativeRef;
 /**
@@ -105,5 +107,65 @@ impl<'a> Value<'a> {
 		unsafe {
 			jit_value_set_addressable(self.as_ptr())
 		}
+	}
+}
+impl<'a> Add<Value<'a>, Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn add(&self, other:&Value<'a>) -> Value<'a> {
+		self.get_function().insn_add(self, other)
+	}
+}
+impl<'a> Sub<Value<'a>, Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn sub(&self, other:&Value<'a>) -> Value<'a> {
+		self.get_function().insn_sub(self, other)
+	}
+}
+impl<'a> Mul<Value<'a>, Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn mul(&self, other:&Value<'a>) -> Value<'a> {
+		self.get_function().insn_mul(self, other)
+	}
+}
+impl<'a> Div<Value<'a>, Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn div(&self, other:&Value<'a>) -> Value<'a> {
+		self.get_function().insn_div(self, other)
+	}
+}
+impl<'a> Rem<Value<'a>, Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn rem(&self, other:&Value<'a>) -> Value<'a> {
+		self.get_function().insn_rem(self, other)
+	}
+}
+impl<'a> BitAnd<Value<'a>, Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn bitand(&self, other:&Value<'a>) -> Value<'a> {
+		self.get_function().insn_and(self, other)
+	}
+}
+impl<'a> BitOr<Value<'a>, Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn bitor(&self, other:&Value<'a>) -> Value<'a> {
+		self.get_function().insn_or(self, other)
+	}
+}
+impl<'a> BitXor<Value<'a>, Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn bitxor(&self, other:&Value<'a>) -> Value<'a> {
+		self.get_function().insn_xor(self, other)
+	}
+}
+impl<'a> Neg<Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn neg(&self) -> Value<'a> {
+		self.get_function().insn_neg(self)
+	}
+}
+impl<'a> Not<Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn not(&self) -> Value<'a> {
+		self.get_function().insn_not(self)
 	}
 }
