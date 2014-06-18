@@ -5,6 +5,38 @@
 #![deny(unnecessary_parens, unrecognized_lint, unreachable_code, unnecessary_allocation, unnecessary_typecast, unnecessary_allocation, uppercase_variables, unused_must_use)]
 #![feature(globs, plugin_registrar, quote)]
 #![experimental]
+//! This crate provides some macros for better LibJIT interop
+//! For example, here's a quick example of automatic struct compilation to a LibJIT value:
+//! 
+//! ```rust
+//! extern crate jit;
+//! #[phase(syntax)]
+//! extern crate jit_macros;
+//! use jit::{C_DECL, Context, Function, Type, Types, get_type};
+//! struct Pos {
+//! 	x: f64,
+//! 	y: f64,
+//! 	z: f64
+//! }
+//! fn main() {
+//! 	let cx = Context::new();
+//! 	cx.build(|| {
+//! 		// build the IR
+//! 		let sig = get_type(fn() -> Pos);
+//! 		let func = Function::new(cx, sig);
+//! 		let result = Pos {
+//!				x: -10,
+//!				y: 0,
+//!				z: 10
+//!			}.compile();
+//! 		func.insn_return(&result);
+//! 		/// run the IR
+//! 		func.compile();
+//! 		let rfunc:fn() -> Pos = func.closure0();
+//! 		assert_eq(rfunc().x, -10)
+//! 	});
+//! }
+//! ```
 extern crate rustc;
 extern crate syntax;
 
