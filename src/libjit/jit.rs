@@ -36,12 +36,12 @@
 //! 
 //! ```rust
 //! extern crate jit;
-//! use jit::{C_DECL, Context, Function, Type, Types};
+//! use jit::{C_DECL, Context, Function, Type, Types, get_type};
 //! fn main() {
 //! 	let cx = Context::new();
 //! 	cx.build(|| {
 //! 		// build the IR
-//! 		let sig = Type::create_signature(C_DECL, &Types::get_int(), &[&Types::get_int(), &Types::get_int()]);
+//! 		let sig = get_type(fn(int, int) -> int);
 //! 		let func = Function::new(cx, sig);
 //! 		let x = func.get_param(0);
 //! 		let y = func.get_param(1);
@@ -49,7 +49,7 @@
 //! 		func.insn_return(&result);
 //! 		/// run the IR
 //! 		func.compile();
-//! 		let rfunc:fn(int, int) -> int = func.closure();
+//! 		let rfunc:fn(int, int) -> int = func.closure2();
 //! 		assert_eq(rfunc(4, 5), 20)
 //! 	});
 //! }
