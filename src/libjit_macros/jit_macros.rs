@@ -22,7 +22,7 @@ fn gen_compilable(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|
 	let fields:Vec<(Option<String>, P<Expr>)> = match item.node {
 		ItemStruct(def, _) if def.is_virtual => {
 			cx.span_err(pos, "Virtual structs cannot be JIT compiled");
-			Vec::new()
+			fail!("...")
 		},
 		ItemStruct(def, _) => {
 			def.fields.iter().map(|field| {
