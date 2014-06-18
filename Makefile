@@ -1,14 +1,17 @@
 RUSTC ?= rustc
 RUSTDOC ?= rustdoc
-.PHONY: all build doc libjit libjit_macro update-doc clean
+.PHONY: all build doc libjit libjit_macros update-doc clean
 all: build
 libjit:
 	mkdir -p target
 	cd target && $(RUSTC) ../src/libjit/jit.rs -L .
+libjit_macros:
+	mkdir -p target
+	cd target && $(RUSTC) ../src/libjit_macros/jit_macros.rs -L .
 test:
 	mkdir -p target
 	cd target && $(RUSTC) --test ../src/libjit/jit.rs -L . -o jit_tests
-build: libjit test
+build: libjit libjit_macros test
 install:
 	sudo cp -f target/libjit*.so /usr/local/lib
 doc:

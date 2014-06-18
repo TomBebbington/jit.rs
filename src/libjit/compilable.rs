@@ -52,7 +52,7 @@ pub trait Compilable {
 	fn jit_type(_:Option<Self>) -> Type;
 }
 impl Compilable for () {
-	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
+	fn compile(&self, func:&Function) -> Value {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_void_ptr, 0))
 		}
