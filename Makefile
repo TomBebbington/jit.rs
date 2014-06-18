@@ -16,6 +16,7 @@ install:
 	sudo cp -f target/libjit*.so /usr/local/lib
 doc:
 	$(RUSTDOC) src/libjit/jit.rs -o doc -L target
+	$(RUSTDOC) src/libjit_macros/jit_macros.rs -o doc -L target
 update-doc: doc
 	rm -rf /tmp/doc
 	mv doc /tmp/doc
