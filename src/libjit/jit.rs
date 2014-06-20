@@ -38,44 +38,44 @@
 //! extern crate jit;
 //! use jit::{C_DECL, Context, Function, Type, Types, get_type};
 //! fn main() {
-//! 	let cx = Context::new();
-//! 	cx.build(|| {
-//! 		// build the IR
-//! 		let sig = get_type(fn(int, int) -> int);
-//! 		let func = Function::new(cx, sig);
-//! 		let x = func.get_param(0);
-//! 		let y = func.get_param(1);
-//! 		let result = func.insn_mul(&x, &y);
-//! 		func.insn_return(&result);
-//! 		/// run the IR
-//! 		func.compile();
-//! 		let rfunc:fn(int, int) -> int = func.closure2();
-//! 		assert_eq(rfunc(4, 5), 20)
-//! 	});
+//!     let cx = Context::new();
+//!     cx.build(|| {
+//!         // build the IR
+//!         let sig = get_type(fn(int, int) -> int);
+//!         let func = Function::new(cx, sig);
+//!         let x = func.get_param(0);
+//!         let y = func.get_param(1);
+//!         let result = func.insn_mul(&x, &y);
+//!         func.insn_return(&result);
+//!         /// run the IR
+//!         func.compile();
+//!         let rfunc:fn(int, int) -> int = func.closure2();
+//!         assert_eq(rfunc(4, 5), 20)
+//!     });
 //! }
 //! ```
 
 extern crate libc;
 use bindings::{
-	jit_init,
-	jit_uses_interpreter,
-	jit_supports_threads,
-	jit_supports_virtual_memory
+    jit_init,
+    jit_uses_interpreter,
+    jit_supports_threads,
+    jit_supports_virtual_memory
 };
 pub use bindings::{
-	jit_nint,
-	jit_nuint
+    jit_nint,
+    jit_nuint
 };
 pub use compile::Compile;
 pub use context::{
-	Context,
-	InContext,
-	Functions
+    Context,
+    InContext,
+    Functions
 };
 pub use function::{
-	ABI,
-	CDECL,
-	Function
+    ABI,
+    CDECL,
+    Function
 };
 pub use label::Label;
 pub use types::*;
@@ -86,74 +86,74 @@ pub use value::Value;
 /// Initialise the library and prepare for operations
 #[inline]
 pub fn init() -> () {
-	unsafe {
-		jit_init()
-	}
+    unsafe {
+        jit_init()
+    }
 }
 /// Check if the JIT is using a fallback interpreter
 #[inline]
 pub fn uses_interpreter() -> bool {
-	unsafe {
-		jit_uses_interpreter() != 0
-	}
+    unsafe {
+        jit_uses_interpreter() != 0
+    }
 }
 /// Check if the JIT supports theads
 #[inline]
 pub fn supports_threads() -> bool {
-	unsafe {
-		jit_supports_threads() != 0
-	}
+    unsafe {
+        jit_supports_threads() != 0
+    }
 }
 /// Check if the JIT supports virtual memory
 #[inline]
 pub fn supports_virtual_memory() -> bool {
-	unsafe {
-		jit_supports_virtual_memory() != 0
-	}
+    unsafe {
+        jit_supports_virtual_memory() != 0
+    }
 }
 macro_rules! native_ref(
-	($name:ident, $field:ident, $pointer_ty:ty) => (
-		#[deriving(PartialEq)]
-		pub struct $name {
-			$field: $pointer_ty
-		}
-		impl NativeRef for $name {
-			#[inline]
-			/// Convert to a native pointer
-			unsafe fn as_ptr(&self) -> $pointer_ty {
-				self.$field
-			}
-			#[inline]
-			/// Convert from a native pointer
-			unsafe fn from_ptr(ptr:$pointer_ty) -> $name {
-				$name {
-					$field: ptr
-				}
-			}
-		}
-	);
-	($name:ident, $field:ident, $pointer_ty:ty, $lifetime:ident) => (
-		#[deriving(PartialEq)]
-		pub struct $name<'a> {
-			$field: $pointer_ty,
-			marker: $lifetime<'a>
-		}
-		impl<'a> NativeRef for $name<'a> {
-			#[inline]
-			/// Convert to a native pointer
-			unsafe fn as_ptr(&self) -> $pointer_ty {
-				self.$field
-			}
-			#[inline]
-			/// Convert from a native pointer
-			unsafe fn from_ptr(ptr:$pointer_ty) -> $name {
-				$name {
-					$field: ptr,
-					marker: $lifetime::<'a>
-				}
-			}
-		}
-	)
+    ($name:ident, $field:ident, $pointer_ty:ty) => (
+        #[deriving(PartialEq)]
+        pub struct $name {
+            $field: $pointer_ty
+        }
+        impl NativeRef for $name {
+            #[inline]
+            /// Convert to a native pointer
+            unsafe fn as_ptr(&self) -> $pointer_ty {
+                self.$field
+            }
+            #[inline]
+            /// Convert from a native pointer
+            unsafe fn from_ptr(ptr:$pointer_ty) -> $name {
+                $name {
+                    $field: ptr
+                }
+            }
+        }
+    );
+    ($name:ident, $field:ident, $pointer_ty:ty, $lifetime:ident) => (
+        #[deriving(PartialEq)]
+        pub struct $name<'a> {
+            $field: $pointer_ty,
+            marker: $lifetime<'a>
+        }
+        impl<'a> NativeRef for $name<'a> {
+            #[inline]
+            /// Convert to a native pointer
+            unsafe fn as_ptr(&self) -> $pointer_ty {
+                self.$field
+            }
+            #[inline]
+            /// Convert from a native pointer
+            unsafe fn from_ptr(ptr:$pointer_ty) -> $name {
+                $name {
+                    $field: ptr,
+                    marker: $lifetime::<'a>
+                }
+            }
+        }
+    )
 )
 mod bindings;
 mod context;
