@@ -8,7 +8,7 @@ use bindings::{
 	jit_value_get_function,
 	jit_value_set_addressable
 };
-use compilable::Compilable;
+use compile::Compile;
 use context::{
 	Context,
 	InContext
@@ -137,6 +137,18 @@ impl<'a> Rem<Value<'a>, Value<'a>> for Value<'a> {
 	#[inline(always)]
 	fn rem(&self, other:&Value<'a>) -> Value<'a> {
 		self.get_function().insn_rem(self, other)
+	}
+}
+impl<'a> Shl<Value<'a>, Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn shl(&self, other:&Value<'a>) -> Value<'a> {
+		self.get_function().insn_shl(self, other)
+	}
+}
+impl<'a> Shr<Value<'a>, Value<'a>> for Value<'a> {
+	#[inline(always)]
+	fn shr(&self, other:&Value<'a>) -> Value<'a> {
+		self.get_function().insn_shr(self, other)
 	}
 }
 impl<'a> BitAnd<Value<'a>, Value<'a>> for Value<'a> {

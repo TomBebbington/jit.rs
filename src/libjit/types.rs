@@ -1,5 +1,5 @@
 use bindings::*;
-use compilable::Compilable;
+use compile::Compile;
 use function::ABI;
 use libc::c_uint;
 use std::kinds::marker::{
@@ -205,6 +205,6 @@ impl Type {
 }
 #[inline]
 /// Get the Rust type given as a type descriptor
-pub fn get<T:Compilable>() -> Type {
-	Compilable::jit_type(None::<T>)
+pub fn get<T:Compile>() -> Type {
+	Compile::jit_type(None::<T>)
 }

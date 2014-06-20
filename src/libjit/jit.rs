@@ -66,7 +66,7 @@ pub use bindings::{
 	jit_nint,
 	jit_nuint
 };
-pub use compilable::Compilable;
+pub use compile::Compile;
 pub use context::{
 	Context,
 	InContext,
@@ -157,7 +157,7 @@ macro_rules! native_ref(
 )
 mod bindings;
 mod context;
-mod compilable;
+mod compile;
 mod elf;
 mod function;
 mod label;

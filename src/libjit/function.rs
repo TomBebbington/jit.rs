@@ -3,7 +3,7 @@ use context::{
 	Context,
 	InContext
 };
-use compilable::Compilable;
+use compile::Compile;
 use label::Label;
 use types::Type;
 use util::NativeRef;
@@ -126,9 +126,9 @@ impl<'a> Function<'a> {
 		}
 	}
 	/// Make this function a candidate for recompilation
-	pub fn set_recompilable(&self) {
+	pub fn set_recompile(&self) {
 		unsafe {
-			jit_function_set_recompilable(self.as_ptr());
+			jit_function_set_recompile(self.as_ptr());
 		}
 	}
 	/// Compile the function
@@ -145,7 +145,7 @@ impl<'a> Function<'a> {
 		}
 	}
 	/// Make an instructional representation of a Rust value
-	pub fn insn_of<T:Compilable>(&self, val:&T) -> Value<'a> {
+	pub fn insn_of<T:Compile>(&self, val:&T) -> Value<'a> {
 		val.compile(self)
 	}
 	/// Notify libjit that this function has a catch block in it so it can prepare

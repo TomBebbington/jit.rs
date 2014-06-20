@@ -1,4 +1,4 @@
-use compilable::Compilable;
+use compile::Compile;
 use context::Context;
 use function::{CDECL, Function};
 use std::c_str::CString;
@@ -12,7 +12,7 @@ fn with_empty_func(cb:|&Context, &Function| -> ()) -> () {
 		cb(&ctx, &func)
 	})
 }
-fn test_compile<T:Compilable+Default>(kind:TypeKind) {
+fn test_compile<T:Compile+Default>(kind:TypeKind) {
 	with_empty_func(|_, func| {
 		let pval:T = Default::default();
 		let val = pval.compile(func);

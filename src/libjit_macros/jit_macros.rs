@@ -50,7 +50,7 @@ use syntax::ext::quote::rt::*;
 use syntax::parse::token::*;
 use syntax::owned_slice::OwnedSlice;
 
-fn gen_compilable(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<Item>|) {
+fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<Item>|) {
 	let fields:Vec<(Option<String>, P<Expr>)> = match item.node {
 		ItemStruct(def, _) if def.is_virtual => {
 			cx.span_err(pos, "Virtual structs cannot be JIT compiled");
@@ -68,7 +68,7 @@ fn gen_compilable(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|
 			}).collect()
 		},
 		_ => {
-			cx.span_err(pos, "Compilable can only be automatically implemented for structs");
+			cx.span_err(pos, "Compile can only be automatically implemented for structs");
 			fail!("...")
 		}
 	};
@@ -154,14 +154,14 @@ fn gen_compilable(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|
 			lifetimes: vec!(),
 			ty_params: OwnedSlice::empty()
 		},
-		Some(cx.trait_ref(cx.path_global(pos, vec!(cx.ident_of("jit"), cx.ident_of("Compilable"))))),
+		Some(cx.trait_ref(cx.path_global(pos, vec!(cx.ident_of("jit"), cx.ident_of("Compile"))))),
 		cx.ty_path(cx.path_ident(pos, item.ident), None),
 		methods
 	);
-	cb(cx.item(pos, cx.ident_of("Compilable"), vec!(), node));
+	cb(cx.item(pos, cx.ident_of("Compile"), vec!(), node));
 }
 
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(intern("jit_compilable"), ItemDecorator(gen_compilable));
+    reg.register_syntax_extension(intern("jit_compile"), ItemDecorator(gen_compile));
 }

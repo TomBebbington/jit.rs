@@ -45,13 +45,13 @@ use types::{
 use util::NativeRef;
 use std::default::Default;
 /// A type that can be compiled into a LibJIT representation
-pub trait Compilable {
+pub trait Compile {
 	/// Get a JIT representation of this value
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a>;
 	/// Get the JIT type repr of the value
 	fn jit_type(_:Option<Self>) -> Type;
 }
-impl Compilable for () {
+impl Compile for () {
 	fn compile(&self, func:&Function) -> Value {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_void_ptr, 0))
@@ -64,7 +64,7 @@ impl Compilable for () {
 		}
 	}
 }
-impl Compilable for f64 {
+impl Compile for f64 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_float64_constant(func.as_ptr(), jit_type_float64, *self) )
@@ -77,7 +77,7 @@ impl Compilable for f64 {
 		}
 	}
 }
-impl Compilable for f32 {
+impl Compile for f32 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_float32_constant(func.as_ptr(), jit_type_float32, *self) )
@@ -90,7 +90,7 @@ impl Compilable for f32 {
 		}
 	}
 }
-impl Compilable for int {
+impl Compile for int {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_long_constant(func.as_ptr(), jit_type_nint, *self as i64) )
@@ -103,7 +103,7 @@ impl Compilable for int {
 		}
 	}
 }
-impl Compilable for uint {
+impl Compile for uint {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_nuint, *self as jit_nint) )
@@ -116,7 +116,7 @@ impl Compilable for uint {
 		}
 	}
 }
-impl Compilable for i32 {
+impl Compile for i32 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_int, *self as jit_nint) )
@@ -129,7 +129,7 @@ impl Compilable for i32 {
 		}
 	}
 }
-impl Compilable for u32 {
+impl Compile for u32 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_uint, *self as jit_nint) )
@@ -142,7 +142,7 @@ impl Compilable for u32 {
 		}
 	}
 }
-impl Compilable for i16 {
+impl Compile for i16 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_short, *self as jit_nint) )
@@ -155,7 +155,7 @@ impl Compilable for i16 {
 		}
 	}
 }
-impl Compilable for u16 {
+impl Compile for u16 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_ushort, *self as jit_nint) )
@@ -168,7 +168,7 @@ impl Compilable for u16 {
 		}
 	}
 }
-impl Compilable for i8 {
+impl Compile for i8 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_sbyte, *self as jit_nint) )
@@ -181,7 +181,7 @@ impl Compilable for i8 {
 		}
 	}
 }
-impl Compilable for u8 {
+impl Compile for u8 {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_ubyte, *self as jit_nint) )
@@ -194,7 +194,7 @@ impl Compilable for u8 {
 		}
 	}
 }
-impl Compilable for bool {
+impl Compile for bool {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_sys_bool, *self as jit_nint) )
@@ -207,7 +207,7 @@ impl Compilable for bool {
 		}
 	}
 }
-impl Compilable for char {
+impl Compile for char {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		unsafe {
 			NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_sys_char, *self as jit_nint) )
@@ -220,9 +220,9 @@ impl Compilable for char {
 		}
 	}
 }
-impl<'t> Compilable for &'t str {
+impl<'t> Compile for &'t str {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-		let cstring_t = Compilable::jit_type(None::<&'t str>);
+		let cstring_t = Compile::jit_type(None::<&'t str>);
 		let strlen_i = (self.len() as i32).compile(func);
 		let bufptr = Value::new(func, &cstring_t);
 		func.insn_store(&bufptr, &func.insn_alloca(&strlen_i));
@@ -241,7 +241,7 @@ impl<'t> Compilable for &'t str {
 		}
 	}
 }
-impl Compilable for String {
+impl Compile for String {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		self.as_slice().compile(func)
 	}
@@ -252,7 +252,7 @@ impl Compilable for String {
 		}
 	}
 }
-impl<T:Compilable> Compilable for *T {
+impl<T:Compile> Compile for *T {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		func.insn_convert(&self.to_uint().compile(func), &::get_type::<T>(), false)
 	}
@@ -261,7 +261,7 @@ impl<T:Compilable> Compilable for *T {
 		Type::create_pointer(&::get_type::<T>())
 	}
 }
-impl<R:Compilable> Compilable for fn() -> R {
+impl<R:Compile> Compile for fn() -> R {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		func.insn_convert(&(self as *fn() -> R).to_uint().compile(func), &::get_type::<fn() -> R>(), false)
 	}
@@ -270,7 +270,7 @@ impl<R:Compilable> Compilable for fn() -> R {
 		Type::create_signature(CDECL, &::get_type::<R>(), &mut [])
 	}
 }
-impl<A:Compilable, R:Compilable> Compilable for fn(A) -> R {
+impl<A:Compile, R:Compile> Compile for fn(A) -> R {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		func.insn_convert(&(self as *fn(A) -> R).to_uint().compile(func), &::get_type::<fn(A) -> R>(), false)
 	}
@@ -279,7 +279,7 @@ impl<A:Compilable, R:Compilable> Compilable for fn(A) -> R {
 		Type::create_signature(CDECL, &::get_type::<R>(), &mut [&::get_type::<A>()])
 	}
 }
-impl<A:Compilable, B:Compilable, R:Compilable> Compilable for fn(A, B) -> R {
+impl<A:Compile, B:Compile, R:Compile> Compile for fn(A, B) -> R {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		func.insn_convert(&(self as *fn(A, B) -> R).to_uint().compile(func), &::get_type::<fn(A, B) -> R>(), false)
 	}
@@ -288,7 +288,7 @@ impl<A:Compilable, B:Compilable, R:Compilable> Compilable for fn(A, B) -> R {
 		Type::create_signature(CDECL, &::get_type::<R>(), &mut [&::get_type::<A>(), &::get_type::<B>()])
 	}
 }
-impl<A:Compilable, B:Compilable, C:Compilable, R:Compilable> Compilable for fn(A, B, C) -> R {
+impl<A:Compile, B:Compile, C:Compile, R:Compile> Compile for fn(A, B, C) -> R {
 	fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
 		func.insn_convert(&(self as *fn(A, B, C) -> R).to_uint().compile(func), &::get_type::<fn(A, B, C) -> R>(), false)
 	}
