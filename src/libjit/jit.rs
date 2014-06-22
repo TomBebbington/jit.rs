@@ -29,8 +29,9 @@
 #![crate_type = "rlib"]
 #![allow(raw_pointer_deriving, dead_code, non_camel_case_types)]
 #![deny(unnecessary_parens, unrecognized_lint, unreachable_code, unnecessary_allocation, unnecessary_typecast, unnecessary_allocation, uppercase_variables, unused_must_use)]
-#![feature(globs, macro_rules)]
+#![feature(globs, phase, macro_rules)]
 #![stable]
+
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
 //! 
@@ -56,6 +57,8 @@
 //! ```
 
 extern crate libc;
+#[phase(plugin)]
+extern crate bindgen;
 use bindings::{
     jit_init,
     jit_uses_interpreter,
