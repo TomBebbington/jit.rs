@@ -25,25 +25,8 @@ use function::{
     Function
 };
 use value::Value;
-use types::{
-    Type,
-    TypeKind,
-    Void,
-    Float32,
-    Float64,
-    NInt,
-    NUInt,
-    Int,
-    UInt,
-    Short,
-    UShort,
-    SByte,
-    UByte,
-    SysBool,
-    SysChar
-};
+use types::Type;
 use util::NativeRef;
-use std::default::Default;
 /// A type that can be compiled into a LibJIT representation
 pub trait Compile {
     /// Get a JIT representation of this value

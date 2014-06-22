@@ -13,7 +13,6 @@ use libc::{
     c_uint,
     c_void
 };
-use std::any::Any;
 use std::kinds::marker::ContravariantLifetime;
 use std::mem::transmute;
 use std::ptr::mut_null;
