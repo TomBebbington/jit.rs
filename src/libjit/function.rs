@@ -126,9 +126,9 @@ impl<'a> Function<'a> {
         }
     }
     /// Make this function a candidate for recompilation
-    pub fn set_recompile(&self) {
+    pub fn set_recompilable(&self) {
         unsafe {
-            jit_function_set_recompile(self.as_ptr());
+            jit_function_set_recompilable(self.as_ptr());
         }
     }
     /// Compile the function

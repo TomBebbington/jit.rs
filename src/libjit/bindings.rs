@@ -556,9 +556,9 @@ extern "C" {
      jit_function_t;
     pub fn jit_function_compile(func: jit_function_t) -> ::libc::c_int;
     pub fn jit_function_is_compiled(func: jit_function_t) -> ::libc::c_int;
-    pub fn jit_function_set_recompile(func: jit_function_t);
-    pub fn jit_function_clear_recompile(func: jit_function_t);
-    pub fn jit_function_is_recompile(func: jit_function_t) ->
+    pub fn jit_function_set_recompilable(func: jit_function_t);
+    pub fn jit_function_clear_recompilable(func: jit_function_t);
+    pub fn jit_function_is_recompilable(func: jit_function_t) ->
      ::libc::c_int;
     pub fn jit_function_compile_entry(func: jit_function_t,
                                       entry_point: *mut *mut ::libc::c_void)
