@@ -1,7 +1,6 @@
 use compile::Compile;
 use context::Context;
 use function::{CDECL, Function};
-use std::c_str::CString;
 use std::default::Default;
 use types::*;
 fn with_empty_func(cb:|&Context, &Function| -> ()) -> () {

@@ -8,7 +8,6 @@ use bindings::{
     jit_value_get_function,
     jit_value_set_addressable
 };
-use compile::Compile;
 use context::{
     Context,
     InContext
