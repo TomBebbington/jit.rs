@@ -13,6 +13,8 @@
 //! #[phase(syntax)]
 //! extern crate jit_macros;
 //! use jit::{C_DECL, Context, Function, Type, Types, get_type};
+//! 
+//! #[jit_compile]
 //! struct Pos {
 //!     x: f64,
 //!     y: f64,
@@ -25,10 +27,10 @@
 //!         let sig = get_type(fn() -> Pos);
 //!         let func = Function::new(cx, sig);
 //!         let result = Pos {
-//!                x: -10,
-//!                y: 0,
-//!                z: 10
-//!            }.compile();
+//!             x: -10,
+//!             y: 0,
+//!             z: 10
+//!         }.compile();
 //!         func.insn_return(&result);
 //!         /// run the IR
 //!         func.compile();
