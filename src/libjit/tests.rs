@@ -28,14 +28,13 @@ fn test_sqrt() {
     let sqrt_arg_ui = func.insn_convert(&sqrt_arg, &get::<uint>(), false);
     func.insn_return(&sqrt_arg_ui);
     func.compile();
-    unsafe {
-        let comp:fn(uint) -> uint = func.closure1();
-        assert_eq!(comp(64), 8);
-        assert_eq!(comp(16), 4);
-        assert_eq!(comp(9), 3);
-        assert_eq!(comp(4), 2);
-        assert_eq!(comp(1), 1);
-    }
+    func.with_closure1(|sqrt:fn(uint) -> uint| {
+        assert_eq!(sqrt(64), 8);
+        assert_eq!(sqrt(16), 4);
+        assert_eq!(sqrt(9), 3);
+        assert_eq!(sqrt(4), 2);
+        assert_eq!(sqrt(1), 1);
+    })
 }
 #[test]
 fn test_struct() {

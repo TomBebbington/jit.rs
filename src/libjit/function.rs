@@ -374,23 +374,31 @@ impl<'a> Function<'a> {
     }
     #[inline]
     /// Turn this function into a closure with 0 arguments
-    pub unsafe fn closure0<Z>(&self) -> fn<'a>() -> Z {
-        transmute(self.closure())
+    pub fn with_closure0<Y, Z>(&self, cb:|fn() -> Z| -> Y) -> Y {
+        unsafe {
+            cb(transmute(self.closure()))
+        }
     }
     #[inline]
     /// Turn this function into a closure with 1 argument
-    pub unsafe fn closure1<A, Z>(&self) -> fn<'a>(A) -> Z {
-        transmute(self.closure())
+    pub fn with_closure1<A, Y, Z>(&self, cb:|fn(A) -> Z| -> Y)  -> Y {
+        unsafe {
+            cb(transmute(self.closure()))
+        }
     }
     #[inline]
     /// Turn this function into a closure with 2 arguments
-    pub unsafe fn closure2<A, B, Z>(&self) -> fn<'a>(A, B) -> Z {
-        transmute(self.closure())
+    pub fn with_closure2<A, B, Y, Z>(&self, cb:|fn(A, B) -> Z| -> Y) -> Y {
+        unsafe {
+            cb(transmute(self.closure()))
+        }
     }
     #[inline]
     /// Turn this function into a closure with 3 arguments
-    pub unsafe fn closure3<A, B, C, Z>(&self) -> fn<'a>(A, B, C) -> Z {
-        transmute(self.closure())
+    pub fn with_closure3<A, B, C, Y, Z>(&self, cb:|fn(A, B, C) -> Z| -> Y) -> Y {
+        unsafe {
+            cb(transmute(self.closure()))
+        }
     }
     /// Make an instruction that converts the value to the type given
     pub fn insn_convert(&self, v: &Value<'a>, t:&Type, overflow_check:bool) -> Value<'a> {
