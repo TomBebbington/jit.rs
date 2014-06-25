@@ -23,13 +23,13 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#![crate_id = "jit#0.1.2"]
+#![crate_id = "jit"]
 #![comment = "LibJIT Bindings"]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
 #![allow(raw_pointer_deriving, dead_code, non_camel_case_types)]
 #![deny(unnecessary_parens, unrecognized_lint, unreachable_code, unnecessary_allocation, unnecessary_typecast, unnecessary_allocation, uppercase_variables, unused_must_use)]
-#![feature(unsafe_destructor, globs, macro_rules)]
+#![feature(globs, macro_rules)]
 #![stable]
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
