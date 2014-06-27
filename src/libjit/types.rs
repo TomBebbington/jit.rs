@@ -46,7 +46,7 @@ pub struct Fields<'a> {
 }
 impl<'a> Fields<'a> {
     #[inline]
-    fn new(ty:&'a Type) -> Fields<'a> {
+    fn new(ty:Type) -> Fields<'a> {
         unsafe {
             Fields {
                 _type: ty.as_ptr(),
@@ -100,7 +100,7 @@ pub struct Params<'a> {
 }
 impl<'a> Params<'a> {
     #[inline]
-    fn new(ty:&'a Type) -> Params<'a> {
+    fn new(ty:Type) -> Params<'a> {
         unsafe {
             Params {
                 _type: ty.as_ptr(),
@@ -257,12 +257,12 @@ impl Type {
     #[inline]
     /// Iterator over the type's fields
     pub fn iter_fields<'a>(&'a self) -> Fields<'a> {
-        Fields::new(self)
+        Fields::new(self.clone())
     }
     #[inline]
     /// Iterator over the function signature's parameters
     pub fn iter_params<'a>(&'a self) -> Params<'a> {
-        Params::new(self)
+        Params::new(self.clone())
     }
     #[inline]
     /// Find the field/parameter index for a particular name.
