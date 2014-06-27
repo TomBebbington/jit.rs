@@ -44,9 +44,19 @@ fn test_struct() {
     double_float_t.set_names(&["first", "second"]);
     assert_eq!(double_float_t.find_name("first"), 0);
     assert_eq!(double_float_t.find_name("second"), 1);
+    let fields:Vec<(String, Type)> = double_float_t.iter_fields().collect();
+    assert!(fields.as_slice() == [
+        ("first".into_string(), float_t.clone()),
+        ("second".into_string(), float_t)
+    ])
     let mut iter = double_float_t.iter_fields();
-    assert!(iter.next() == Some(("first".into_string(), float_t.clone())));
-    assert!(iter.next() == Some(("second".into_string(), float_t)));
+    let (size, _) = iter.size_hint();
+    assert_eq!(size, 2);
+    assert!({
+        let (field, _) = iter.nth(1).unwrap();
+        field.as_slice() == "second"
+    });
+    assert_eq!(iter.count(), 0);
 }
 #[test]
 fn test_compiles() {

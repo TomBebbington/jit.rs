@@ -76,6 +76,21 @@ impl<'a> Iterator<(String, Type)> for Fields<'a> {
             }
         }
     }
+    #[inline]
+    fn size_hint(&self) -> (uint, Option<uint>) {
+        ((self.length - self.index) as uint, None)
+    }
+    #[inline]
+    fn count(&mut self) -> uint {
+        let count = self.length - self.index;
+        self.index = self.length;
+        count as uint
+    }
+    #[inline]
+    fn nth(&mut self, n:uint) -> Option<(String, Type)> {
+        self.index += n as u32;
+        self.next()
+    }
 }
 /**
  * An object that represents a native system type.
