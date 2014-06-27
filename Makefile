@@ -1,22 +1,13 @@
 RUSTC ?= rustc
+CARGO ?= cargo
 RUSTDOC ?= rustdoc
-.PHONY: all build doc libjit libjit_macros update-doc clean
-all: build
-libjit:
-	mkdir -p target
-	cd target && $(RUSTC) ../src/libjit/jit.rs -L .
-libjit_macros:
-	mkdir -p target
-	cd target && $(RUSTC) ../src/libjit_macros/jit_macros.rs -L .
-test:
-	mkdir -p target
-	cd target && $(RUSTC) --test ../src/libjit/jit.rs -L . -o jit_tests
-build: libjit libjit_macros test
-install:
-	sudo cp -f target/libjit*.so /usr/local/lib
-doc:
-	$(RUSTDOC) src/libjit/jit.rs -o doc -L target
-	$(RUSTDOC) src/libjit_macros/jit_macros.rs -o doc -L target
+.PHONY: all build doc update-doc clean
+all: build doc
+build:
+	$(CARGO) build
+doc: build
+	rm -rf doc
+	$(RUSTDOC) src/libjit/jit.rs -o doc -L target/deps
 update-doc: doc
 	rm -rf /tmp/doc
 	mv doc /tmp/doc
@@ -28,4 +19,4 @@ update-doc: doc
 	-git push origin gh-pages
 	git checkout master
 clean:
-	rm -rf target/*
+	rm -rf target/*jit*
