@@ -92,6 +92,53 @@ impl<'a> Iterator<(String, Type)> for Fields<'a> {
         self.next()
     }
 }
+pub struct Params<'a> {
+    _type: jit_type_t,
+    index: c_uint,
+    length: c_uint,
+    marker: ContravariantLifetime<'a>
+}
+impl<'a> Params<'a> {
+    #[inline]
+    fn new(ty:&'a Type) -> Params<'a> {
+        unsafe {
+            Params {
+                _type: ty.as_ptr(),
+                index: 0 as c_uint,
+                length: jit_type_num_params(ty.as_ptr()),
+                marker: ContravariantLifetime::<'a>
+            }
+        }
+    }
+}
+impl<'a> Iterator<Type> for Params<'a> {
+    fn next(&mut self) -> Option<Type> {
+        let index = self.index;
+        self.index += 1;
+        if index < self.length {
+            Some(unsafe {
+                NativeRef::from_ptr(jit_type_get_param(self._type, index))
+            })
+        } else {
+            None
+        }
+    }
+    #[inline]
+    fn size_hint(&self) -> (uint, Option<uint>) {
+        ((self.length - self.index) as uint, None)
+    }
+    #[inline]
+    fn count(&mut self) -> uint {
+        let count = self.length - self.index;
+        self.index = self.length;
+        count as uint
+    }
+    #[inline]
+    fn nth(&mut self, n:uint) -> Option<Type> {
+        self.index += n as u32;
+        self.next()
+    }
+}
 /**
  * An object that represents a native system type.
  *
@@ -211,6 +258,11 @@ impl Type {
     /// Iterator over the type's fields
     pub fn iter_fields<'a>(&'a self) -> Fields<'a> {
         Fields::new(self)
+    }
+    #[inline]
+    /// Iterator over the function signature's parameters
+    pub fn iter_params<'a>(&'a self) -> Params<'a> {
+        Params::new(self)
     }
     #[inline]
     /// Find the field/parameter index for a particular name.
