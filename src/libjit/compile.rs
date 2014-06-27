@@ -99,6 +99,32 @@ impl Compile for uint {
         }
     }
 }
+impl Compile for i64 {
+    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
+        unsafe {
+            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_int, *self as jit_nint) )
+        }
+    }
+    #[inline]
+    fn jit_type(_:Option<i64>) -> Type {
+        unsafe {
+            NativeRef::from_ptr(jit_type_int)
+        }
+    }
+}
+impl Compile for u64 {
+    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
+        unsafe {
+            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_uint, *self as jit_nint) )
+        }
+    }
+    #[inline]
+    fn jit_type(_:Option<u64>) -> Type {
+        unsafe {
+            NativeRef::from_ptr(jit_type_uint)
+        }
+    }
+}
 impl Compile for i32 {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
         unsafe {
