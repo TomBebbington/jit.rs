@@ -12,29 +12,29 @@ use util::NativeRef;
 /// The types that a value can be
 bitflags!(
     flags TypeKind: i32 {
-        static Invalid        = -1,
-        static Void            = 0,
+        static Invalid      = -1,
+        static Void         = 0,
         static SByte        = 1,
         static UByte        = 2,
         static Short        = 3,
-        static UShort        = 4,
-        static Int            = 5,
+        static UShort       = 4,
+        static Int          = 5,
         static UInt         = 6,
         static NInt         = 7,
-        static NUInt         = 8,
+        static NUInt        = 8,
         static Long         = 9,
-        static ULong         = 10,
-        static Float32         = 11,
-        static Float64         = 12,
-        static NFloat         = 13,
+        static ULong        = 10,
+        static Float32      = 11,
+        static Float64      = 12,
+        static NFloat       = 13,
         static MaxPrimitive = 13,
-        static Struct         = 14,
-        static Union         = 15,
-        static Signature     = 16,
-        static Pointer         = 17,
-        static FirstTagged    = 32,
-        static SysBool         = 10009,
-        static SysChar         = 10010
+        static Struct       = 14,
+        static Union        = 15,
+        static Signature    = 16,
+        static Pointer      = 17,
+        static FirstTagged  = 32,
+        static SysBool      = 10009,
+        static SysChar      = 10010
     }
 )
 /// A type field iterator
