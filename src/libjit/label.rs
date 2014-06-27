@@ -23,7 +23,7 @@ impl<'a> Label<'a> {
     }
     /// Get the value of this label
     #[inline]
-    pub fn get_value(&self) -> jit_label_t {
+    pub fn get_value(&self) -> u64 {
         self._label
     }
 }
