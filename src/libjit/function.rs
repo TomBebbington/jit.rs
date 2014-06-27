@@ -84,7 +84,7 @@ impl<'a> Function<'a> {
      * This will protect the JIT's internal data structures within a
      * multi-threaded environment.
     */
-    pub fn new(context:&Context<'a>, signature: &Type) -> Function<'a> {
+    pub fn new(context:&Context<'a>, signature: Type) -> Function<'a> {
         unsafe {
             NativeRef::from_ptr(jit_function_create(context.as_ptr(), signature.as_ptr()))
         }
@@ -100,7 +100,7 @@ impl<'a> Function<'a> {
      * The front end is also responsible for ensuring that the nested function
      * is compiled before its parent.
     */
-    pub fn new_nested(context:&Context<'a>, signature: &Type, parent: &Function<'a>) -> Function<'a> {
+    pub fn new_nested(context:&Context<'a>, signature: Type, parent: &Function<'a>) -> Function<'a> {
         unsafe {
             NativeRef::from_ptr(jit_function_create_nested(context.as_ptr(), signature.as_ptr(), parent.as_ptr()))
         }
@@ -302,14 +302,14 @@ impl<'a> Function<'a> {
         }
     }
     /// Make an instruction that calls a function that has the signature given with some arguments
-    pub fn insn_call_indirect(&self, func:&Function<'a>, signature: &Type, args: &mut [&Value<'a>]) -> Value<'a> {
+    pub fn insn_call_indirect(&self, func:&Function<'a>, signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), transmute(args.as_mut_ptr()), args.len() as c_uint, JitCallNothrow as c_int))
         }
     }
     /// Make an instruction that calls a native function that has the signature given with some arguments
     fn insn_call_native<S:ToCStr>(&self, name: S, native_func: *mut c_void,
-                        signature: &Type, args: &mut [&Value<'a>]) -> Value<'a> {
+                        signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<jit_value_t> = args.iter().map(|arg| arg.as_ptr()).collect();
             name.with_c_str(|c_name|
@@ -322,31 +322,31 @@ impl<'a> Function<'a> {
     /// Make an instruction that calls a Rust function that has the signature given with no arguments and expects a return value
     pub fn insn_call_native0<R, S:ToCStr>(&self, name: S,
                                 native_func: fn() -> R,
-                                signature: &Type, args: &mut [&Value<'a>]) -> Value<'a> {
+                                signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
         self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
     }
     /// Make an instruction that calls a Rust function that has the signature given with a single argument and expects a return value
     pub fn insn_call_native1<A,R, S:ToCStr>(&self, name: S,
                                   native_func: fn(A) -> R,
-                                  signature: &Type, args: &mut [&Value<'a>]) -> Value<'a> {
+                                  signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
         self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
     }
     /// Make an instruction that calls a Rust function that has the signature given with two arguments and expects a return value
     pub fn insn_call_native2<A,B,R, S:ToCStr>(&self, name: S,
                                   native_func: fn(A, B) -> R,
-                                  signature: &Type, args: &mut [&Value<'a>]) -> Value<'a> {
+                                  signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
         self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
     }
     /// Make an instruction that calls a Rust function that has the signature given with three arguments and expects a return value
     pub fn insn_call_native3<A,B,C,R, S:ToCStr>(&self, name: S,
                                   native_func: fn(A, B, C) -> R,
-                                  signature: &Type, args: &mut [&Value<'a>]) -> Value<'a> {
+                                  signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
         self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
     }
     /// Make an instruction that calls a Rust function that has the signature given with four arguments and expects a return value
     pub fn insn_call_native4<A,B,C,D,R, S:ToCStr>(&self, name: S,
                                   native_func: fn(A, B, C, D) -> R,
-                                  signature: &Type, args: &mut [&Value<'a>]) -> Value<'a> {
+                                  signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
         self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
     }
     /// Make an instruction that allocates some space
@@ -401,7 +401,7 @@ impl<'a> Function<'a> {
         }
     }
     /// Make an instruction that converts the value to the type given
-    pub fn insn_convert(&self, v: &Value<'a>, t:&Type, overflow_check:bool) -> Value<'a> {
+    pub fn insn_convert(&self, v: &Value<'a>, t:Type, overflow_check:bool) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr(jit_insn_convert(self.as_ptr(), v.as_ptr(), t.as_ptr(), overflow_check as c_int))
         }

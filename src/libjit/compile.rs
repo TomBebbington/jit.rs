@@ -231,9 +231,9 @@ impl Compile for char {
 }
 impl<'t> Compile for &'t str {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        let cstring_t = Compile::jit_type(None::<&'t str>);
+        let cstring_t = ::get_type::<&'t str>();
         let strlen_i = (self.len() as i32).compile(func);
-        let bufptr = Value::new(func, &cstring_t);
+        let bufptr = Value::new(func, cstring_t);
         func.insn_store(&bufptr, &func.insn_alloca(&strlen_i));
         for i in range(0, self.len()) {
             let char_i = self.char_at(i).compile(func);
@@ -245,9 +245,7 @@ impl<'t> Compile for &'t str {
     }
     #[inline]
     fn jit_type(_:Option<&'t str>) -> Type {
-        unsafe {
-            Type::create_pointer(&NativeRef::from_ptr(jit_type_sys_char))
-        }
+        Type::create_pointer(::get_type::<char>())
     }
 }
 impl Compile for String {
@@ -257,52 +255,52 @@ impl Compile for String {
     #[inline]
     fn jit_type(_:Option<String>) -> Type {
         unsafe {
-            Type::create_pointer(&NativeRef::from_ptr(jit_type_sys_char))
+            Type::create_pointer(NativeRef::from_ptr(jit_type_sys_char))
         }
     }
 }
 impl<T:Compile> Compile for *T {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        func.insn_convert(&self.to_uint().compile(func), &::get_type::<T>(), false)
+        func.insn_convert(&self.to_uint().compile(func), ::get_type::<T>(), false)
     }
     #[inline]
     fn jit_type(_:Option<*T>) -> Type {
-        Type::create_pointer(&::get_type::<T>())
+        Type::create_pointer(::get_type::<T>())
     }
 }
 impl<R:Compile> Compile for fn() -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        func.insn_convert(&(self as *fn() -> R).to_uint().compile(func), &::get_type::<fn() -> R>(), false)
+        func.insn_convert(&(self as *fn() -> R).to_uint().compile(func), ::get_type::<fn() -> R>(), false)
     }
     #[inline]
     fn jit_type(_:Option<fn() -> R>) -> Type {
-        Type::create_signature(CDECL, &::get_type::<R>(), &mut [])
+        Type::create_signature(CDECL, ::get_type::<R>(), &mut [])
     }
 }
 impl<A:Compile, R:Compile> Compile for fn(A) -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        func.insn_convert(&(self as *fn(A) -> R).to_uint().compile(func), &::get_type::<fn(A) -> R>(), false)
+        func.insn_convert(&(self as *fn(A) -> R).to_uint().compile(func), ::get_type::<fn(A) -> R>(), false)
     }
     #[inline]
     fn jit_type(_:Option<fn(A) -> R>) -> Type {
-        Type::create_signature(CDECL, &::get_type::<R>(), &mut [&::get_type::<A>()])
+        Type::create_signature(CDECL, ::get_type::<R>(), &mut [::get_type::<A>()])
     }
 }
 impl<A:Compile, B:Compile, R:Compile> Compile for fn(A, B) -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        func.insn_convert(&(self as *fn(A, B) -> R).to_uint().compile(func), &::get_type::<fn(A, B) -> R>(), false)
+        func.insn_convert(&(self as *fn(A, B) -> R).to_uint().compile(func), ::get_type::<fn(A, B) -> R>(), false)
     }
     #[inline]
     fn jit_type(_:Option<fn(A, B) -> R>) -> Type {
-        Type::create_signature(CDECL, &::get_type::<R>(), &mut [&::get_type::<A>(), &::get_type::<B>()])
+        Type::create_signature(CDECL, ::get_type::<R>(), &mut [::get_type::<A>(), ::get_type::<B>()])
     }
 }
 impl<A:Compile, B:Compile, C:Compile, R:Compile> Compile for fn(A, B, C) -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        func.insn_convert(&(self as *fn(A, B, C) -> R).to_uint().compile(func), &::get_type::<fn(A, B, C) -> R>(), false)
+        func.insn_convert(&(self as *fn(A, B, C) -> R).to_uint().compile(func), ::get_type::<fn(A, B, C) -> R>(), false)
     }
     #[inline]
     fn jit_type(_:Option<fn(A, B, C) -> R>) -> Type {
-        Type::create_signature(CDECL, &::get_type::<R>(), &mut [&::get_type::<A>(), &::get_type::<B>(), &::get_type::<C>()])
+        Type::create_signature(CDECL, ::get_type::<R>(), &mut [::get_type::<A>(), ::get_type::<B>(), ::get_type::<C>()])
     }
 }

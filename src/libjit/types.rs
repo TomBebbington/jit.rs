@@ -190,7 +190,7 @@ impl Drop for Type {
 }
 impl Type {
     /// Create a type descriptor for a function signature.
-    pub fn create_signature(abi: ABI, return_type: &Type, params: &mut [&Type]) -> Type {
+    pub fn create_signature(abi: ABI, return_type: Type, params: &mut [Type]) -> Type {
         unsafe {
             let mut native_params:Vec<jit_type_t> = params.iter().map(|param| param.as_ptr()).collect();
             let signature = jit_type_create_signature(abi as jit_abi_t, return_type.as_ptr(), native_params.as_mut_ptr(), params.len() as c_uint, 1);
@@ -198,7 +198,7 @@ impl Type {
         }
     }
 
-    fn create_complex(fields: &mut [&Type], union: bool) -> Type {
+    fn create_complex(fields: &mut [Type], union: bool) -> Type {
         unsafe {
             let mut native_fields:Vec<jit_type_t> = fields.iter().map(|field| field.as_ptr()).collect();
             let f = if union { jit_type_create_union } else { jit_type_create_struct };
@@ -207,16 +207,16 @@ impl Type {
         }
     }
     /// Create a type descriptor for a structure.
-    pub fn create_struct(fields: &mut [&Type]) -> Type {
+    pub fn create_struct(fields: &mut [Type]) -> Type {
         Type::create_complex(fields, false)
     }
     /// Create a type descriptor for a union.
-    pub fn create_union(fields: &mut [&Type]) -> Type {
+    pub fn create_union(fields: &mut [Type]) -> Type {
         let inner = Type::create_complex(fields, true);
-        Type::create_struct(&mut [&get::<int>(), &inner])
+        Type::create_struct(&mut [get::<int>(), inner])
     }
     /// Create a type descriptor for a pointer to another type.
-    pub fn create_pointer(pointee: &Type) -> Type {
+    pub fn create_pointer(pointee: Type) -> Type {
         unsafe {
             let ptr = jit_type_create_pointer(pointee.as_ptr(), 1);
             NativeRef::from_ptr(ptr)

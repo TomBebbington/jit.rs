@@ -6,8 +6,8 @@ use types::*;
 fn with_empty_func(cb:|&Context, &Function| -> ()) -> () {
     let ctx = Context::new();
     ctx.build(|| {
-        let sig = Type::create_signature(CDECL, &get::<()>(), &mut[]);
-        let func = Function::new(&ctx, &sig);
+        let sig = Type::create_signature(CDECL, get::<()>(), &mut[]);
+        let func = Function::new(&ctx, sig);
         cb(&ctx, &func)
     })
 }
@@ -22,10 +22,10 @@ fn test_compile<T:Compile+Default>(kind:TypeKind) {
 fn test_sqrt() {
     let context = Context::new();
     let sig = get::<fn(uint) -> uint>();
-    let func = Function::new(&context, &sig);
+    let func = Function::new(&context, sig);
     let arg = func.get_param(0);
     let sqrt_arg = func.insn_sqrt(&arg);
-    let sqrt_arg_ui = func.insn_convert(&sqrt_arg, &get::<uint>(), false);
+    let sqrt_arg_ui = func.insn_convert(&sqrt_arg, get::<uint>(), false);
     func.insn_return(&sqrt_arg_ui);
     func.compile();
     func.with_closure1(|sqrt:fn(uint) -> uint| {
@@ -40,7 +40,7 @@ fn test_sqrt() {
 fn test_struct() {
     ::init();
     let float_t = get::<f64>();
-    let double_float_t = Type::create_struct(&mut [&float_t, &float_t]);
+    let double_float_t = Type::create_struct(&mut [float_t.clone(), float_t.clone()]);
     double_float_t.set_names(&["first", "second"]);
     assert_eq!(double_float_t.find_name("first"), 0);
     assert_eq!(double_float_t.find_name("second"), 1);

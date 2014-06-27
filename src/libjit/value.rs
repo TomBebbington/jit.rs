@@ -59,7 +59,7 @@ impl<'a> Value<'a> {
      * It will be converted into a function-wide local variable if
      * it is ever referenced from a different block.
      */
-    pub fn new(func:&Function<'a>, value_type:&Type) -> Value<'a> {
+    pub fn new(func:&Function<'a>, value_type:Type) -> Value<'a> {
         unsafe {
             let value = jit_value_create(func.as_ptr(), value_type.as_ptr());
             NativeRef::from_ptr(value)
