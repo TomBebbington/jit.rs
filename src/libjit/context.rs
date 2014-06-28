@@ -23,12 +23,10 @@ impl<'a> Context<'a> {
     pub fn build<R>(&self, cb: || -> R) -> R {
         unsafe {
             jit_context_build_start(self.as_ptr());
-        }
-        let rv = cb();
-        unsafe {
+            let rv = cb();
             jit_context_build_end(self.as_ptr());
+            rv
         }
-        rv
     }
     /// Iterate through all the functions in this context
     pub fn iter_funcs(&self) -> Functions<'a> {
