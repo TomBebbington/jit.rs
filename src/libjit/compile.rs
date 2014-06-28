@@ -1,6 +1,4 @@
 use bindings::{
-    jit_nint,
-
     jit_type_void_ptr,
     jit_type_ubyte,
     jit_type_sbyte,
@@ -12,6 +10,8 @@ use bindings::{
     jit_type_nint,
     jit_type_float32,
     jit_type_float64,
+    jit_type_long,
+    jit_type_ulong,
     jit_type_sys_bool,
     jit_type_sys_char,
 
@@ -24,6 +24,7 @@ use function::{
     CDECL,
     Function
 };
+use libc::c_long;
 use value::Value;
 use types::Type;
 use util::NativeRef;
@@ -47,188 +48,20 @@ impl Compile for () {
         }
     }
 }
-impl Compile for f64 {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_float64_constant(func.as_ptr(), jit_type_float64, *self) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<f64>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_float64)
-        }
-    }
-}
-impl Compile for f32 {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_float32_constant(func.as_ptr(), jit_type_float32, *self) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<f32>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_float32)
-        }
-    }
-}
-impl Compile for int {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_long_constant(func.as_ptr(), jit_type_nint, *self as i64) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<int>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_nint)
-        }
-    }
-}
-impl Compile for uint {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_nuint, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<uint>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_nuint)
-        }
-    }
-}
-impl Compile for i64 {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_int, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<i64>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_int)
-        }
-    }
-}
-impl Compile for u64 {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_uint, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<u64>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_uint)
-        }
-    }
-}
-impl Compile for i32 {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_int, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<i32>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_int)
-        }
-    }
-}
-impl Compile for u32 {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_uint, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<u32>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_uint)
-        }
-    }
-}
-impl Compile for i16 {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_short, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<i16>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_short)
-        }
-    }
-}
-impl Compile for u16 {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_ushort, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<u16>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_ushort)
-        }
-    }
-}
-impl Compile for i8 {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_sbyte, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<i8>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_sbyte)
-        }
-    }
-}
-impl Compile for u8 {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_ubyte, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<u8>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_ubyte)
-        }
-    }
-}
-impl Compile for bool {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_sys_bool, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<bool>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_sys_bool)
-        }
-    }
-}
-impl Compile for char {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_sys_char, *self as jit_nint) )
-        }
-    }
-    #[inline]
-    fn jit_type(_:Option<char>) -> Type {
-        unsafe {
-            NativeRef::from_ptr(jit_type_sys_char)
-        }
-    }
-}
+compile_prim!(f64, jit_type_float64, jit_value_create_float64_constant)
+compile_prim!(f32, jit_type_float32, jit_value_create_float32_constant)
+compile_prim!(int, jit_type_nint, jit_value_create_nint_constant, c_long)
+compile_prim!(uint,jit_type_nuint, jit_value_create_nint_constant, c_long)
+compile_prim!(i64, jit_type_long, jit_value_create_long_constant, c_long)
+compile_prim!(u64, jit_type_ulong, jit_value_create_long_constant, c_long)
+compile_prim!(i32, jit_type_int, jit_value_create_nint_constant, c_long)
+compile_prim!(u32, jit_type_uint, jit_value_create_nint_constant, c_long)
+compile_prim!(i16, jit_type_short, jit_value_create_nint_constant, c_long)
+compile_prim!(u16, jit_type_ushort, jit_value_create_nint_constant, c_long)
+compile_prim!(i8, jit_type_sbyte, jit_value_create_nint_constant, c_long)
+compile_prim!(u8, jit_type_ubyte, jit_value_create_nint_constant, c_long)
+compile_prim!(bool, jit_type_sys_bool, jit_value_create_nint_constant, c_long)
+compile_prim!(char, jit_type_sys_char, jit_value_create_nint_constant, c_long)
 impl<'t> Compile for &'t str {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
         let cstring_t = ::get_type::<&'t str>();
