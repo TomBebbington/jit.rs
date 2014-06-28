@@ -12,6 +12,7 @@ use std::c_str::ToCStr;
 pub struct Needed<'a> {
     _reader: jit_readelf_t,
     index: c_uint,
+    length: c_uint,
     marker: ContravariantLifetime<'a>
 }
 impl<'a> Needed<'a> {
@@ -21,6 +22,7 @@ impl<'a> Needed<'a> {
             Needed {
                 _reader: read.as_ptr(),
                 index: 0 as c_uint,
+                length: jit_readelf_num_needed(read.as_ptr()),
                 marker: ContravariantLifetime::<'a>
             }
         }
@@ -31,7 +33,7 @@ impl<'a> Iterator<String> for Needed<'a> {
         let index = self.index;
         self.index += 1;
         unsafe {
-            if index < jit_readelf_num_needed(self._reader) {
+            if index < self.length {
                 let c_name = jit_readelf_get_needed(self._reader, index);
                 let name = from_c_str(c_name);
                 Some(name)
@@ -39,6 +41,21 @@ impl<'a> Iterator<String> for Needed<'a> {
                 None
             }
         }
+    }
+    #[inline]
+    fn size_hint(&self) -> (uint, Option<uint>) {
+        ((self.length - self.index) as uint, None)
+    }
+    #[inline]
+    fn count(&mut self) -> uint {
+        let count = self.length - self.index;
+        self.index = self.length;
+        count as uint
+    }
+    #[inline]
+    fn nth(&mut self, n:uint) -> Option<String> {
+        self.index += n as u32;
+        self.next()
     }
 }
 /// An ELF binary reader
