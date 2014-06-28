@@ -74,18 +74,18 @@ impl<'a> Iterator<Function<'a>> for Functions<'a> {
         }
     }
     fn size_hint(&self) -> (uint, Option<uint>) {
-        unsafe {
-            let mut size : uint = 0;
-            let mut last = self.last;
-            loop {
-                last = jit_function_next(self.ctx, last);
-                if last.is_null() {
-                    break;
-                } else {
-                    size += 1;
-                }
+        let mut size : uint = 0;
+        let mut last = self.last;
+        loop {
+            last = unsafe {
+                jit_function_next(self.ctx, last)
+            };
+            if last.is_null() {
+                break;
+            } else {
+                size += 1;
             }
-            (size, Some(size))
         }
+        (size, Some(size))
     }
 }
