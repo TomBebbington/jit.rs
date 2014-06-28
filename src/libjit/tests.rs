@@ -44,17 +44,17 @@ fn test_struct() {
     double_float_t.set_names(&["first", "second"]);
     assert_eq!(double_float_t.find_name("first"), 0);
     assert_eq!(double_float_t.find_name("second"), 1);
-    let fields:Vec<(String, Type)> = double_float_t.iter_fields().collect();
+    let fields:Vec<String> = double_float_t.iter_fields().map(|field| field.get_name().unwrap()).collect();
     assert!(fields.as_slice() == [
-        ("first".into_string(), float_t.clone()),
-        ("second".into_string(), float_t)
-    ])
+        "first".into_string(),
+        "second".into_string()
+    ].as_slice())
     let mut iter = double_float_t.iter_fields();
     let (size, _) = iter.size_hint();
     assert_eq!(size, 2);
     assert!({
-        let (field, _) = iter.nth(1).unwrap();
-        field.as_slice() == "second"
+        let field:Option<String> = iter.nth(1).unwrap().get_name();
+        field.unwrap().as_slice() == "second"
     });
     assert_eq!(iter.count(), 0);
 }

@@ -37,6 +37,41 @@ bitflags!(
         static SysChar      = 10010
     }
 )
+/// A single field of a struct
+pub struct Field<'a> {
+    /// The index of the field
+    pub index: c_uint,
+    _type: jit_type_t,
+    marker: ContravariantLifetime<'a>
+}
+impl<'a> Field<'a> {
+    #[inline]
+    /// Get the field's name or none if it lacks one
+    pub fn get_name(&self) -> Option<String> {
+        unsafe {
+            let c_name = jit_type_get_name(self._type, self.index);
+            if c_name.is_null() {
+                None
+            } else {
+                Some(from_c_str(c_name))
+            }
+        }
+    }
+    #[inline]
+    /// Get the type of the field
+    pub fn get_type(&self) -> Type {
+        unsafe {
+            NativeRef::from_ptr(jit_type_get_field(self._type, self.index))
+        }
+    }
+    #[inline]
+    /// Get the offset of the field
+    pub fn get_offset(&self) -> uint {
+        unsafe {
+            jit_type_get_offset(self._type, self.index) as uint
+        }
+    }
+}
 /// A type field iterator
 pub struct Fields<'a> {
     _type: jit_type_t,
@@ -57,23 +92,18 @@ impl<'a> Fields<'a> {
         }
     }
 }
-impl<'a> Iterator<(String, Type)> for Fields<'a> {
-    fn next(&mut self) -> Option<(String, Type)> {
-        unsafe {
-            let index = self.index;
-            self.index += 1;
-            if index < self.length {
-                let name = from_c_str(jit_type_get_name(self._type, index));
-                let native_field = jit_type_get_field(self._type, index);
-                if name.len() == 0 || native_field.is_null() {
-                    None
-                } else {
-                    let field = NativeRef::from_ptr(native_field);
-                    Some((name, field))
-                }
-            } else {
-                None
-            }
+impl<'a> Iterator<Field<'a>> for Fields<'a> {
+    fn next(&mut self) -> Option<Field<'a>> {
+        let index = self.index;
+        self.index += 1;
+        if index < self.length {
+            Some(Field {
+                _type: self._type.clone(),
+                index: index,
+                marker: ContravariantLifetime::<'a>
+            })
+        } else {
+            None
         }
     }
     #[inline]
@@ -87,7 +117,7 @@ impl<'a> Iterator<(String, Type)> for Fields<'a> {
         count as uint
     }
     #[inline]
-    fn nth(&mut self, n:uint) -> Option<(String, Type)> {
+    fn nth(&mut self, n:uint) -> Option<Field<'a>> {
         self.index += n as u32;
         self.next()
     }
