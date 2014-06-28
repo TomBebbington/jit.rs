@@ -74,3 +74,12 @@ macro_rules! native_ref(
         }
     )
 )
+#[macro_export]
+macro_rules! jit(
+    ($ty:ty) => (
+        ::jit::get_type::<$ty>()
+    );
+    ($value:expr, $func:expr) => (
+        $value.compile($func)
+    );
+)
