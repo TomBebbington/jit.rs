@@ -12,6 +12,7 @@ pub struct Label<'a> {
     marker: ContravariantLifetime<'a>
 }
 impl<'a> Label<'a> {
+    #[inline(always)]
     /// Create a new label
     pub fn new(func:&Function<'a>) -> Label<'a> {
         unsafe {

@@ -76,6 +76,7 @@ impl<'a> InContext<'a> for Function<'a> {
     }
 }
 impl<'a> Function<'a> {
+    #[inline(always)]
     /**
      * Create a new function block and associate it with a JIT context.
      *

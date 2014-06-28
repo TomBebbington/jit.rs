@@ -16,7 +16,7 @@ pub struct Needed<'a> {
     marker: ContravariantLifetime<'a>
 }
 impl<'a> Needed<'a> {
-    #[inline]
+    #[inline(always)]
     fn new(read:&ReadElf<'a>) -> Needed<'a> {
         unsafe {
             Needed {

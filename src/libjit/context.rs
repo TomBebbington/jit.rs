@@ -13,6 +13,7 @@ use util::NativeRef;
 /// Holds all of the functions you have built and compiled. There can be multiple, but normally there is only one.
 native_ref!(Context, _context, jit_context_t, ContravariantLifetime)
 impl<'a> Context<'a> {
+    #[inline(always)]
     /// Create a new JIT Context
     pub fn new() -> Context<'a> {
         unsafe {
@@ -29,6 +30,7 @@ impl<'a> Context<'a> {
         }
     }
     /// Iterate through all the functions in this context
+    #[inline]
     pub fn iter_funcs(&self) -> Functions<'a> {
         Functions::new(self)
     }

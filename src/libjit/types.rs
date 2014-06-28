@@ -80,7 +80,7 @@ pub struct Fields<'a> {
     marker: ContravariantLifetime<'a>
 }
 impl<'a> Fields<'a> {
-    #[inline]
+    #[inline(always)]
     fn new(ty:Type) -> Fields<'a> {
         unsafe {
             Fields {
@@ -129,7 +129,7 @@ pub struct Params<'a> {
     marker: ContravariantLifetime<'a>
 }
 impl<'a> Params<'a> {
-    #[inline]
+    #[inline(always)]
     fn new(ty:Type) -> Params<'a> {
         unsafe {
             Params {
@@ -236,15 +236,18 @@ impl Type {
             NativeRef::from_ptr(ty)
         }
     }
+    #[inline(always)]
     /// Create a type descriptor for a structure.
     pub fn create_struct(fields: &mut [Type]) -> Type {
         Type::create_complex(fields, false)
     }
+    #[inline(always)]
     /// Create a type descriptor for a union.
     pub fn create_union(fields: &mut [Type]) -> Type {
         let inner = Type::create_complex(fields, true);
         Type::create_struct(&mut [get::<int>(), inner])
     }
+    #[inline(always)]
     /// Create a type descriptor for a pointer to another type.
     pub fn create_pointer(pointee: Type) -> Type {
         unsafe {

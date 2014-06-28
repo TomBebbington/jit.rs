@@ -53,6 +53,7 @@ impl<'a> InContext<'a> for Value<'a> {
     }
 }
 impl<'a> Value<'a> {
+    #[inline(always)]
     /**
      * Create a new value in the context of a function's current block.
      * The value initially starts off as a block-specific temporary.
