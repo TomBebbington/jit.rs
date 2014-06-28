@@ -31,7 +31,7 @@ pub enum CallFlags {
     /// When the function is tail-recursive
     JitCallTail = 4,
 }
-#[deriving(Clone, PartialEq)]
+#[deriving(PartialEq)]
 /**
  * A function persists for the lifetime of its containing context.
  * It initially starts life in the "building" state, where the user
