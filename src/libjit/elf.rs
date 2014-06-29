@@ -5,6 +5,7 @@ use libc::c_uint;
 use util::NativeRef;
 use std::fmt::Show;
 use std::kinds::marker::ContravariantLifetime;
+use std::mem::transmute;
 use std::iter::Iterator;
 use std::str::raw::from_c_str;
 use std::c_str::ToCStr;
@@ -90,9 +91,9 @@ impl<'a> ReadElf<'a> {
     }
     #[inline]
     /// Get a symbol in the ELF binary
-    pub unsafe fn get_symbol<T, S:ToCStr>(&self, symbol:S) -> *T {
+    pub unsafe fn get_symbol<T, S:ToCStr>(&self, symbol:S) -> &'a mut T {
         symbol.with_c_str(|c_symbol|
-            jit_readelf_get_symbol(self.as_ptr(), c_symbol) as *T
+            transmute(jit_readelf_get_symbol(self.as_ptr(), c_symbol))
         )
     }
     #[inline]

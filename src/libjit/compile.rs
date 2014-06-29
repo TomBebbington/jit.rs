@@ -67,6 +67,22 @@ compile_prim!(i8, jit_type_sbyte, jit_value_create_nint_constant, c_long)
 compile_prim!(u8, jit_type_ubyte, jit_value_create_nint_constant, c_long)
 compile_prim!(bool, jit_type_sys_bool, jit_value_create_nint_constant, c_long)
 compile_prim!(char, jit_type_sys_char, jit_value_create_nint_constant, c_long)
+impl<'a, T:Compile> Compile for &'a T {
+    #[inline]
+    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
+        unsafe {
+            NativeRef::from_ptr(jit_value_create_nint_constant(
+                func.as_ptr(),
+                jit!(T).as_ptr(),
+                (*self as *const T).to_uint() as c_long
+            ))
+        }
+    }
+    #[inline]
+    fn jit_type(_:Option<&'a T>) -> Type {
+        Type::create_pointer(jit!(T))
+    }
+}
 impl<'t> Compile for &'t str {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
         let cstring_t = jit!(&'t str);
@@ -83,7 +99,7 @@ impl<'t> Compile for &'t str {
     }
     #[inline]
     fn jit_type(_:Option<&'t str>) -> Type {
-            jit!(*char)
+        jit!(&char)
     }
 }
 impl Compile for String {
@@ -92,22 +108,22 @@ impl Compile for String {
     }
     #[inline]
     fn jit_type(_:Option<String>) -> Type {
-        jit!(*char)
+        jit!(&char)
     }
 }
-impl<T:Compile> Compile for *T {
+impl<T:Compile> Compile for *const T {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
         let ptr = self.to_uint().compile(func);
         func.insn_convert(&ptr, jit!(T), false)
     }
     #[inline]
-    fn jit_type(_:Option<*T>) -> Type {
+    fn jit_type(_:Option<*const T>) -> Type {
         Type::create_pointer(jit!(T))
     }
 }
 impl<R:Compile> Compile for fn() -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        let ptr = (self as *fn() -> R).to_uint().compile(func);
+        let ptr = (self as *const fn() -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn() -> R>(), false)
     }
     #[inline]
@@ -117,7 +133,7 @@ impl<R:Compile> Compile for fn() -> R {
 }
 impl<A:Compile, R:Compile> Compile for fn(A) -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        let ptr = (self as *fn(A) -> R).to_uint().compile(func);
+        let ptr = (self as *const fn(A) -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn(A) -> R>(), false)
     }
     #[inline]
@@ -127,7 +143,7 @@ impl<A:Compile, R:Compile> Compile for fn(A) -> R {
 }
 impl<A:Compile, B:Compile, R:Compile> Compile for fn(A, B) -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        let ptr = (self as *fn(A, B) -> R).to_uint().compile(func);
+        let ptr = (self as *const fn(A, B) -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn(A, B) -> R>(), false)
     }
     #[inline]
@@ -137,7 +153,7 @@ impl<A:Compile, B:Compile, R:Compile> Compile for fn(A, B) -> R {
 }
 impl<A:Compile, B:Compile, C:Compile, R:Compile> Compile for fn(A, B, C) -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        let ptr = (self as *fn(A, B, C) -> R).to_uint().compile(func);
+        let ptr = (self as *const fn(A, B, C) -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn(A, B, C) -> R>(), false)
     }
     #[inline]

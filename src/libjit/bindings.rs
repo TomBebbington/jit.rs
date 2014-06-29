@@ -40,7 +40,7 @@ pub type jit_on_demand_driver_func =
 pub type jit_size_t = ::libc::c_uint;
 pub type jit_memory_context_t = *mut ::libc::c_void;
 pub type jit_function_info_t = *mut ::libc::c_void;
-pub type jit_memory_manager_t = *Struct_jit_memory_manager;
+pub type jit_memory_manager_t = *const Struct_jit_memory_manager;
 pub struct Struct_jit_memory_manager {
     pub create: ::std::option::Option<extern "C" fn(arg1: jit_context_t)
                                           -> jit_memory_context_t>,
@@ -184,7 +184,7 @@ pub type Struct_jitom_method = ::libc::c_void;
 pub type jitom_method_t = *mut Struct_jitom_method;
 pub type jit_opcode_info_t = Struct_jit_opcode_info;
 pub struct Struct_jit_opcode_info {
-    pub name: *::libc::c_char,
+    pub name: *const ::libc::c_char,
     pub flags: ::libc::c_int,
 }
 pub type _jit_arch_frame_t = Struct__jit_arch_frame;
@@ -335,8 +335,8 @@ extern "C" {
     pub fn jit_type_get_offset(_type: jit_type_t, field_index: ::libc::c_uint)
      -> jit_nuint;
     pub fn jit_type_get_name(_type: jit_type_t, index: ::libc::c_uint) ->
-     *::libc::c_char;
-    pub fn jit_type_find_name(_type: jit_type_t, name: *::libc::c_char) ->
+     *const ::libc::c_char;
+    pub fn jit_type_find_name(_type: jit_type_t, name: *const ::libc::c_char) ->
      ::libc::c_uint;
     pub fn jit_type_num_params(_type: jit_type_t) -> ::libc::c_uint;
     pub fn jit_type_get_return(_type: jit_type_t) -> jit_type_t;
@@ -420,14 +420,14 @@ extern "C" {
     pub fn jit_debugger_get_self(dbg: jit_debugger_t) ->
      jit_debugger_thread_id_t;
     pub fn jit_debugger_get_thread(dbg: jit_debugger_t,
-                                   native_thread: *::libc::c_void) ->
+                                   native_thread: *const ::libc::c_void) ->
      jit_debugger_thread_id_t;
     pub fn jit_debugger_get_native_thread(dbg: jit_debugger_t,
                                           thread: jit_debugger_thread_id_t,
                                           native_thread: *mut ::libc::c_void)
      -> ::libc::c_int;
     pub fn jit_debugger_set_breakable(dbg: jit_debugger_t,
-                                      native_thread: *::libc::c_void,
+                                      native_thread: *const ::libc::c_void,
                                       flag: ::libc::c_int);
     pub fn jit_debugger_attach_self(dbg: jit_debugger_t,
                                     stop_immediately: ::libc::c_int);
@@ -461,15 +461,15 @@ extern "C" {
                                  hook: jit_debugger_hook_func) ->
      jit_debugger_hook_func;
     pub fn jit_readelf_open(readelf: *mut jit_readelf_t,
-                            filename: *::libc::c_char, flags: ::libc::c_int)
+                            filename: *const ::libc::c_char, flags: ::libc::c_int)
      -> ::libc::c_int;
     pub fn jit_readelf_close(readelf: jit_readelf_t);
-    pub fn jit_readelf_get_name(readelf: jit_readelf_t) -> *::libc::c_char;
+    pub fn jit_readelf_get_name(readelf: jit_readelf_t) -> *const ::libc::c_char;
     pub fn jit_readelf_get_symbol(readelf: jit_readelf_t,
-                                  name: *::libc::c_char) ->
+                                  name: *const ::libc::c_char) ->
      *mut ::libc::c_void;
     pub fn jit_readelf_get_section(readelf: jit_readelf_t,
-                                   name: *::libc::c_char,
+                                   name: *const ::libc::c_char,
                                    size: *mut jit_nuint) ->
      *mut ::libc::c_void;
     pub fn jit_readelf_get_section_by_type(readelf: jit_readelf_t,
@@ -480,30 +480,30 @@ extern "C" {
      *mut ::libc::c_void;
     pub fn jit_readelf_num_needed(readelf: jit_readelf_t) -> ::libc::c_uint;
     pub fn jit_readelf_get_needed(readelf: jit_readelf_t,
-                                  index: ::libc::c_uint) -> *::libc::c_char;
+                                  index: ::libc::c_uint) -> *const ::libc::c_char;
     pub fn jit_readelf_add_to_context(readelf: jit_readelf_t,
                                       context: jit_context_t);
     pub fn jit_readelf_resolve_all(context: jit_context_t,
                                    print_failures: ::libc::c_int) ->
      ::libc::c_int;
     pub fn jit_readelf_register_symbol(context: jit_context_t,
-                                       name: *::libc::c_char,
+                                       name: *const ::libc::c_char,
                                        value: *mut ::libc::c_void,
                                        after: ::libc::c_int) -> ::libc::c_int;
-    pub fn jit_writeelf_create(library_name: *::libc::c_char) ->
+    pub fn jit_writeelf_create(library_name: *const ::libc::c_char) ->
      jit_writeelf_t;
     pub fn jit_writeelf_destroy(writeelf: jit_writeelf_t);
     pub fn jit_writeelf_write(writeelf: jit_writeelf_t,
-                              filename: *::libc::c_char) -> ::libc::c_int;
+                              filename: *const ::libc::c_char) -> ::libc::c_int;
     pub fn jit_writeelf_add_function(writeelf: jit_writeelf_t,
                                      func: jit_function_t,
-                                     name: *::libc::c_char) -> ::libc::c_int;
+                                     name: *const ::libc::c_char) -> ::libc::c_int;
     pub fn jit_writeelf_add_needed(writeelf: jit_writeelf_t,
-                                   library_name: *::libc::c_char) ->
+                                   library_name: *const ::libc::c_char) ->
      ::libc::c_int;
     pub fn jit_writeelf_write_section(writeelf: jit_writeelf_t,
-                                      name: *::libc::c_char, _type: jit_int,
-                                      buf: *::libc::c_void,
+                                      name: *const ::libc::c_char, _type: jit_int,
+                                      buf: *const ::libc::c_void,
                                       len: ::libc::c_uint,
                                       discardable: ::libc::c_int) ->
      ::libc::c_int;
@@ -617,7 +617,7 @@ extern "C" {
     pub fn jit_insn_get_label(insn: jit_insn_t) -> jit_label_t;
     pub fn jit_insn_get_function(insn: jit_insn_t) -> jit_function_t;
     pub fn jit_insn_get_native(insn: jit_insn_t) -> *mut ::libc::c_void;
-    pub fn jit_insn_get_name(insn: jit_insn_t) -> *::libc::c_char;
+    pub fn jit_insn_get_name(insn: jit_insn_t) -> *const ::libc::c_char;
     pub fn jit_insn_get_signature(insn: jit_insn_t) -> jit_type_t;
     pub fn jit_insn_dest_is_value(insn: jit_insn_t) -> ::libc::c_int;
     pub fn jit_insn_label(func: jit_function_t, label: *mut jit_label_t) ->
@@ -777,7 +777,7 @@ extern "C" {
     pub fn jit_insn_convert(func: jit_function_t, value: jit_value_t,
                             _type: jit_type_t, overflow_check: ::libc::c_int)
      -> jit_value_t;
-    pub fn jit_insn_call(func: jit_function_t, name: *::libc::c_char,
+    pub fn jit_insn_call(func: jit_function_t, name: *const ::libc::c_char,
                          jit_func: jit_function_t, signature: jit_type_t,
                          args: *mut jit_value_t, num_args: ::libc::c_uint,
                          flags: ::libc::c_int) -> jit_value_t;
@@ -792,15 +792,15 @@ extern "C" {
                                          args: *mut jit_value_t,
                                          num_args: ::libc::c_uint,
                                          flags: ::libc::c_int) -> jit_value_t;
-    pub fn jit_insn_call_native(func: jit_function_t, name: *::libc::c_char,
+    pub fn jit_insn_call_native(func: jit_function_t, name: *const ::libc::c_char,
                                 native_func: *mut ::libc::c_void,
                                 signature: jit_type_t, args: *mut jit_value_t,
                                 num_args: ::libc::c_uint,
                                 flags: ::libc::c_int) -> jit_value_t;
     pub fn jit_insn_call_intrinsic(func: jit_function_t,
-                                   name: *::libc::c_char,
+                                   name: *const ::libc::c_char,
                                    intrinsic_func: *mut ::libc::c_void,
-                                   descriptor: *jit_intrinsic_descr_t,
+                                   descriptor: *const jit_intrinsic_descr_t,
                                    arg1: jit_value_t, arg2: jit_value_t) ->
      jit_value_t;
     pub fn jit_insn_incoming_reg(func: jit_function_t, value: jit_value_t,
@@ -1322,7 +1322,7 @@ extern "C" {
     pub fn jit_meta_destroy(list: *mut jit_meta_t);
     pub fn jitom_destroy_model(model: jit_objmodel_t);
     pub fn jitom_get_class_by_name(model: jit_objmodel_t,
-                                   name: *::libc::c_char) -> jitom_class_t;
+                                   name: *const ::libc::c_char) -> jitom_class_t;
     pub fn jitom_class_get_name(model: jit_objmodel_t, klass: jitom_class_t)
      -> *mut ::libc::c_char;
     pub fn jitom_class_get_modifiers(model: jit_objmodel_t,
@@ -1435,40 +1435,40 @@ extern "C" {
     pub fn jit_free(ptr: *mut ::libc::c_void);
     pub fn jit_memset(dest: *mut ::libc::c_void, ch: ::libc::c_int,
                       len: ::libc::c_uint) -> *mut ::libc::c_void;
-    pub fn jit_memcpy(dest: *mut ::libc::c_void, src: *::libc::c_void,
+    pub fn jit_memcpy(dest: *mut ::libc::c_void, src: *const ::libc::c_void,
                       len: ::libc::c_uint) -> *mut ::libc::c_void;
-    pub fn jit_memmove(dest: *mut ::libc::c_void, src: *::libc::c_void,
+    pub fn jit_memmove(dest: *mut ::libc::c_void, src: *const ::libc::c_void,
                        len: ::libc::c_uint) -> *mut ::libc::c_void;
-    pub fn jit_memcmp(s1: *::libc::c_void, s2: *::libc::c_void,
+    pub fn jit_memcmp(s1: *const ::libc::c_void, s2: *const ::libc::c_void,
                       len: ::libc::c_uint) -> ::libc::c_int;
-    pub fn jit_memchr(str: *::libc::c_void, ch: ::libc::c_int,
+    pub fn jit_memchr(str: *const ::libc::c_void, ch: ::libc::c_int,
                       len: ::libc::c_uint) -> *mut ::libc::c_void;
-    pub fn jit_strlen(str: *::libc::c_char) -> ::libc::c_uint;
-    pub fn jit_strcpy(dest: *mut ::libc::c_char, src: *::libc::c_char) ->
+    pub fn jit_strlen(str: *const ::libc::c_char) -> ::libc::c_uint;
+    pub fn jit_strcpy(dest: *mut ::libc::c_char, src: *const ::libc::c_char) ->
      *mut ::libc::c_char;
-    pub fn jit_strcat(dest: *mut ::libc::c_char, src: *::libc::c_char) ->
+    pub fn jit_strcat(dest: *mut ::libc::c_char, src: *const ::libc::c_char) ->
      *mut ::libc::c_char;
-    pub fn jit_strncpy(dest: *mut ::libc::c_char, src: *::libc::c_char,
+    pub fn jit_strncpy(dest: *mut ::libc::c_char, src: *const ::libc::c_char,
                        len: ::libc::c_uint) -> *mut ::libc::c_char;
-    pub fn jit_strdup(str: *::libc::c_char) -> *mut ::libc::c_char;
-    pub fn jit_strndup(str: *::libc::c_char, len: ::libc::c_uint) ->
+    pub fn jit_strdup(str: *const ::libc::c_char) -> *mut ::libc::c_char;
+    pub fn jit_strndup(str: *const ::libc::c_char, len: ::libc::c_uint) ->
      *mut ::libc::c_char;
-    pub fn jit_strcmp(str1: *::libc::c_char, str2: *::libc::c_char) ->
+    pub fn jit_strcmp(str1: *const ::libc::c_char, str2: *const ::libc::c_char) ->
      ::libc::c_int;
-    pub fn jit_strncmp(str1: *::libc::c_char, str2: *::libc::c_char,
+    pub fn jit_strncmp(str1: *const ::libc::c_char, str2: *const ::libc::c_char,
                        len: ::libc::c_uint) -> ::libc::c_int;
-    pub fn jit_stricmp(str1: *::libc::c_char, str2: *::libc::c_char) ->
+    pub fn jit_stricmp(str1: *const ::libc::c_char, str2: *const ::libc::c_char) ->
      ::libc::c_int;
-    pub fn jit_strnicmp(str1: *::libc::c_char, str2: *::libc::c_char,
+    pub fn jit_strnicmp(str1: *const ::libc::c_char, str2: *const ::libc::c_char,
                         len: ::libc::c_uint) -> ::libc::c_int;
-    pub fn jit_strchr(str: *::libc::c_char, ch: ::libc::c_int) ->
+    pub fn jit_strchr(str: *const ::libc::c_char, ch: ::libc::c_int) ->
      *mut ::libc::c_char;
-    pub fn jit_strrchr(str: *::libc::c_char, ch: ::libc::c_int) ->
+    pub fn jit_strrchr(str: *const ::libc::c_char, ch: ::libc::c_int) ->
      *mut ::libc::c_char;
-    pub fn jit_sprintf(str: *mut ::libc::c_char, format: *::libc::c_char, ...)
+    pub fn jit_sprintf(str: *mut ::libc::c_char, format: *const ::libc::c_char, ...)
      -> ::libc::c_int;
     pub fn jit_snprintf(str: *mut ::libc::c_char, len: ::libc::c_uint,
-                        format: *::libc::c_char, ...) -> ::libc::c_int;
+                        format: *const ::libc::c_char, ...) -> ::libc::c_int;
     pub fn jit_value_create(func: jit_function_t, _type: jit_type_t) ->
      jit_value_t;
     pub fn jit_value_create_nint_constant(func: jit_function_t,
@@ -1492,7 +1492,7 @@ extern "C" {
                                             const_value: jit_nfloat) ->
      jit_value_t;
     pub fn jit_value_create_constant(func: jit_function_t,
-                                     const_value: *jit_constant_t) ->
+                                     const_value: *const jit_constant_t) ->
      jit_value_t;
     pub fn jit_value_get_param(func: jit_function_t, param: ::libc::c_uint) ->
      jit_value_t;
@@ -1518,7 +1518,7 @@ extern "C" {
     pub fn jit_value_get_nfloat_constant(value: jit_value_t) -> jit_nfloat;
     pub fn jit_value_is_true(value: jit_value_t) -> ::libc::c_int;
     pub fn jit_constant_convert(result: *mut jit_constant_t,
-                                value: *jit_constant_t, _type: jit_type_t,
+                                value: *const jit_constant_t, _type: jit_type_t,
                                 overflow_check: ::libc::c_int) ->
      ::libc::c_int;
     pub fn jit_vmem_init();
