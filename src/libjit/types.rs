@@ -287,9 +287,13 @@ impl Type {
     }
     #[inline]
     /// Find the field/parameter index for a particular name.
-    pub fn find_name<T:ToCStr>(&self, name:T) -> uint {
+    pub fn find_name<'b, T:ToCStr>(&'b self, name:T) -> Field<'b> {
         name.with_c_str(|c_name| unsafe {
-            jit_type_find_name(self.as_ptr(), c_name) as uint
+            Field {
+                index: jit_type_find_name(self.as_ptr(), c_name),
+                _type: self.as_ptr(),
+                marker: ContravariantLifetime::<'b>
+            }
         })
     }
 }
