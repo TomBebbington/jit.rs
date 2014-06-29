@@ -94,8 +94,29 @@ macro_rules! jit(
         structure.set_names(&[$($name),+]);
         structure
     });
-    ($value:expr, $func:expr) => (
-        $value.compile($func)
+    ($func:expr, return) => (
+        $func.insn_default_return()
+    );
+    ($func:expr, return $value:expr) => (
+        $func.insn_return($value)
+    );
+    ($func:expr, call($call:expr,
+        $($arg:expr),+
+    )) => (
+        $func.insn_call(None::<String>, $call, None, [$($arg),+].as_mut_slice())
+    );
+    ($func:expr, jump_table($value:expr,
+        $($label:ident),+
+    )) => (
+    let ($($label),+) = {
+        $(let $label:Label = Label::new($func);)+
+        $func.insn_jump_table($value, [
+            $($label),+
+        ].as_mut_slice());
+        ($($label),+)
+    });
+    ($func:expr, $value:expr) => (
+        $func.insn_of(&$value)
     );
     ($ty:ty) => (
         get_type::<$ty>()

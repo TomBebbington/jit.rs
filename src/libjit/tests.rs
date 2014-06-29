@@ -3,6 +3,7 @@ use context::Context;
 use function::{CDECL, Function};
 use label::Label;
 use std::default::Default;
+use std::io::stdio::println;
 use test::Bencher;
 use types::*;
 use get_type = types::get;
@@ -99,21 +100,19 @@ fn bench_jit_fib(b: &mut Bencher) {
     let sig = get::<fn(uint) -> uint>();
     let fib = Function::new(&context, sig.clone());
     let n = fib.get_param(0);
-    let mut table = Vec::from_fn(4, |_| Label::new(&fib));
-    println!("Making jump table");
-    fib.insn_jump_table(&n, table.as_mut_slice());
-    println!("Returning");
-    fib.insn_return({
-        println!("n - 1");
-        let n_m1 = n - 1u.compile(&fib);
-        println!("fib_m1");
-        let fib_m1 = fib.insn_call(None::<String>, &fib, None, [&n_m1].as_mut_slice());
-        println!("fib_m2");
-        let n_m2 = n - 2u.compile(&fib);
-        let fib_m2 = fib.insn_call(None::<String>, &fib, None, [&n_m2].as_mut_slice());
-        println!("Adding");
-        &(fib_m1 + fib_m2)
-    });
+    println("Making jump table");
+    jit!(&fib, jump_table(&n, zero, one, two, three));
+    println("n - 1");
+    let n_m1 = n - jit!(fib, 1u);
+    println("fib_m1");
+    let fib_m1 = jit!(fib, call(&fib, &n_m1));
+    println("fib_m2");
+    let n_m2 = n - jit!(fib, 2u);
+    let fib_m2 = jit!(fib, call(&fib, &n_m2));
+    println("Adding");
+    let result = fib_m1 + fib_m2;
+    println("Returning");
+    jit!(fib, return &result);
     fib.compile();
     fib.with_closure1(|fib:fn(uint) -> uint| {
         b.iter(|| {
