@@ -41,16 +41,18 @@
 //!     let cx = Context::new();
 //!     cx.build(|| {
 //!         // build the IR
-//!         let sig = get_type(fn(int, int) -> int);
+//!         let sig = get_type::<fn(int, int) -> int>();
 //!         let func = Function::new(cx, sig);
 //!         let x = func.get_param(0);
 //!         let y = func.get_param(1);
 //!         let result = func.insn_mul(&x, &y);
 //!         func.insn_return(&result);
-//!         /// run the IR
+//!         /// compile the IR into machine code
 //!         func.compile();
-//!         let rfunc:fn(int, int) -> int = func.closure2();
-//!         assert_eq(rfunc(4, 5), 20)
+//!         /// get the machine code as a function
+//!         func.with_closure2(|mul:fn(int, int) -> int| {
+//!             assert_eq!(mul(4, 5), 20);
+//!         });
 //!     });
 //! }
 //! ```
