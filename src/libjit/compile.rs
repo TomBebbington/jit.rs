@@ -67,6 +67,25 @@ compile_prim!(i8, jit_type_sbyte, jit_value_create_nint_constant, c_long)
 compile_prim!(u8, jit_type_ubyte, jit_value_create_nint_constant, c_long)
 compile_prim!(bool, jit_type_sys_bool, jit_value_create_nint_constant, c_long)
 compile_prim!(char, jit_type_sys_char, jit_value_create_nint_constant, c_long)
+impl<'s> Compile for &'s str {
+    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
+        let cstring_t = jit!(&'s str);
+        let strlen_i = self.len().compile(func);
+        let bufptr = Value::new(func, cstring_t);
+        func.insn_store(&bufptr, &func.insn_alloca(&strlen_i));
+        for i in range(0, self.len()) {
+            let char_i = self.char_at(i).compile(func);
+            func.insn_store_relative(&bufptr, i as int, &char_i);
+        }
+        let null_term = '\0'.compile(func);
+        func.insn_store_relative(&bufptr, self.len() as int, &null_term);
+        bufptr
+    }
+    #[inline]
+    fn jit_type(_:Option<&'s str>) -> Type {
+        jit!(&char)
+    }
+}
 impl<'a, T:Compile> Compile for &'a T {
     #[inline]
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
@@ -81,25 +100,6 @@ impl<'a, T:Compile> Compile for &'a T {
     #[inline]
     fn jit_type(_:Option<&'a T>) -> Type {
         Type::create_pointer(jit!(T))
-    }
-}
-impl<'t> Compile for &'t str {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        let cstring_t = jit!(&'t str);
-        let strlen_i = self.len().compile(func);
-        let bufptr = Value::new(func, cstring_t);
-        func.insn_store(&bufptr, &func.insn_alloca(&strlen_i));
-        for i in range(0, self.len()) {
-            let char_i = self.char_at(i).compile(func);
-            func.insn_store_relative(&bufptr, i as int, &char_i);
-        }
-        let null_term = '\0'.compile(func);
-        func.insn_store_relative(&bufptr, self.len() as int, &null_term);
-        bufptr
-    }
-    #[inline]
-    fn jit_type(_:Option<&'t str>) -> Type {
-        jit!(&char)
     }
 }
 impl Compile for String {
