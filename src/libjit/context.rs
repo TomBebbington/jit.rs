@@ -72,7 +72,7 @@ impl<'a> Iterator<Function<'a>> for Functions<'a> {
         unsafe {
             let native_next = jit_function_next(self.ctx, self.last);
             self.last = native_next;
-            NativeRef::from_ptr_opt(native_next)
+            NativeRef::from_ptr(native_next)
         }
     }
     fn size_hint(&self) -> (uint, Option<uint>) {
