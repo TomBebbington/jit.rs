@@ -298,14 +298,15 @@ impl<'a> Function<'a> {
     /// Make an instruction that branches to a label in the table
     pub fn insn_jump_table(&self, value: &Value<'a>, labels: &mut [Label<'a>]) {
         unsafe {
-            let labels_ptr: *mut jit_label_t = transmute(labels.as_mut_ptr());
-            jit_insn_jump_table(self.as_ptr(), value.as_ptr(), labels_ptr, labels.len() as u32);
+            let mut native_labels: Vec<jit_label_t> = labels.iter().map(|label| label.get_value() as jit_label_t).collect();
+            jit_insn_jump_table(self.as_ptr(), value.as_ptr(), native_labels.as_mut_ptr(), labels.len() as c_uint);
         }
     }
     /// Make an instruction that calls a function that has the signature given with some arguments
     pub fn insn_call_indirect(&self, func:&Function<'a>, signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), transmute(args.as_mut_ptr()), args.len() as c_uint, JitCallNothrow as c_int))
+            let mut native_args:Vec<jit_value_t> = args.iter().map(|arg| arg.as_ptr()).collect();
+            NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JitCallNothrow as c_int))
         }
     }
     /// Make an instruction that calls a native function that has the signature given with some arguments
