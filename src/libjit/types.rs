@@ -258,12 +258,12 @@ impl Type {
             jit_type_get_size(self.as_ptr()) as uint
         }
     }
+    #[inline]
     /**
      * Get a value that indicates the kind of this type. This allows
      * callers to quickly classify a type to determine how it should
      * be handled further.
      */
-    #[inline]
     pub fn get_kind(&self) -> TypeKind {
         unsafe {
             TypeKind::from_bits(jit_type_get_kind(self.as_ptr())).unwrap()
@@ -283,12 +283,12 @@ impl Type {
             jit_type_set_names(self.as_ptr(), native_names.as_ptr() as *mut *mut i8, names.len() as u32) != 0
         }
     }
-    #[inline]
+    #[inline(always)]
     /// Iterator over the type's fields
     pub fn iter_fields<'a>(&'a self) -> Fields<'a> {
         Fields::new(self.clone())
     }
-    #[inline]
+    #[inline(always)]
     /// Iterator over the function signature's parameters
     pub fn iter_params<'a>(&'a self) -> Params<'a> {
         Params::new(self.clone())
@@ -301,7 +301,7 @@ impl Type {
         })
     }
 }
-#[inline]
+#[inline(always)]
 /// Get the Rust type given as a type descriptor
 pub fn get<T:Compile>() -> Type {
     Compile::jit_type(None::<T>)
