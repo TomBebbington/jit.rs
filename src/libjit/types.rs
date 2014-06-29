@@ -169,13 +169,10 @@ impl<'a> Iterator<Type> for Params<'a> {
         self.next()
     }
 }
-/**
- * An object that represents a native system type.
- *
- * Each `Type` represents a basic system type,
- * be it a primitive, a struct, a union, a pointer, or a function signature.
- * The library uses this information to lay out values in memory.
-*/
+/// An object that represents a native system type.
+/// Each `Type` represents a basic system type, be it a primitive, a struct, a
+/// union, a pointer, or a function signature. The library uses this information
+/// to lay out values in memory.
 #[deriving(PartialEq)]
 pub struct Type {
     _type: jit_type_t,
@@ -206,12 +203,9 @@ impl Clone for Type {
 #[unsafe_destructor]
 impl Drop for Type {
     #[inline]
-    /**
-     * Free a type descriptor by decreasing its reference count.
-     *
-     * This function is save to use on pre-defined types, which
-     * are never actually freed.
-     */
+    /// Free a type descriptor by decreasing its reference count.
+    /// This function is safe to use on pre-defined types, which are never
+    /// actually freed.
     fn drop(&mut self) {
         unsafe {
             jit_type_free(self.as_ptr());
@@ -259,11 +253,9 @@ impl Type {
         }
     }
     #[inline]
-    /**
-     * Get a value that indicates the kind of this type. This allows
-     * callers to quickly classify a type to determine how it should
-     * be handled further.
-     */
+    /// Get a value that indicates the kind of this type. This allows
+    /// callers to quickly classify a type to determine how it should
+    /// be handled further.
     pub fn get_kind(&self) -> TypeKind {
         unsafe {
             TypeKind::from_bits(jit_type_get_kind(self.as_ptr())).unwrap()

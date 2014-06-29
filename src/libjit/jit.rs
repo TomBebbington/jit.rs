@@ -56,7 +56,8 @@
 //!     });
 //! }
 //! ```
-
+#[cfg(test)]
+extern crate test;
 extern crate libc;
 use bindings::{
     jit_init,

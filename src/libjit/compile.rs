@@ -28,6 +28,7 @@ use libc::c_long;
 use value::Value;
 use types::Type;
 use util::NativeRef;
+use get_type = types::get;
 /// A type that can be compiled into a LibJIT representation
 pub trait Compile {
     /// Get a JIT representation of this value
@@ -38,7 +39,11 @@ pub trait Compile {
 impl Compile for () {
     fn compile(&self, func:&Function) -> Value {
         unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(func.as_ptr(), jit_type_void_ptr, 0))
+            NativeRef::from_ptr(jit_value_create_nint_constant(
+                func.as_ptr(),
+                jit_type_void_ptr,
+                0
+            ))
         }
     }
     #[inline]
@@ -64,7 +69,7 @@ compile_prim!(bool, jit_type_sys_bool, jit_value_create_nint_constant, c_long)
 compile_prim!(char, jit_type_sys_char, jit_value_create_nint_constant, c_long)
 impl<'t> Compile for &'t str {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        let cstring_t = ::get_type::<&'t str>();
+        let cstring_t = jit!(&'t str);
         let strlen_i = self.len().compile(func);
         let bufptr = Value::new(func, cstring_t);
         func.insn_store(&bufptr, &func.insn_alloca(&strlen_i));
@@ -78,7 +83,7 @@ impl<'t> Compile for &'t str {
     }
     #[inline]
     fn jit_type(_:Option<&'t str>) -> Type {
-        Type::create_pointer(::get_type::<char>())
+            jit!(*char)
     }
 }
 impl Compile for String {
@@ -87,53 +92,56 @@ impl Compile for String {
     }
     #[inline]
     fn jit_type(_:Option<String>) -> Type {
-        unsafe {
-            Type::create_pointer(NativeRef::from_ptr(jit_type_sys_char))
-        }
+        jit!(*char)
     }
 }
 impl<T:Compile> Compile for *T {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        func.insn_convert(&self.to_uint().compile(func), ::get_type::<T>(), false)
+        let ptr = self.to_uint().compile(func);
+        func.insn_convert(&ptr, jit!(T), false)
     }
     #[inline]
     fn jit_type(_:Option<*T>) -> Type {
-        Type::create_pointer(::get_type::<T>())
+        Type::create_pointer(jit!(T))
     }
 }
 impl<R:Compile> Compile for fn() -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        func.insn_convert(&(self as *fn() -> R).to_uint().compile(func), ::get_type::<fn() -> R>(), false)
+        let ptr = (self as *fn() -> R).to_uint().compile(func);
+        func.insn_convert(&ptr, get_type::<fn() -> R>(), false)
     }
     #[inline]
     fn jit_type(_:Option<fn() -> R>) -> Type {
-        Type::create_signature(CDECL, ::get_type::<R>(), &mut [])
+        Type::create_signature(CDECL, jit!(R), &mut [])
     }
 }
 impl<A:Compile, R:Compile> Compile for fn(A) -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        func.insn_convert(&(self as *fn(A) -> R).to_uint().compile(func), ::get_type::<fn(A) -> R>(), false)
+        let ptr = (self as *fn(A) -> R).to_uint().compile(func);
+        func.insn_convert(&ptr, get_type::<fn(A) -> R>(), false)
     }
     #[inline]
     fn jit_type(_:Option<fn(A) -> R>) -> Type {
-        Type::create_signature(CDECL, ::get_type::<R>(), &mut [::get_type::<A>()])
+        Type::create_signature(CDECL, jit!(R), &mut [jit!(A)])
     }
 }
 impl<A:Compile, B:Compile, R:Compile> Compile for fn(A, B) -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        func.insn_convert(&(self as *fn(A, B) -> R).to_uint().compile(func), ::get_type::<fn(A, B) -> R>(), false)
+        let ptr = (self as *fn(A, B) -> R).to_uint().compile(func);
+        func.insn_convert(&ptr, get_type::<fn(A, B) -> R>(), false)
     }
     #[inline]
     fn jit_type(_:Option<fn(A, B) -> R>) -> Type {
-        Type::create_signature(CDECL, ::get_type::<R>(), &mut [::get_type::<A>(), ::get_type::<B>()])
+        Type::create_signature(CDECL, jit!(R), &mut [jit!(A), jit!(B)])
     }
 }
 impl<A:Compile, B:Compile, C:Compile, R:Compile> Compile for fn(A, B, C) -> R {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        func.insn_convert(&(self as *fn(A, B, C) -> R).to_uint().compile(func), ::get_type::<fn(A, B, C) -> R>(), false)
+        let ptr = (self as *fn(A, B, C) -> R).to_uint().compile(func);
+        func.insn_convert(&ptr, get_type::<fn(A, B, C) -> R>(), false)
     }
     #[inline]
     fn jit_type(_:Option<fn(A, B, C) -> R>) -> Type {
-        Type::create_signature(CDECL, ::get_type::<R>(), &mut [::get_type::<A>(), ::get_type::<B>(), ::get_type::<C>()])
+        Type::create_signature(CDECL, jit!(R), &mut [jit!(A), jit!(B), jit!(C)])
     }
 }

@@ -32,13 +32,10 @@ pub enum CallFlags {
     JitCallTail = 4,
 }
 #[deriving(PartialEq)]
-/**
- * A function persists for the lifetime of its containing context.
- * It initially starts life in the "building" state, where the user
- * constructs instructions that represents the function body.
- * Once the build process is complete, the user calls
- * `function.compile()` to convert it into its executable form.
-*/
+/// A function persists for the lifetime of its containing context. It initially
+/// starts life in the "building" state, where the user constructs instructions
+/// that represents the function body. Once the build process is complete, the
+/// user calls `function.compile()` to convert it into its executable form.
 pub struct Function<'a> {
     _func: jit_function_t,
     marker: ContravariantLifetime<'a>
@@ -77,49 +74,67 @@ impl<'a> InContext<'a> for Function<'a> {
 }
 impl<'a> Function<'a> {
     #[inline(always)]
-    /**
-     * Create a new function block and associate it with a JIT context.
-     *
-     * It is recommended that you call `Function::new` and
-     * `function.compile()` in the closure you give to `context.build(...)`.
-     * This will protect the JIT's internal data structures within a
-     * multi-threaded environment.
-    */
-    pub fn new(context:&'a Context<'a>, signature: Type) -> Function<'a> {
+    /// Create a new function block and associate it with a JIT context.
+    /// It is recommended that you call `Function::new` and `function.compile()`
+    /// in the closure you give to `context.build(...)`.
+    /// 
+    /// This will protect the JIT's internal data structures within a
+    /// multi-threaded environment.
+    pub fn new(context:&'a Context<'a>,
+               signature:Type) -> Function<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_function_create(context.as_ptr(), signature.as_ptr()))
+            NativeRef::from_ptr(jit_function_create(
+                context.as_ptr(),
+                signature.as_ptr()
+            ))
         }
     }
-    /**
-     * Create a new function block and associate it with a JIT context.
-     * In addition, this function is nested inside the specified
-     * *parent* function and is able to access its parent's
-     * (and grandparent's) local variables.
-     *
-     * The front end is responsible for ensuring that the nested function can
-     * never be called by anyone except its parent and sibling functions.
-     * The front end is also responsible for ensuring that the nested function
-     * is compiled before its parent.
-    */
-    pub fn new_nested(context:&'a Context<'a>, signature: Type, parent: &'a Function<'a>) -> Function<'a> {
+    /// Create a new function block and associate it with a JIT context.
+    /// In addition, this function is nested inside the specified *parent*
+    /// function and is able to access its parent's (and grandparent's) local
+    /// variables.
+    /// 
+    /// The front end is responsible for ensuring that the nested function can
+    /// never be called by anyone except its parent and sibling functions.
+    /// The front end is also responsible for ensuring that the nested function
+    /// is compiled before its parent.
+    pub fn new_nested(context:&'a Context<'a>,
+                        signature: Type,
+                        parent: &'a Function<'a>) -> Function<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_function_create_nested(context.as_ptr(), signature.as_ptr(), parent.as_ptr()))
+            NativeRef::from_ptr(jit_function_create_nested(
+                context.as_ptr(),
+                signature.as_ptr(),
+                parent.as_ptr()
+            ))
         }
     }
-    fn insn_binop(&self, v1: &Value<'a>, v2: &Value<'a>, f: unsafe extern "C" fn(function: jit_function_t, v1: jit_value_t, v2: jit_value_t) -> jit_value_t) -> Value<'a> {
+    fn insn_binop(&self,
+                    v1: &Value<'a>, v2: &Value<'a>,
+                    f: unsafe extern "C" fn(
+                        jit_function_t,
+                        jit_value_t,
+                        jit_value_t) -> jit_value_t)
+                    -> Value<'a> {
         unsafe {
             let value = f(self.as_ptr(), v1.as_ptr(), v2.as_ptr());
             NativeRef::from_ptr(value)
         }
     }
 
-    fn insn_unop(&self, value: &Value<'a>, f: unsafe extern "C" fn(function: jit_function_t, value: jit_value_t) -> jit_value_t) -> Value<'a> {
+    fn insn_unop(&self,
+                    value: &Value<'a>,
+                    f: unsafe extern "C" fn(
+                        jit_function_t,
+                        jit_value_t) -> jit_value_t)
+                    -> Value<'a> {
         unsafe {
             let value = f(self.as_ptr(), value.as_ptr());
             NativeRef::from_ptr(value)
         }
     }
-    /// Set the optimization level of the function, where the bigger the level, the more effort should be spent optimising
+    /// Set the optimization level of the function, where the bigger the level,
+    /// the more effort should be spent optimising
     pub fn set_optimization_level(&self, level: c_uint) {
         unsafe {
             jit_function_set_optimization_level(self.as_ptr(), level);
@@ -148,7 +163,8 @@ impl<'a> Function<'a> {
     pub fn insn_of<T:Compile>(&self, val:&T) -> Value<'a> {
         val.compile(self)
     }
-    /// Notify libjit that this function has a catch block in it so it can prepare
+    /// Notify the function building process that this function has a catch block
+    /// in it. This must be called before any code that is part of a try block
     pub fn insn_uses_catcher(&self) {
         unsafe {
             jit_insn_uses_catcher(self.as_ptr());
@@ -188,15 +204,18 @@ impl<'a> Function<'a> {
     pub fn insn_div(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
         self.insn_binop(v1, v2, jit_insn_div)
     }
-    /// Make an instruction that finds the remainder when the first number is divided by the second
+    /// Make an instruction that finds the remainder when the first number is
+    /// divided by the second
     pub fn insn_rem(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
         self.insn_binop(v1, v2, jit_insn_rem)
     }
-    /// Make an instruction that checks if the first value is lower than or equal to the second
+    /// Make an instruction that checks if the first value is lower than or
+    /// equal to the second
     pub fn insn_leq(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
         self.insn_binop(v1, v2, jit_insn_le)
     }
-    /// Make an instruction that checks if the first value is greater than or equal to the second
+    /// Make an instruction that checks if the first value is greater than or
+    /// equal to the second
     pub fn insn_geq(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
         self.insn_binop(v1, v2, jit_insn_ge)
     }
@@ -232,15 +251,18 @@ impl<'a> Function<'a> {
     pub fn insn_not(&self, value: &Value<'a>) -> Value<'a> {
         self.insn_unop(value, jit_insn_not)
     }
-    /// Make an instruction that performs a left bitwise shift on the first value by the second value
+    /// Make an instruction that performs a left bitwise shift on the first
+    /// value by the second value
     pub fn insn_shl(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
         self.insn_binop(v1, v2, jit_insn_shl)
     }
-    /// Make an instruction that performs a right bitwise shift on the first value by the second value
+    /// Make an instruction that performs a right bitwise shift on the first
+    /// value by the second value
     pub fn insn_shr(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
         self.insn_binop(v1, v2, jit_insn_shr)
     }
-    /// Make an instruction that performs a right bitwise shift on the first value by the second value
+    /// Make an instruction that performs a right bitwise shift on the first
+    /// value by the second value
     pub fn insn_ushr(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
         self.insn_binop(v1, v2, jit_insn_ushr)
     }
@@ -265,8 +287,10 @@ impl<'a> Function<'a> {
             jit_insn_store(self.as_ptr(), dest.as_ptr(), src.as_ptr());
         }
     }
-    /// Make an instruction that stores a value a certain offset away from a destination value
-    pub fn insn_store_relative(&self, dest: &Value<'a>, offset: int, src: &Value<'a>) {
+    /// Make an instruction that stores a value a certain offset away from a
+    /// destination value
+    pub fn insn_store_relative(&self, dest: &Value<'a>, offset: int, 
+                               src: &Value<'a>) {
         unsafe {
             jit_insn_store_relative(self.as_ptr(), dest.as_ptr(), offset as jit_nint, src.as_ptr());
         }
@@ -286,38 +310,71 @@ impl<'a> Function<'a> {
     /// Make an instruction that branches to a certain label if the value is true
     pub fn insn_branch_if(&self, value: &Value<'a>, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_branch_if(self.as_ptr(), value.as_ptr(), &mut (label.get_value() as jit_label_t));
+            let mut native_label = label.get_value() as jit_label_t;
+            jit_insn_branch_if(self.as_ptr(), value.as_ptr(), &mut native_label);
         }
     }
     /// Make an instruction that branches to a certain label if the value is false
     pub fn insn_branch_if_not(&self, value: &Value<'a>, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_branch_if_not(self.as_ptr(), value.as_ptr(), &mut (label.get_value() as jit_label_t));
+            let mut native_label = label.get_value() as jit_label_t;
+            jit_insn_branch_if_not(self.as_ptr(), value.as_ptr(), &mut native_label);
         }
     }
     /// Make an instruction that branches to a label in the table
     pub fn insn_jump_table(&self, value: &Value<'a>, labels: &mut [Label<'a>]) {
         unsafe {
-            let mut native_labels: Vec<jit_label_t> = labels.iter().map(|label| label.get_value() as jit_label_t).collect();
-            jit_insn_jump_table(self.as_ptr(), value.as_ptr(), native_labels.as_mut_ptr(), labels.len() as c_uint);
+            let mut native_labels: Vec<_> = labels.iter()
+                .map(|label|label.get_value() as jit_label_t).collect();
+            jit_insn_jump_table(
+                self.as_ptr(),
+                value.as_ptr(),
+                native_labels.as_mut_ptr(),
+                labels.len() as c_uint
+            );
         }
     }
-    /// Make an instruction that calls a function that has the signature given with some arguments
-    pub fn insn_call_indirect(&self, func:&Function<'a>, signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
+    /// Call the function, which may or may not be translated yet
+    pub fn insn_call<S:ToCStr>(&self, name:Option<S>, func:&Function<'a>,
+                                sig:Option<Type>,
+                                args: &mut [&Value<'a>]) -> Value<'a> {
+        unsafe {
+            let mut native_args:Vec<jit_value_t> = args.iter().map(|arg| arg.as_ptr()).collect();
+            let cb = |c_name|
+                NativeRef::from_ptr(jit_insn_call(self.as_ptr(), c_name, func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JitCallNothrow as c_int));
+            match name {
+                Some(ref name) => name.with_c_str(cb),
+                None => cb(RawPtr::null())
+            }
+        }
+    }
+    /// Make an instruction that calls a function that has the signature given
+    /// with some arguments
+    pub fn insn_call_indirect(&self, func:&Function<'a>, signature: Type,
+                               args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<jit_value_t> = args.iter().map(|arg| arg.as_ptr()).collect();
             NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JitCallNothrow as c_int))
         }
     }
-    /// Make an instruction that calls a native function that has the signature given with some arguments
-    fn insn_call_native<S:ToCStr>(&self, name: Option<S>, native_func: *mut c_void,
-                        signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
+    /// Make an instruction that calls a native function that has the signature
+    /// given with some arguments
+    fn insn_call_native<S:ToCStr>(&self, name: Option<S>,
+                        native_func: *mut c_void, signature: Type,
+                        args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
-            let mut native_args:Vec<jit_value_t> = args.iter().map(|arg| arg.as_ptr()).collect();
+            let mut native_args:Vec<jit_value_t> = args.iter()
+                .map(|arg| arg.as_ptr()).collect();
             let cb = |c_name| {
-                NativeRef::from_ptr(jit_insn_call_native(self.as_ptr(), c_name, native_func,
-                                            signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint,
-                                            JitCallNothrow as c_int))
+                NativeRef::from_ptr(jit_insn_call_native(
+                    self.as_ptr(),
+                    c_name,
+                    native_func,
+                    signature.as_ptr(),
+                    native_args.as_mut_ptr(),
+                    args.len() as c_uint,
+                    JitCallNothrow as c_int
+                ))
             };
             match name {
                 Some(ref name) => name.with_c_str(cb),
@@ -325,35 +382,50 @@ impl<'a> Function<'a> {
             }
         }
     }
-    /// Make an instruction that calls a Rust function that has the signature given with no arguments and expects a return value
+    /// Make an instruction that calls a Rust function that has the signature
+    /// given with no arguments and expects a return value
     pub fn insn_call_native0<R, S:ToCStr>(&self, name: Option<S>,
                                 native_func: fn() -> R,
-                                signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
-        self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
+                                signature: Type,
+                                args: &mut [&Value<'a>]) -> Value<'a> {
+        let func_ptr = unsafe { transmute(native_func) };
+        self.insn_call_native(name, func_ptr, signature, args)
     }
-    /// Make an instruction that calls a Rust function that has the signature given with a single argument and expects a return value
+    /// Make an instruction that calls a Rust function that has the signature
+    /// given with a single argument and expects a return value
     pub fn insn_call_native1<A,R, S:ToCStr>(&self, name: Option<S>,
                                   native_func: fn(A) -> R,
-                                  signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
-        self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
+                                  signature: Type,
+                                  args: &mut [&Value<'a>]) -> Value<'a> {
+        let func_ptr = unsafe { transmute(native_func) };
+        self.insn_call_native(name, func_ptr, signature, args)
     }
-    /// Make an instruction that calls a Rust function that has the signature given with two arguments and expects a return value
+    /// Make an instruction that calls a Rust function that has the signature
+    /// given with two arguments and expects a return value
     pub fn insn_call_native2<A,B,R, S:ToCStr>(&self, name: Option<S>,
                                   native_func: fn(A, B) -> R,
-                                  signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
-        self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
+                                  signature: Type,
+                                  args: &mut [&Value<'a>]) -> Value<'a> {
+        let func_ptr = unsafe { transmute(native_func) };
+        self.insn_call_native(name, func_ptr, signature, args)
     }
-    /// Make an instruction that calls a Rust function that has the signature given with three arguments and expects a return value
+    /// Make an instruction that calls a Rust function that has the signature
+    /// given with three arguments and expects a return value
     pub fn insn_call_native3<A,B,C,R, S:ToCStr>(&self, name: Option<S>,
                                   native_func: fn(A, B, C) -> R,
-                                  signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
-        self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
+                                  signature: Type,
+                                  args: &mut [&Value<'a>]) -> Value<'a> {
+        let func_ptr = unsafe { transmute(native_func) };
+        self.insn_call_native(name, func_ptr, signature, args)
     }
-    /// Make an instruction that calls a Rust function that has the signature given with four arguments and expects a return value
+    /// Make an instruction that calls a Rust function that has the signature
+    /// given with four arguments and expects a return value
     pub fn insn_call_native4<A,B,C,D,R, S:ToCStr>(&self, name: Option<S>,
                                   native_func: fn(A, B, C, D) -> R,
-                                  signature: Type, args: &mut [&Value<'a>]) -> Value<'a> {
-        self.insn_call_native(name, unsafe { transmute(native_func) }, signature, args)
+                                  signature: Type,
+                                  args: &mut [&Value<'a>]) -> Value<'a> {
+        let func_ptr = unsafe { transmute(native_func) };
+        self.insn_call_native(name, func_ptr, signature, args)
     }
     /// Make an instruction that allocates some space
     pub fn insn_alloca(&self, size: &Value<'a>) -> Value<'a> {
@@ -407,9 +479,15 @@ impl<'a> Function<'a> {
         }
     }
     /// Make an instruction that converts the value to the type given
-    pub fn insn_convert(&self, v: &Value<'a>, t:Type, overflow_check:bool) -> Value<'a> {
+    pub fn insn_convert(&self, v: &Value<'a>,
+                            t:Type, overflow_check:bool) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_insn_convert(self.as_ptr(), v.as_ptr(), t.as_ptr(), overflow_check as c_int))
+            NativeRef::from_ptr(jit_insn_convert(
+                self.as_ptr(),
+                v.as_ptr(),
+                t.as_ptr(),
+                overflow_check as c_int
+            ))
         }
     }
     /// Make an instruction that gets the inverse cosine of the number given
@@ -440,7 +518,8 @@ impl<'a> Function<'a> {
     pub fn insn_cosh(&self, v: &Value<'a>) -> Value<'a>{
         self.insn_unop(v, jit_insn_cosh)
     }
-    /// Make an instruction that gets the natural logarithm rased to the power of the number
+    /// Make an instruction that gets the natural logarithm rased to the power
+    /// of the number
     pub fn insn_exp(&self, v: &Value<'a>) -> Value<'a>{
         self.insn_unop(v, jit_insn_exp)
     }
@@ -456,15 +535,18 @@ impl<'a> Function<'a> {
     pub fn insn_log10(&self, v: &Value<'a>) -> Value<'a>{
         self.insn_unop(v, jit_insn_log10)
     }
-    /// Make an instruction the gets the result of raising the first value to the power of the second value
+    /// Make an instruction the gets the result of raising the first value to
+    /// the power of the second value
     pub fn insn_pow(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
         self.insn_binop(v1, v2, jit_insn_pow)
     }
-    /// Make an instruction the gets the result of rounding the value to the nearest integer
+    /// Make an instruction the gets the result of rounding the value to the
+    /// nearest integer
     pub fn insn_rint(&self, v: &Value<'a>) -> Value<'a>{
         self.insn_unop(v, jit_insn_rint)
     }
-    /// Make an instruction the gets the result of rounding the value to the nearest integer
+    /// Make an instruction the gets the result of rounding the value to the
+    /// nearest integer
     pub fn insn_round(&self, v: &Value<'a>) -> Value<'a>{
         self.insn_unop(v, jit_insn_round)
     }

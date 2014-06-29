@@ -10,7 +10,8 @@ use bindings::{
 use function::Function;
 use std::kinds::marker::ContravariantLifetime;
 use util::NativeRef;
-/// Holds all of the functions you have built and compiled. There can be multiple, but normally there is only one.
+/// Holds all of the functions you have built and compiled. There can be
+/// multiple, but normally there is only one.
 native_ref!(Context, _context, jit_context_t, ContravariantLifetime)
 impl<'a> Context<'a> {
     #[inline(always)]

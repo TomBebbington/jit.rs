@@ -17,13 +17,10 @@ use std::kinds::marker::ContravariantLifetime;
 use std::ops::*;
 use types::Type;
 use util::NativeRef;
-/**
- * Values form the backbone of the storage system in `libjit`.
- * Every value in the system, be it a constant, a local variable,
- * or a temporary result, is represented by an object of type
- * `Value`. The JIT then allocates registers or memory
- * locations to the values as appropriate.
-*/
+/// Values form the backbone of the storage system in `libjit`.
+/// Every value in the system, be it a constant, a local variable, or a
+/// temporary result, is represented by an object of type `Value`. The JIT then
+/// allocates registers or memory locations to the values as appropriate.
 #[deriving(Clone, PartialEq)]
 pub struct Value<'a> {
     _value: jit_value_t,
@@ -54,12 +51,10 @@ impl<'a> InContext<'a> for Value<'a> {
 }
 impl<'a> Value<'a> {
     #[inline(always)]
-    /**
-     * Create a new value in the context of a function's current block.
-     * The value initially starts off as a block-specific temporary.
-     * It will be converted into a function-wide local variable if
-     * it is ever referenced from a different block.
-     */
+    /// Create a new value in the context of a function's current block.
+    /// The value initially starts off as a block-specific temporary. It will be
+    /// converted into a function-wide local variable if it is ever referenced
+    /// from a different block.
     pub fn new(func:&Function<'a>, value_type:Type) -> Value<'a> {
         unsafe {
             let value = jit_value_create(func.as_ptr(), value_type.as_ptr());
@@ -80,10 +75,8 @@ impl<'a> Value<'a> {
             NativeRef::from_ptr(jit_value_get_function(self.as_ptr()))
         }
     }
-    /**
-     * Determine if a value is temporary.  i.e. its scope extends
-     * over a single block within its function.
-     */
+    /// Determine if a value is temporary.  i.e. its scope extends over a single
+    /// block within its function.
     #[inline]
     pub fn is_temp(&self) -> bool {
         unsafe {
@@ -97,11 +90,10 @@ impl<'a> Value<'a> {
             jit_value_is_addressable(self.as_ptr()) != 0
         }
     }
-    /* Set a flag on a value to indicate that it is addressable.
-     * This should be used when you want to take the address of a
-     * value (e.g. `&variable` in Rust/C).  The value is guaranteed
-     * to not be stored in a register across a function call.
-     */
+    /// Set a flag on a value to indicate that it is addressable.
+    /// This should be used when you want to take the address of a value (e.g. 
+    /// `&variable` in Rust/C).  The value is guaranteed to not be stored in a
+    /// register across a function call.
     #[inline]
     pub fn set_addressable(&self) -> () {
         unsafe {

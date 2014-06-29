@@ -76,10 +76,28 @@ macro_rules! native_ref(
 )
 #[macro_export]
 macro_rules! jit(
-    ($ty:ty) => (
-        ::jit::get_type::<$ty>()
-    );
+    (struct {
+        $($name:expr: $ty:ty),+
+    }) => ({
+        let structure = Type::create_struct([
+            $(get_type::<$ty>()),+
+        ].as_mut_slice());
+        structure.set_names(&[$($name),+]);
+        structure
+    });
+    (union {
+        $($name:expr: $ty:ty),+
+    }) => ({
+        let structure = Type::create_union([
+            $(get_type::<$ty>()),+
+        ].as_mut_slice());
+        structure.set_names(&[$($name),+]);
+        structure
+    });
     ($value:expr, $func:expr) => (
         $value.compile($func)
+    );
+    ($ty:ty) => (
+        get_type::<$ty>()
     );
 )
