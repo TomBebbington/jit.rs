@@ -1,5 +1,5 @@
 use libc::c_void;
-use std::c_str::ToCStr;
+use std::c_str::{CString, ToCStr};
 use std::mem::transmute;
 use std::ptr::RawPtr;
 use std::str::raw::from_c_str;
@@ -44,5 +44,19 @@ impl NativeRef for String {
     #[inline(always)]
     unsafe fn with_ptr<R>(&self, cb:|*mut c_void| -> R) -> R {
         self.with_c_str(transmute(cb))
+    }
+}
+impl NativeRef for CString {
+    #[inline(always)]
+    unsafe fn as_ptr(&self) -> *mut c_void {
+        transmute(self.with_ref(|ptr| ptr))
+    }
+    #[inline(always)]
+    unsafe fn from_ptr(ptr:*mut c_void) -> CString {
+        CString::new(transmute(ptr), true)
+    }
+    #[inline(always)]
+    unsafe fn with_ptr<R>(&self, cb:|*mut c_void| -> R) -> R {
+        self.with_ref(transmute(cb))
     }
 }
