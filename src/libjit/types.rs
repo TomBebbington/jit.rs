@@ -118,7 +118,7 @@ impl<'a> Iterator<Field<'a>> for Fields<'a> {
     }
     #[inline]
     fn nth(&mut self, n:uint) -> Option<Field<'a>> {
-        self.index += n as u32;
+        self.index += n as c_uint;
         self.next()
     }
 }
@@ -165,7 +165,7 @@ impl<'a> Iterator<Type> for Params<'a> {
     }
     #[inline]
     fn nth(&mut self, n:uint) -> Option<Type> {
-        self.index += n as u32;
+        self.index += n as c_uint;
         self.next()
     }
 }

@@ -54,7 +54,7 @@ impl<'a> Iterator<String> for Needed<'a> {
     }
     #[inline]
     fn nth(&mut self, n:uint) -> Option<String> {
-        self.index += n as u32;
+        self.index += n as c_uint;
         self.next()
     }
 }
