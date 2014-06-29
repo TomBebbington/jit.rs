@@ -253,9 +253,9 @@ impl Type {
     }
     #[inline]
     /// Get the size of this type in bytes.
-    pub fn get_size(&self) -> jit_nuint {
+    pub fn get_size(&self) -> uint {
         unsafe {
-            jit_type_get_size(self.as_ptr())
+            jit_type_get_size(self.as_ptr()) as uint
         }
     }
     /**
