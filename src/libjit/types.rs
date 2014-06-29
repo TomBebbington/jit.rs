@@ -227,25 +227,21 @@ impl Type {
             NativeRef::from_ptr(signature)
         }
     }
-
-    fn create_complex(fields: &mut [Type], union: bool) -> Type {
-        unsafe {
-            let mut native_fields:Vec<jit_type_t> = fields.iter().map(|field| field.as_ptr()).collect();
-            let f = if union { jit_type_create_union } else { jit_type_create_struct };
-            let ty:jit_type_t = f(native_fields.as_mut_ptr(), fields.len() as c_uint, 1);
-            NativeRef::from_ptr(ty)
-        }
-    }
     #[inline(always)]
     /// Create a type descriptor for a structure.
     pub fn create_struct(fields: &mut [Type]) -> Type {
-        Type::create_complex(fields, false)
+        unsafe {
+            let mut native_fields:Vec<_> = fields.iter().map(|field| field.as_ptr()).collect();
+            NativeRef::from_ptr(jit_type_create_struct(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
+        }
     }
     #[inline(always)]
     /// Create a type descriptor for a union.
     pub fn create_union(fields: &mut [Type]) -> Type {
-        let inner = Type::create_complex(fields, true);
-        Type::create_struct(&mut [get::<int>(), inner])
+        unsafe {
+            let mut native_fields:Vec<_> = fields.iter().map(|field| field.as_ptr()).collect();
+            NativeRef::from_ptr(jit_type_create_union(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
+        }
     }
     #[inline(always)]
     /// Create a type descriptor for a pointer to another type.
