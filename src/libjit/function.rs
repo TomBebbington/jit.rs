@@ -274,25 +274,25 @@ impl<'a> Function<'a> {
     /// Make an instruction that sets a label
     pub fn insn_set_label(&self, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_label(self.as_ptr(), &mut label.get_value());
+            jit_insn_label(self.as_ptr(), &mut (label.get_value() as jit_label_t));
         }
     }
     /// Make an instruction that branches to a certain label
     pub fn insn_branch(&self, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_branch(self.as_ptr(), &mut label.get_value());
+            jit_insn_branch(self.as_ptr(), &mut (label.get_value() as jit_label_t));
         }
     }
     /// Make an instruction that branches to a certain label if the value is true
     pub fn insn_branch_if(&self, value: &Value<'a>, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_branch_if(self.as_ptr(), value.as_ptr(), &mut label.get_value());
+            jit_insn_branch_if(self.as_ptr(), value.as_ptr(), &mut (label.get_value() as jit_label_t));
         }
     }
     /// Make an instruction that branches to a certain label if the value is false
     pub fn insn_branch_if_not(&self, value: &Value<'a>, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_branch_if_not(self.as_ptr(), value.as_ptr(), &mut label.get_value());
+            jit_insn_branch_if_not(self.as_ptr(), value.as_ptr(), &mut (label.get_value() as jit_label_t));
         }
     }
     /// Make an instruction that branches to a label in the table

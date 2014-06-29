@@ -24,7 +24,7 @@ impl<'a> Label<'a> {
     }
     /// Get the value of this label
     #[inline]
-    pub fn get_value(&self) -> u64 {
-        self._label
+    pub fn get_value(&self) -> uint {
+        self._label as uint
     }
 }

@@ -20,8 +20,8 @@ fn test_compile<T:Compile+Default>(kind:TypeKind) {
 }
 #[test]
 fn test_sqrt() {
-    let context = Context::new();
     let sig = get::<fn(uint) -> uint>();
+    let context = Context::new();
     let func = Function::new(&context, sig);
     let arg = func.get_param(0);
     let sqrt_arg = func.insn_sqrt(&arg);
