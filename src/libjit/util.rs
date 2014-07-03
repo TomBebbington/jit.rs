@@ -49,14 +49,10 @@ impl NativeRef for String {
 impl NativeRef for CString {
     #[inline(always)]
     unsafe fn as_ptr(&self) -> *mut c_void {
-        transmute(self.with_ref(|ptr| ptr))
+        transmute(self.unwrap())
     }
     #[inline(always)]
     unsafe fn from_ptr(ptr:*mut c_void) -> CString {
         CString::new(transmute(ptr), true)
-    }
-    #[inline(always)]
-    unsafe fn with_ptr<R>(&self, cb:|*mut c_void| -> R) -> R {
-        self.with_ref(transmute(cb))
     }
 }
