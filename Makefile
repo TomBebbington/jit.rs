@@ -11,6 +11,7 @@ native:
 	cd native && ./auto_gen.sh
 	cd native && ./configure
 	cd native && make
+	cd native && sudo make install
 doc: build
 	rm -rf doc
 	$(RUSTDOC) src/libjit/jit.rs -o doc -L target -L target/deps
