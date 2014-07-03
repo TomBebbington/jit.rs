@@ -49,7 +49,7 @@ impl NativeRef for String {
 impl NativeRef for CString {
     #[inline(always)]
     unsafe fn as_ptr(&self) -> *mut c_void {
-        transmute(self.unwrap())
+        transmute(self.clone().unwrap())
     }
     #[inline(always)]
     unsafe fn from_ptr(ptr:*mut c_void) -> CString {
