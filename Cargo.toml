@@ -4,4 +4,14 @@ name = "jit"
 version = "0.0.2"
 authors = [ "tophattedcoder@gmail.com" ]
 tags = ["compiler", "virtual machine"]
-build = "make"
+build = "make native"
+
+[[lib]]
+
+name = "jit"
+path = "src/libjit/jit.rs"
+
+[[lib]]
+
+name = "jit_macros"
+path = "src/libjit_macros/jit_macros.rs"

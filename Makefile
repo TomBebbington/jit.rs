@@ -6,17 +6,18 @@ RUSTDOC ?= rustdoc
 all: build doc
 target:
 	mkdir -p target
-build: target native
-	$(RUSTC) $(RUSTC_ARGS) src/libjit/jit.rs
-	$(RUSTC) $(RUSTC_ARGS) src/libjit_macros/jit_macros.rs
+build: target
+	$(CARGO) build
 native:
 	cd native && ./auto_gen.sh
 	cd native && ./configure
 	cd native && make
-	cd native && sudo make install
+	mkdir -p native/root
+	cd native && make DESTDIR=$(CURDIR)/native/root install
+	ln -s native/root/libjit.so target/deps/libjit.so
 doc: build
 	rm -rf doc
-	$(RUSTDOC) src/libjit/jit.rs -o doc -L target -L target/deps
-	$(RUSTDOC) src/libjit_macros/jit_macros.rs -o doc -L target -L target/deps
+	$(RUSTDOC) src/libjit/jit.rs -o doc -L target -L target/deps -L native/root/usr/local/lib
+	$(RUSTDOC) src/libjit_macros/jit_macros.rs -o doc -L target -L target/deps -L native/root/usr/local/lib
 clean:
 	rm -rf target/*jit*
