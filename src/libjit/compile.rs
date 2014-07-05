@@ -69,7 +69,7 @@ compile_prim!(bool, jit_type_sys_bool, jit_value_create_nint_constant, c_long)
 compile_prim!(char, jit_type_sys_char, jit_value_create_nint_constant, c_long)
 impl<'s> Compile for &'s str {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        let cstring_t = jit!(&'s str);
+        let cstring_t = jit!(String);
         let strlen_i = self.len().compile(func);
         let bufptr = Value::new(func, cstring_t);
         func.insn_store(&bufptr, &func.insn_alloca(&strlen_i));
