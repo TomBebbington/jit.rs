@@ -14,7 +14,7 @@ native:
 	cd native && make
 	mkdir -p native/root
 	cd native && make DESTDIR=$(CURDIR)/native/root install
-	ln -s native/root/libjit.so target/deps/libjit.so
+	-ln -s native/root/libjit.so target/deps/libjit.so
 doc: build
 	rm -rf doc
 	$(RUSTDOC) src/libjit/jit.rs -o doc -L target -L target/deps -L native/root/usr/local/lib
