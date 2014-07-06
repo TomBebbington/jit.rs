@@ -297,6 +297,13 @@ impl Type {
             }
         })
     }
+    #[inline(always)]
+    /// Check if this is a pointer
+    pub fn is_pointer(&self) -> bool {
+        unsafe {
+            jit_type_is_pointer(self.as_ptr()) != 0
+        }
+    }
 }
 #[inline(always)]
 /// Get the Rust type given as a type descriptor
