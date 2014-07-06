@@ -309,7 +309,7 @@ impl<'a> Function<'a> {
     pub fn insn_load(&self, src: &Value<'a>) -> Value<'a> {
         self.insn_unop(src, jit_insn_load)
     }
-    #[i-nline(always)]
+    #[inline(always)]
     /// Make an instruction that loads a value from a src value
     pub fn insn_load_relative(&self, src: &Value<'a>, offset: int, ty:Type) -> Value<'a> {
         unsafe {
