@@ -309,6 +309,18 @@ impl<'a> Function<'a> {
     pub fn insn_load(&self, src: &Value<'a>) -> Value<'a> {
         self.insn_unop(src, jit_insn_load)
     }
+    #[i-nline(always)]
+    /// Make an instruction that loads a value from a src value
+    pub fn insn_load_relative(&self, src: &Value<'a>, offset: int, ty:Type) -> Value<'a> {
+        unsafe {
+            NativeRef::from_ptr(jit_insn_load_relative(
+                self.as_ptr(),
+                src.as_ptr(),
+                offset as jit_nint,
+                ty.as_ptr()
+            ))
+        }
+    }
     #[inline(always)]
     /// Make an instruction that stores a value at a destination value
     pub fn insn_store(&self, dest: &Value<'a>, src: &Value<'a>) {
