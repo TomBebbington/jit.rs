@@ -387,45 +387,45 @@ impl<'a> Function<'a> {
     pub fn insn_call_native0<R, S:ToCStr>(&self, name: Option<S>,
                                 native_func: fn() -> R,
                                 signature: Type,
-                                args: &mut [&Value<'a>]) -> Value<'a> {
+                                mut args: [&Value<'a>, ..0]) -> Value<'a> {
         let func_ptr = unsafe { transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args)
+        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice())
     }
     /// Make an instruction that calls a Rust function that has the signature
     /// given with a single argument and expects a return value
     pub fn insn_call_native1<A,R, S:ToCStr>(&self, name: Option<S>,
                                   native_func: fn(A) -> R,
                                   signature: Type,
-                                  args: &mut [&Value<'a>]) -> Value<'a> {
+                                  mut args: [&Value<'a>, ..1]) -> Value<'a> {
         let func_ptr = unsafe { transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args)
+        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice())
     }
     /// Make an instruction that calls a Rust function that has the signature
     /// given with two arguments and expects a return value
     pub fn insn_call_native2<A,B,R, S:ToCStr>(&self, name: Option<S>,
                                   native_func: fn(A, B) -> R,
                                   signature: Type,
-                                  args: &mut [&Value<'a>]) -> Value<'a> {
+                                  mut args: [&Value<'a>, ..2]) -> Value<'a> {
         let func_ptr = unsafe { transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args)
+        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice())
     }
     /// Make an instruction that calls a Rust function that has the signature
     /// given with three arguments and expects a return value
     pub fn insn_call_native3<A,B,C,R, S:ToCStr>(&self, name: Option<S>,
                                   native_func: fn(A, B, C) -> R,
                                   signature: Type,
-                                  args: &mut [&Value<'a>]) -> Value<'a> {
+                                  mut args: [&Value<'a>, ..3]) -> Value<'a> {
         let func_ptr = unsafe { transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args)
+        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice())
     }
     /// Make an instruction that calls a Rust function that has the signature
     /// given with four arguments and expects a return value
     pub fn insn_call_native4<A,B,C,D,R, S:ToCStr>(&self, name: Option<S>,
                                   native_func: fn(A, B, C, D) -> R,
                                   signature: Type,
-                                  args: &mut [&Value<'a>]) -> Value<'a> {
+                                  mut args: [&Value<'a>, ..4]) -> Value<'a> {
         let func_ptr = unsafe { transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args)
+        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice())
     }
     /// Make an instruction that allocates some space
     pub fn insn_alloca(&self, size: &Value<'a>) -> Value<'a> {
