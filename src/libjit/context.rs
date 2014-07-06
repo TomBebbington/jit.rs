@@ -21,6 +21,7 @@ impl<'a> Context<'a> {
             NativeRef::from_ptr(jit_context_create())
         }
     }
+    #[inline(always)]
     /// Run a closure that can generate IR
     pub fn build<R>(&self, cb: || -> R) -> R {
         unsafe {
