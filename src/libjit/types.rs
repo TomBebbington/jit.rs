@@ -6,38 +6,35 @@ use std::kinds::marker::{
     ContravariantLifetime,
     Managed
 };
+use std::mem::transmute;
 use std::str::raw::from_c_str;
 use std::c_str::ToCStr;
 use util::NativeRef;
-/// The types that a value can be
-bitflags!(
-    #[deriving(Show)]
-    flags TypeKind: i32 {
-        static Invalid      = -1,
-        static Void         = 0,
-        static SByte        = 1,
-        static UByte        = 2,
-        static Short        = 3,
-        static UShort       = 4,
-        static Int          = 5,
-        static UInt         = 6,
-        static NInt         = 7,
-        static NUInt        = 8,
-        static Long         = 9,
-        static ULong        = 10,
-        static Float32      = 11,
-        static Float64      = 12,
-        static NFloat       = 13,
-        static MaxPrimitive = 13,
-        static Struct       = 14,
-        static Union        = 15,
-        static Signature    = 16,
-        static Pointer      = 17,
-        static FirstTagged  = 32,
-        static SysBool      = 10009,
-        static SysChar      = 10010
-    }
-)
+#[repr(i32)]
+#[deriving(Show)]
+pub enum TypeKind {
+    Void         = 0,
+    SByte        = 1,
+    UByte        = 2,
+    Short        = 3,
+    UShort       = 4,
+    Int          = 5,
+    UInt         = 6,
+    NInt         = 7,
+    NUInt        = 8,
+    Long         = 9,
+    ULong        = 10,
+    Float32      = 11,
+    Float64      = 12,
+    NFloat       = 13,
+    Struct       = 14,
+    Union        = 15,
+    Signature    = 16,
+    Pointer      = 17,
+    FirstTagged  = 32,
+    SysBool      = 10009,
+    SysChar      = 10010
+}
 /// A single field of a struct
 pub struct Field<'a> {
     /// The index of the field
@@ -259,7 +256,7 @@ impl Type {
     /// be handled further.
     pub fn get_kind(&self) -> TypeKind {
         unsafe {
-            TypeKind::from_bits(jit_type_get_kind(self.as_ptr())).unwrap()
+            transmute(jit_type_get_kind(self.as_ptr()))
         }
     }
     #[inline]
