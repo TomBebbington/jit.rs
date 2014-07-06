@@ -57,6 +57,7 @@ impl<'a> NativeRef for Function<'a> {
 }
 #[unsafe_destructor]
 impl<'a> Drop for Function<'a> {
+    #[inline(always)]
     fn drop(&mut self) {
         unsafe {
             jit_function_abandon(self.as_ptr());
@@ -64,6 +65,7 @@ impl<'a> Drop for Function<'a> {
     }
 }
 impl<'a> InContext<'a> for Function<'a> {
+    #[inline(always())]
     /// Get the context this function was made in
     fn get_context(&self) -> Context<'a> {
         unsafe {
