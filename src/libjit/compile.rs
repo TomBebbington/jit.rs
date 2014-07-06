@@ -39,6 +39,7 @@ pub trait Compile {
     fn jit_type(_:Option<Self>) -> Type;
 }
 impl Compile for () {
+    #[inline(always)]
     fn compile(&self, func:&Function) -> Value {
         unsafe {
             NativeRef::from_ptr(jit_value_create_nint_constant(
@@ -48,7 +49,7 @@ impl Compile for () {
             ))
         }
     }
-    #[inline]
+    #[inline(always)]
     fn jit_type(_:Option<()>) -> Type {
         unsafe {
             NativeRef::from_ptr(jit_type_void_ptr)
@@ -210,7 +211,7 @@ impl<'a, T:Compile> Compile for Vec<T> {
     }
 }
 impl<'a, T:Compile> Compile for &'a T {
-    #[inline]
+    #[inline(always)]
     fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr(jit_value_create_nint_constant(
@@ -220,47 +221,51 @@ impl<'a, T:Compile> Compile for &'a T {
             ))
         }
     }
-    #[inline]
+    #[inline(always)]
     fn jit_type(_:Option<&'a T>) -> Type {
         Type::create_pointer(jit!(T))
     }
 }
 impl<R:Compile> Compile for fn() -> R {
+    #[inline(always)]
     fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
         let ptr = (self as *const fn() -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn() -> R>(), false)
     }
-    #[inline]
+    #[inline(always)]
     fn jit_type(_:Option<fn() -> R>) -> Type {
         Type::create_signature(CDECL, jit!(R), &mut [])
     }
 }
 impl<A:Compile, R:Compile> Compile for fn(A) -> R {
+    #[inline(always)]
     fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
         let ptr = (self as *const fn(A) -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn(A) -> R>(), false)
     }
-    #[inline]
+    #[inline(always)]
     fn jit_type(_:Option<fn(A) -> R>) -> Type {
         Type::create_signature(CDECL, jit!(R), &mut [jit!(A)])
     }
 }
 impl<A:Compile, B:Compile, R:Compile> Compile for fn(A, B) -> R {
+    #[inline(always)]
     fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
         let ptr = (self as *const fn(A, B) -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn(A, B) -> R>(), false)
     }
-    #[inline]
+    #[inline(always)]
     fn jit_type(_:Option<fn(A, B) -> R>) -> Type {
         Type::create_signature(CDECL, jit!(R), &mut [jit!(A), jit!(B)])
     }
 }
 impl<A:Compile, B:Compile, C:Compile, R:Compile> Compile for fn(A, B, C) -> R {
+    #[inline(always)]
     fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
         let ptr = (self as *const fn(A, B, C) -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn(A, B, C) -> R>(), false)
     }
-    #[inline]
+    #[inline(always)]
     fn jit_type(_:Option<fn(A, B, C) -> R>) -> Type {
         Type::create_signature(CDECL, jit!(R), &mut [jit!(A), jit!(B), jit!(C)])
     }
