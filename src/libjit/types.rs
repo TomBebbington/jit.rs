@@ -275,12 +275,12 @@ impl Type {
     }
     #[inline(always)]
     /// Iterator over the type's fields
-    pub fn iter_fields<'a>(&'a self) -> Fields<'a> {
+    pub fn fields<'a>(&'a self) -> Fields<'a> {
         Fields::new(self.clone())
     }
     #[inline(always)]
     /// Iterator over the function signature's parameters
-    pub fn iter_params<'a>(&'a self) -> Params<'a> {
+    pub fn params<'a>(&'a self) -> Params<'a> {
         Params::new(self.clone())
     }
     #[inline]
