@@ -39,7 +39,7 @@ impl<'a> Context<'a> {
 }
 #[unsafe_destructor]
 impl<'a> Drop for Context<'a> {
-    #[inline]
+    #[inline(always)]
     fn drop(&mut self) {
         unsafe {
             jit_context_destroy(self.as_ptr());
