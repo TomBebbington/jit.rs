@@ -31,8 +31,8 @@ impl<'a> Context<'a> {
         }
     }
     /// Iterate through all the functions in this context
-    #[inline]
-    pub fn iter_funcs(&self) -> Functions<'a> {
+    #[inline(always)]
+    pub fn funcs(&self) -> Functions<'a> {
         Functions::new(self)
     }
 }
