@@ -37,12 +37,12 @@ macro_rules! native_ref(
             $field: $pointer_ty
         }
         impl NativeRef for $name {
-            #[inline]
+            #[inline(always)]
             /// Convert to a native pointer
             unsafe fn as_ptr(&self) -> $pointer_ty {
                 self.$field
             }
-            #[inline]
+            #[inline(always)]
             /// Convert from a native pointer
             unsafe fn from_ptr(ptr:$pointer_ty) -> $name {
                 $name {

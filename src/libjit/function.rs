@@ -41,12 +41,12 @@ pub struct Function<'a> {
     marker: ContravariantLifetime<'a>
 }
 impl<'a> NativeRef for Function<'a> {
-    #[inline]
+    #[inline(always)]
     /// Convert to a native pointer
     unsafe fn as_ptr(&self) -> jit_function_t {
         self._func
     }
-    #[inline]
+    #[inline(always)]
     /// Convert from a native pointer
     unsafe fn from_ptr(ptr:jit_function_t) -> Function<'a> {
         Function {

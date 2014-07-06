@@ -27,12 +27,12 @@ pub struct Value<'a> {
     marker: ContravariantLifetime<'a>
 }
 impl<'a> NativeRef for Value<'a> {
-    #[inline]
+    #[inline(always)]
     /// Convert to a native pointer
     unsafe fn as_ptr(&self) -> jit_value_t {
         self._value
     }
-    #[inline]
+    #[inline(always)]
     /// Convert from a native pointer
     unsafe fn from_ptr(ptr:jit_value_t) -> Value {
         Value {

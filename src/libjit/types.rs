@@ -177,11 +177,11 @@ pub struct Type {
     marker: Managed
 }
 impl NativeRef for Type {
-    #[inline]
+    #[inline(always)]
     unsafe fn as_ptr(&self) -> jit_type_t {
         self._type
     }
-    #[inline]
+    #[inline(always)]
     unsafe fn from_ptr(ptr:jit_type_t) -> Type {
         Type {
             _type: ptr,
