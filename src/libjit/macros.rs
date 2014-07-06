@@ -97,8 +97,8 @@ macro_rules! jit(
     ($func:expr, return) => (
         $func.insn_default_return()
     );
-    ($func:expr, return $value:expr) => (
-        $func.insn_return($value)
+    ($func:expr, return $($t:tt)+) => (
+        $func.insn_return(jit!($($t)+))
     );
     ($func:expr, call($call:expr,
         $($arg:expr),+

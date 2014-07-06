@@ -89,6 +89,21 @@ impl Compile for *const u8 {
         ::get::<&u8>()
     }
 }
+impl<T:Compile> Compile for *mut T {
+    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
+        unsafe {
+            NativeRef::from_ptr(jit_value_create_nint_constant(
+                func.as_ptr(),
+                jit!(&T).as_ptr(),
+                self.to_uint() as c_long
+            ))
+        }
+    }
+    #[inline(always)]
+    fn jit_type(_:Option<*mut T>) -> Type {
+        jit!(&T)
+    }
+}
 impl<'s> Compile for CString {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
         let ty = jit!(CString);
