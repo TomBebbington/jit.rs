@@ -55,14 +55,14 @@ impl<'a> Field<'a> {
             }
         }
     }
-    #[inline]
+    #[inline(always)]
     /// Get the type of the field
     pub fn get_type(&self) -> Type {
         unsafe {
             NativeRef::from_ptr(jit_type_get_field(self._type, self.index))
         }
     }
-    #[inline]
+    #[inline(always)]
     /// Get the offset of the field
     pub fn get_offset(&self) -> uint {
         unsafe {
@@ -200,7 +200,7 @@ impl Clone for Type {
 }
 #[unsafe_destructor]
 impl Drop for Type {
-    #[inline]
+    #[inline(always)]
     /// Free a type descriptor by decreasing its reference count.
     /// This function is safe to use on pre-defined types, which are never
     /// actually freed.
@@ -243,7 +243,7 @@ impl Type {
             NativeRef::from_ptr(ptr)
         }
     }
-    #[inline]
+    #[inline(always)]
     /// Get the size of this type in bytes.
     pub fn get_size(&self) -> uint {
         unsafe {
@@ -259,7 +259,7 @@ impl Type {
             transmute(jit_type_get_kind(self.as_ptr()))
         }
     }
-    #[inline]
+    #[inline(always)]
     /// Get the type that is referred to by this pointer type.
     pub fn get_ref(&self) -> Type {
         unsafe {
