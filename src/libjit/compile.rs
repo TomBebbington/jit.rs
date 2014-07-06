@@ -26,6 +26,7 @@ use function::{
 };
 use libc::c_long;
 use value::Value;
+use std::c_str::CString;
 use types::Type;
 use util::NativeRef;
 use get_type = types::get;
@@ -67,23 +68,30 @@ compile_prim!(i8, jit_type_sbyte, jit_value_create_nint_constant, c_long)
 compile_prim!(u8, jit_type_ubyte, jit_value_create_nint_constant, c_long)
 compile_prim!(bool, jit_type_sys_bool, jit_value_create_nint_constant, c_long)
 compile_prim!(char, jit_type_sys_char, jit_value_create_nint_constant, c_long)
-impl<'s> Compile for &'s str {
+impl<'s> Compile for CString {
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        let cstring_t = jit!(String);
+        let cstring_t = jit!(&u8);
         let strlen_i = self.len().compile(func);
         let bufptr = Value::new(func, cstring_t);
         func.insn_store(&bufptr, &func.insn_alloca(&strlen_i));
-        for i in range(0, self.len()) {
-            let char_i = self.char_at(i).compile(func);
-            func.insn_store_relative(&bufptr, i as int, &char_i);
+        for c in self.iter() {
+            let char_v = c.compile(func);
+            func.insn_store_relative(&bufptr, c as int, &char_v);
         }
         let null_term = '\0'.compile(func);
         func.insn_store_relative(&bufptr, self.len() as int, &null_term);
-        bufptr
+        let cstring_t = jit!(CString);
+        let wholeptr = Value::new(func, cstring_t.clone());
+        func.insn_store_relative(&bufptr, cstring_t.clone().find_name("data").get_offset() as int, &bufptr);
+        func.insn_store_relative(&bufptr, cstring_t.find_name("is_owned").get_offset() as int, &true.compile(func));
+        wholeptr
     }
     #[inline]
-    fn jit_type(_:Option<&'s str>) -> Type {
-        jit!(&char)
+    fn jit_type(_:Option<CString>) -> Type {
+        jit!(struct {
+            "data": &char,
+            "is_owned": bool
+        })
     }
 }
 impl<'a, T:Compile> Compile for &'a T {
@@ -100,15 +108,6 @@ impl<'a, T:Compile> Compile for &'a T {
     #[inline]
     fn jit_type(_:Option<&'a T>) -> Type {
         Type::create_pointer(jit!(T))
-    }
-}
-impl Compile for String {
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
-        self.as_slice().compile(func)
-    }
-    #[inline]
-    fn jit_type(_:Option<String>) -> Type {
-        jit!(&char)
     }
 }
 impl<T:Compile> Compile for *const T {
