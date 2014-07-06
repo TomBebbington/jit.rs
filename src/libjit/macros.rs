@@ -2,12 +2,13 @@
 macro_rules! compile_prim(
     ($ty:ty, $type_name:ident, $make_constant:ident) =>
 (impl Compile for $ty {
+    #[inline(always)]
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr($make_constant(func.as_ptr(), $type_name, *self) )
         }
     }
-    #[inline]
+    #[inline(always)]
     fn jit_type(_:Option<$ty>) -> Type {
         unsafe {
             NativeRef::from_ptr($type_name)
@@ -16,12 +17,13 @@ macro_rules! compile_prim(
 });
     ($ty:ty, $type_name:ident, $make_constant:ident, $cast:ty) =>
 (impl Compile for $ty {
+    #[inline(always)]
     fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr($make_constant(func.as_ptr(), $type_name, *self as $cast) )
         }
     }
-    #[inline]
+    #[inline(always)]
     fn jit_type(_:Option<$ty>) -> Type {
         unsafe {
             NativeRef::from_ptr($type_name)
