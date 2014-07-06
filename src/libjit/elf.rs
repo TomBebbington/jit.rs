@@ -98,7 +98,7 @@ impl<'a> ReadElf<'a> {
     }
     #[inline]
     /// Iterate over the needed libraries
-    pub fn iter_needed<'a>(&'a self) -> Needed<'a> {
+    pub fn needed<'a>(&'a self) -> Needed<'a> {
         Needed::new(self)
     }
 }
