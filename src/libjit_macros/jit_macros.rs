@@ -1,4 +1,4 @@
-#![crate_name = "jit_macros#0.1.2"]
+#![crate_name = "jit_macros"]
 #![comment = "Macros for LibJIT Bindings"]
 #![crate_type = "dylib"]
 #![allow(raw_pointer_deriving, dead_code, non_camel_case_types)]

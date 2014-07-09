@@ -23,7 +23,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#![crate_name = "jit#0.0.2"]
+#![crate_name = "jit"]
 #![comment = "LibJIT Bindings"]
 #![crate_type = "dylib"]
 #![crate_type = "rlib"]
