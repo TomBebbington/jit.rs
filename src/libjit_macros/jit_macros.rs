@@ -59,13 +59,13 @@ pub mod gen_type;
 fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:P<MetaItem>, item:P<Item>, cb:|P<Item>|) {
     let context = MacroContext::new(cx, pos, item);
     let ref cx = context.cx;
-    let methods = vec!(
+    let methods = vec![
         box(GC) gen_type_meth(context),
         box(GC) gen_compile_meth(context)
-    );
+    ];
     let node = ItemImpl(
         Generics {
-            lifetimes: vec!(),
+            lifetimes: vec![],
             ty_params: OwnedSlice::empty()
         },
         Some(cx.trait_ref(cx.path_global(pos, vec!(cx.ident_of("jit"), cx.ident_of("Compile"))))),
