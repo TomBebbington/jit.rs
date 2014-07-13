@@ -42,17 +42,17 @@
 extern crate rustc;
 extern crate syntax;
 
-use rustc::plugin::Registry;
-use std::gc::GC;
-use syntax::ast::*;
-use syntax::ext::base::*;
-use syntax::ext::build::*;
-use syntax::ext::quote::rt::*;
-use syntax::parse::token::*;
-use syntax::owned_slice::OwnedSlice;
-pub use context::MacroContext;
+use context::MacroContext;
 use gen_compile::gen_compile_meth;
 use gen_type::gen_type_meth;
+use rustc::plugin::Registry;
+use std::gc::GC;
+use syntax::ast::{Generics, Item, ItemImpl, P, MetaItem};
+use syntax::codemap::Span;
+use syntax::ext::base::{ExtCtxt, ItemDecorator};
+use syntax::ext::build::AstBuilder;
+use syntax::owned_slice::OwnedSlice;
+use syntax::parse::token::intern;
 pub mod context;
 pub mod gen_compile;
 pub mod gen_type;
