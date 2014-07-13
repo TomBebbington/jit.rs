@@ -43,7 +43,7 @@ extern crate rustc;
 extern crate syntax;
 
 use rustc::plugin::Registry;
-use std::gc::{Gc, GC};
+use std::gc::GC;
 use syntax::ast::*;
 use syntax::codemap::*;
 use syntax::ext::base::*;
@@ -56,10 +56,10 @@ use syntax::owned_slice::OwnedSlice;
 struct MacroContext<'a, 'b> {
     pub cx: &'a ExtCtxt<'b>,
     pub pos: Span,
-    pub item: Gc<Item>
+    pub item: P<Item>
 }
 impl<'a, 'b> MacroContext<'a, 'b> {
-    pub fn new(cx:&'a ExtCtxt<'b>, pos:Span, item:Gc<Item>) -> MacroContext<'a, 'b> {
+    pub fn new(cx:&'a ExtCtxt<'b>, pos:Span, item:P<Item>) -> MacroContext<'a, 'b> {
         MacroContext {
             cx: cx,
             pos: pos,
@@ -71,7 +71,7 @@ impl<'a, 'b> MacroContext<'a, 'b> {
         self.cx.ty_ident(self.pos, self.item.ident)
     }
 }
-fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<Item>|) {
+fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:P<MetaItem>, item:P<Item>, cb:|P<Item>|) {
     let context = MacroContext::new(cx, pos, item);
     let ref cx = context.cx;
     let methods = vec!(
