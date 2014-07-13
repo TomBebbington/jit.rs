@@ -3,7 +3,7 @@
 #![crate_type = "dylib"]
 #![allow(raw_pointer_deriving, dead_code, non_camel_case_types)]
 #![deny(unnecessary_parens, unrecognized_lint, unreachable_code, unnecessary_allocation, unnecessary_typecast, unnecessary_allocation, uppercase_variables, unused_must_use)]
-#![feature(globs, plugin_registrar, quote)]
+#![feature(plugin_registrar, quote)]
 #![experimental]
 //! This crate provides some macros for better LibJIT interop
 //! For example, here's a quick example of automatic struct compilation to a LibJIT value:
