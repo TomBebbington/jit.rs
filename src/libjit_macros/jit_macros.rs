@@ -51,26 +51,8 @@ use syntax::ext::build::*;
 use syntax::ext::quote::rt::*;
 use syntax::parse::token::*;
 use syntax::owned_slice::OwnedSlice;
-
-#[deriving(Copy)]
-struct MacroContext<'a, 'b> {
-    pub cx: &'a ExtCtxt<'b>,
-    pub pos: Span,
-    pub item: P<Item>
-}
-impl<'a, 'b> MacroContext<'a, 'b> {
-    pub fn new(cx:&'a ExtCtxt<'b>, pos:Span, item:P<Item>) -> MacroContext<'a, 'b> {
-        MacroContext {
-            cx: cx,
-            pos: pos,
-            item: item
-        }
-    }
-    #[inline(always)]
-    pub fn get_curr(&self) -> P<Ty> {
-        self.cx.ty_ident(self.pos, self.item.ident)
-    }
-}
+use context::MacroContext;
+pub mod context;
 fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:P<MetaItem>, item:P<Item>, cb:|P<Item>|) {
     let context = MacroContext::new(cx, pos, item);
     let ref cx = context.cx;
