@@ -131,13 +131,13 @@ fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<
             ty_params: OwnedSlice::empty()
         },
         explicit_self: Spanned {
-            node: SelfRegion(None, MutImmutable),
+            node: SelfRegion(None, MutImmutable, cx.ident_of("self")),
             span: pos
         },
         fn_style: NormalFn,
         decl: cx.fn_decl(
             vec!(
-                Arg::new_self(pos, MutImmutable),
+                Arg::new_self(pos, MutImmutable, cx.ident_of("func")),
                 cx.arg(pos, cx.ident_of("func"), cx.ty_rptr(pos, jit_func_t, None, MutImmutable))
             ),
             jit_val_t
