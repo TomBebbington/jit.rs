@@ -1,5 +1,4 @@
 use bindings::{
-    jit_type_void_ptr,
     jit_type_ubyte,
     jit_type_sbyte,
     jit_type_ushort,
@@ -14,6 +13,7 @@ use bindings::{
     jit_type_ulong,
     jit_type_sys_bool,
     jit_type_sys_char,
+    jit_type_void,
 
     jit_value_create_long_constant,
     jit_value_create_nint_constant,
@@ -40,19 +40,14 @@ pub trait Compile {
 }
 impl Compile for () {
     #[inline(always)]
-    fn compile(&self, func:&Function) -> Value {
-        unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(
-                func.as_ptr(),
-                jit_type_void_ptr,
-                0
-            ))
-        }
+    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+        let ty = ::get::<()>();
+        Value::new(func, ty)
     }
     #[inline(always)]
     fn jit_type(_:Option<()>) -> Type {
         unsafe {
-            NativeRef::from_ptr(jit_type_void_ptr)
+            NativeRef::from_ptr(jit_type_void)
         }
     }
 }
