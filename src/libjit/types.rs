@@ -2,10 +2,7 @@ use bindings::*;
 use compile::Compile;
 use function::ABI;
 use libc::c_uint;
-use std::kinds::marker::{
-    ContravariantLifetime,
-    Managed
-};
+use std::kinds::marker::{ContravariantLifetime, NoCopy};
 use std::mem::transmute;
 use std::str::raw::from_c_str;
 use std::c_str::ToCStr;
@@ -176,10 +173,12 @@ impl<'a> Iterator<Type> for Params<'a> {
 /// Each `Type` represents a basic system type, be it a primitive, a struct, a
 /// union, a pointer, or a function signature. The library uses this information
 /// to lay out values in memory.
+/// Types are not attached to a context so they are reference-counted by LibJIT,
+/// so internally they are represented as `Rc<TypeData>`.
 #[deriving(PartialEq)]
 pub struct Type {
     _type: jit_type_t,
-    marker: Managed
+    no_copy: NoCopy
 }
 impl NativeRef for Type {
     #[inline(always)]
@@ -190,7 +189,7 @@ impl NativeRef for Type {
     unsafe fn from_ptr(ptr:jit_type_t) -> Type {
         Type {
             _type: ptr,
-            marker: Managed
+            no_copy: NoCopy
         }
     }
 }
@@ -256,9 +255,8 @@ impl Type {
         }
     }
     #[inline]
-    /// Get a value that indicates the kind of this type. This allows
-    /// callers to quickly classify a type to determine how it should
-    /// be handled further.
+    /// Get a value that indicates the kind of this type. This allows callers to
+    /// quickly classify a type to determine how it should be handled further.
     pub fn get_kind(&self) -> TypeKind {
         unsafe {
             transmute(jit_type_get_kind(self.as_ptr()))
