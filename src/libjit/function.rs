@@ -14,7 +14,7 @@ use libc::{
     c_void
 };
 use std::kinds::marker::ContravariantLifetime;
-use std::mem::transmute;
+use std::mem::{transmute, uninitialized};
 use std::ptr::mut_null;
 use std::c_str::ToCStr;
 /// A platform's application binary interface
@@ -490,10 +490,45 @@ impl<'a> Function<'a> {
         }
     }
     #[inline(always)]
-    /// Apply a function to some arguments and set the retval to the return value
-    pub fn apply<T>(&self, args: &mut [*mut c_void], retval: &mut T) {
+    /// Apply a function to some arguments and return the result
+    pub unsafe fn apply<R>(&self, args: &mut [*mut c_void]) -> R {
+        let mut retval = uninitialized();
+        jit_function_apply(self.as_ptr(), args.as_mut_ptr(), transmute(&mut retval));
+        retval
+    }
+    #[inline(always)]
+    /// Apply the function and return the result
+    pub fn apply0<R>(&self) -> R {
         unsafe {
-            jit_function_apply(self.as_ptr(), args.as_mut_ptr(), transmute(retval));
+            self.apply([].as_mut_slice())
+        }
+    }
+    #[inline(always)]
+    /// Apply the function to an argument and return the result
+    pub fn apply1<A, R>(&self, ref arg:A) -> R {
+        unsafe {
+            self.apply([transmute(arg)].as_mut_slice())
+        }
+    }
+    #[inline(always)]
+    /// Apply the function to some arguments and return the result
+    pub fn apply2<A, B, R>(&self, ref arg1:A, ref arg2:B) -> R {
+        unsafe {
+            self.apply([transmute(arg1), transmute(arg2)].as_mut_slice())
+        }
+    }
+    #[inline(always)]
+    /// Apply the function to some arguments and return the result
+    pub fn apply3<A, B, C, R>(&self, ref arg1:A, ref arg2:B, ref arg3:C) -> R {
+        unsafe {
+            self.apply([transmute(arg1), transmute(arg2), transmute(arg3)].as_mut_slice())
+        }
+    }
+    #[inline(always)]
+    /// Apply the function to some arguments and return the result
+    pub fn apply4<A, B, C, D, R>(&self, ref arg1:A, ref arg2:B, ref arg3:C, ref arg4:D) -> R {
+        unsafe {
+            self.apply([transmute(arg1), transmute(arg2), transmute(arg3), transmute(arg4)].as_mut_slice())
         }
     }
     #[inline(always)]
