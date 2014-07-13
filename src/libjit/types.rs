@@ -42,6 +42,11 @@ pub struct Field<'a> {
     _type: jit_type_t,
     marker: ContravariantLifetime<'a>
 }
+impl<'a> PartialEq for Field<'a> {
+    fn eq(&self, other:&Field<'a>) -> bool {
+        self.index == other.index && self._type == other._type
+    }
+}
 impl<'a> Field<'a> {
     #[inline]
     /// Get the field's name or none if it lacks one
