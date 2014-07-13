@@ -388,7 +388,7 @@ impl<'a> Function<'a> {
                                 sig:Option<Type>,
                                 args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
-            let mut native_args:Vec<jit_value_t> = args.iter().map(|arg| arg.as_ptr()).collect();
+            let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
             let cb = |c_name|
                 NativeRef::from_ptr(jit_insn_call(self.as_ptr(), c_name, func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JitCallNothrow as c_int));
             match name {
@@ -403,7 +403,7 @@ impl<'a> Function<'a> {
     pub fn insn_call_indirect(&self, func:&Function<'a>, signature: Type,
                                args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
-            let mut native_args:Vec<jit_value_t> = args.iter().map(|arg| arg.as_ptr()).collect();
+            let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
             NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JitCallNothrow as c_int))
         }
     }
@@ -413,7 +413,7 @@ impl<'a> Function<'a> {
                         native_func: *mut c_void, signature: Type,
                         args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
-            let mut native_args:Vec<jit_value_t> = args.iter()
+            let mut native_args:Vec<_> = args.iter()
                 .map(|arg| arg.as_ptr()).collect();
             let cb = |c_name| {
                 NativeRef::from_ptr(jit_insn_call_native(
