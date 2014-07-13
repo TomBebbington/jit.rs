@@ -11,7 +11,7 @@ use std::str::raw::from_c_str;
 use std::c_str::ToCStr;
 use util::NativeRef;
 #[repr(i32)]
-#[deriving(Show)]
+#[deriving(Eq, PartialEq, Show)]
 pub enum TypeKind {
     Void         = 0,
     SByte        = 1,
