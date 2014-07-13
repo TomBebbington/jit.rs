@@ -52,7 +52,47 @@ use syntax::ext::quote::rt::*;
 use syntax::parse::token::*;
 use syntax::owned_slice::OwnedSlice;
 
+#[deriving(Copy)]
+struct MacroContext<'a, 'b> {
+    pub cx: &'a ExtCtxt<'b>,
+    pub pos: Span,
+    pub item: Gc<Item>
+}
+impl<'a, 'b> MacroContext<'a, 'b> {
+    pub fn new(cx:&'a ExtCtxt<'b>, pos:Span, item:Gc<Item>) -> MacroContext<'a, 'b> {
+        MacroContext {
+            cx: cx,
+            pos: pos,
+            item: item
+        }
+    }
+    #[inline(always)]
+    pub fn get_curr(&self) -> P<Ty> {
+        self.cx.ty_ident(self.pos, self.item.ident)
+    }
+}
 fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<Item>|) {
+    let context = MacroContext::new(cx, pos, item);
+    let ref cx = context.cx;
+    let methods = vec!(
+        box(GC) gen_type_meth(context),
+        box(GC) gen_compile_meth(context)
+    );
+    let node = ItemImpl(
+        Generics {
+            lifetimes: vec!(),
+            ty_params: OwnedSlice::empty()
+        },
+        Some(cx.trait_ref(cx.path_global(pos, vec!(cx.ident_of("jit"), cx.ident_of("Compile"))))),
+        cx.ty_path(cx.path_ident(pos, item.ident), None),
+        methods
+    );
+    cb(cx.item(pos, cx.ident_of("Compile"), vec!(), node));
+}
+fn gen_type_meth(context: MacroContext) -> Method {
+    let MacroContext {cx: ref cx, pos: pos, item: item} = context;
+    let jit_type_t = cx.ty_path(cx.path_global(pos, vec!(cx.ident_of("jit"), cx.ident_of("Type"))), None);
+    let create_struct = cx.expr_path(cx.path_global(pos, vec!(cx.ident_of("jit"), cx.ident_of("Type"), cx.ident_of("create_struct"))));
     let fields:Vec<(Option<String>, P<Expr>)> = match item.node {
         ItemStruct(def, _) if def.is_virtual => {
             cx.span_err(pos, "Virtual structs cannot be JIT compiled");
@@ -65,7 +105,7 @@ fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<
                     UnnamedField(_) => None
                 };
                 let ty = field.node.ty;
-                let ty_expr = quote_expr!(&*cx, &::jit::get_type::<$ty>());
+                let ty_expr = quote_expr!(&**cx, &::jit::get_type::<$ty>());
                 (name, ty_expr)
             }).collect()
         },
@@ -74,8 +114,6 @@ fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<
             fail!("...")
         }
     };
-    let jit_type_t = cx.ty_path(cx.path_global(pos, vec!(cx.ident_of("jit"), cx.ident_of("Type"))), None);
-    let create_struct = cx.expr_path(cx.path_global(pos, vec!(cx.ident_of("jit"), cx.ident_of("Type"), cx.ident_of("create_struct"))));
     let jit_type_body = cx.block(pos, vec!(
         cx.stmt_let(pos, false, cx.ident_of("ty"), {
             let mut fields = cx.expr_vec(pos, fields.iter().map(|&(_, ex)| ex).collect());
@@ -83,8 +121,7 @@ fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<
             cx.expr_call(pos, create_struct, vec!(fields))
         }),
     ), Some(cx.expr_ident(pos, cx.ident_of("ty"))));
-    let curr_item = cx.ty_ident(pos, item.ident);
-    let jit_type = Method {
+    Method {
         ident: cx.ident_of("jit_type"),
         attrs: vec!(
             cx.attribute(pos, cx.meta_word(pos, InternedString::new("inline")))
@@ -100,7 +137,7 @@ fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<
         fn_style: NormalFn,
         decl: cx.fn_decl(
             vec!(
-                cx.arg(pos, cx.ident_of("_"), cx.ty_option(curr_item))
+                cx.arg(pos, cx.ident_of("_"), cx.ty_option(context.get_curr()))
             ),
             jit_type_t
         ),
@@ -108,18 +145,22 @@ fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<
         span: pos,
         id: item.id,
         vis: Inherited
-    };
+    }
+}
+fn gen_compile_meth(context: MacroContext) -> Method {
+    let MacroContext {cx: ref cx, pos: pos, item: item} = context;
     let lifetime = cx.lifetime(pos, cx.ident_of("'a").name);
+    let jit_func_t = cx.ty_path(cx.path_all(pos, true, vec!(cx.ident_of("jit"), cx.ident_of("Function")), vec!(lifetime.clone()), vec!()), None);
+    let jit_val_t = cx.ty_path(cx.path_all(pos, true, vec!(cx.ident_of("jit"), cx.ident_of("Value")), vec!(lifetime.clone()), vec!()), None);
+    let curr_item = context.get_curr();
     let compile_body = cx.block(pos, vec!(
-        cx.stmt_let(pos, false, cx.ident_of("ty"), cx.expr_call(pos, quote_expr!(&*cx, ::jit::get_type::<$curr_item>), vec!())),
-        cx.stmt_let(pos, false, cx.ident_of("val"), cx.expr_call(pos, quote_expr!(&*cx, ::jit::Value::new), vec!(
+        cx.stmt_let(pos, false, cx.ident_of("ty"), cx.expr_call(pos, quote_expr!(&**cx, ::jit::get_type::<$curr_item>), vec!())),
+        cx.stmt_let(pos, false, cx.ident_of("val"), cx.expr_call(pos, quote_expr!(&**cx, ::jit::Value::new), vec!(
             cx.expr_ident(pos, cx.ident_of("func")),
             cx.expr_addr_of(pos, cx.expr_ident(pos, cx.ident_of("ty")))
         )))
     ), Some(cx.expr_ident(pos, cx.ident_of("val"))));
-    let jit_func_t = cx.ty_path(cx.path_all(pos, true, vec!(cx.ident_of("jit"), cx.ident_of("Function")), vec!(lifetime.clone()), vec!()), None);
-    let jit_val_t = cx.ty_path(cx.path_all(pos, true, vec!(cx.ident_of("jit"), cx.ident_of("Value")), vec!(lifetime.clone()), vec!()), None);
-    let compile = Method {
+    Method {
         ident: cx.ident_of("compile"),
         attrs: vec!(
             cx.attribute(pos, cx.meta_word(pos, InternedString::new("inline")))
@@ -146,21 +187,7 @@ fn gen_compile(cx:&mut ExtCtxt, pos:Span, _:Gc<MetaItem>, item:Gc<Item>, cb:|Gc<
         span: pos,
         id: item.id,
         vis: Inherited
-    };
-    let methods = vec!(
-        box(GC) jit_type,
-        box(GC) compile
-    );
-    let node = ItemImpl(
-        Generics {
-            lifetimes: vec!(),
-            ty_params: OwnedSlice::empty()
-        },
-        Some(cx.trait_ref(cx.path_global(pos, vec!(cx.ident_of("jit"), cx.ident_of("Compile"))))),
-        cx.ty_path(cx.path_ident(pos, item.ident), None),
-        methods
-    );
-    cb(cx.item(pos, cx.ident_of("Compile"), vec!(), node));
+    }
 }
 
 #[plugin_registrar]
