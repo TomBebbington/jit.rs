@@ -7,10 +7,10 @@ use types::*;
 use get_type = types::get;
 fn with_empty_func(cb:|&Context, &Function| -> ()) -> () {
     let ctx = Context::new();
-    ctx.build(|| {
+    ctx.build(proc(ctx) {
         let sig = Type::create_signature(CDECL, get::<()>(), &mut[]);
-        let func = Function::new(&ctx, sig);
-        cb(&ctx, &func)
+        let func = Function::new(ctx, sig);
+        cb(ctx, &func)
     })
 }
 macro_rules! test_compile(

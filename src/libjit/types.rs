@@ -4,7 +4,7 @@ use function::ABI;
 use libc::c_uint;
 use std::kinds::marker::{ContravariantLifetime, NoCopy};
 use std::mem::transmute;
-use std::str::raw::from_c_str;
+use std::string::raw::from_buf;
 use std::c_str::ToCStr;
 use util::NativeRef;
 #[repr(i32)]
@@ -53,7 +53,7 @@ impl<'a> Field<'a> {
             if c_name.is_null() {
                 None
             } else {
-                Some(from_c_str(c_name))
+                Some(from_buf(transmute(c_name)))
             }
         }
     }

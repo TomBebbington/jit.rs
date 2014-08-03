@@ -23,10 +23,10 @@ impl<'a> Context<'a> {
     }
     #[inline(always)]
     /// Run a closure that can generate IR
-    pub fn build<R>(&self, cb: || -> R) -> R {
+    pub fn build<R>(&self, cb: proc<'a>(&'a Context<'a>) -> R) -> R {
         unsafe {
             jit_context_build_start(self.as_ptr());
-            let rv = cb();
+            let rv = cb(self);
             jit_context_build_end(self.as_ptr());
             rv
         }
@@ -70,7 +70,7 @@ impl<'a> Functions<'a> {
     }
 }
 impl<'a> Iterator<Function<'a>> for Functions<'a> {
-    fn next(&mut self) -> Option<Function> {
+    fn next(&mut self) -> Option<Function<'a>> {
         unsafe {
             let native_next = jit_function_next(self.ctx, self.last);
             self.last = native_next;

@@ -67,7 +67,7 @@ macro_rules! native_ref(
             }
             #[inline]
             /// Convert from a native pointer
-            unsafe fn from_ptr(ptr:$pointer_ty) -> $name {
+            unsafe fn from_ptr<'a>(ptr:$pointer_ty) -> $name<'a> {
                 $name {
                     $field: ptr,
                     marker: $lifetime::<'a>
@@ -79,12 +79,12 @@ macro_rules! native_ref(
 #[macro_export]
 macro_rules! jit(
     (struct {
-        $($name:expr: $ty:ty),+
+        $($name:expr: $ty:ty),*
     }) => ({
         let structure = Type::create_struct([
-            $(get_type::<$ty>()),+
+            $(get_type::<$ty>()),*
         ].as_mut_slice());
-        structure.set_names(&[$($name),+]);
+        structure.set_names(&[$($name),*]);
         structure
     });
     (union {

@@ -7,8 +7,8 @@ use std::fmt::Show;
 use std::kinds::marker::ContravariantLifetime;
 use std::mem::transmute;
 use std::iter::Iterator;
-use std::str::raw::from_c_str;
 use std::c_str::ToCStr;
+use std::string::raw::from_buf;
 /// An ELF dependency iterator
 pub struct Needed<'a> {
     _reader: jit_readelf_t,
@@ -36,7 +36,7 @@ impl<'a> Iterator<String> for Needed<'a> {
         unsafe {
             if index < self.length {
                 let c_name = jit_readelf_get_needed(self._reader, index);
-                let name = from_c_str(c_name);
+                let name = from_buf(transmute(c_name));
                 Some(name)
             } else {
                 None
@@ -80,7 +80,7 @@ impl<'a> ReadElf<'a> {
     /// Get the name of this ELF binary
     pub fn get_name(&self) -> String {
         unsafe {
-            from_c_str(jit_readelf_get_name(self.as_ptr()))
+            from_buf(transmute(jit_readelf_get_name(self.as_ptr())))
         }
     }
     #[inline]
