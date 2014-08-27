@@ -1,8 +1,8 @@
+language: rust
 env:
   global:
     - secure: o1PpGrcSWvluiK1m3VydfHiwZjmXApmX5BIZkVF4psCEZjhyEKBk6Uq9g9JAgs2suA+GereVVnVcjdTjCbDzLbXyU2bWg8FfU23hjFVZtil4gMsd3e1cta5AMgohGO8nc8IWEdr6qnybTOtBlbklnf3I88Yak1NE6pWkqHpVTfg=
 install:
-  - curl -s http://www.rust-lang.org/rustup.sh | sudo sh
   - sudo apt-get install texinfo
 script:
   - make clean build doc
