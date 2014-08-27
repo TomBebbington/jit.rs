@@ -4,10 +4,10 @@ use function::{CDECL, Function};
 use std::default::Default;
 use test::Bencher;
 use types::*;
-use get_type = types::get;
+use types::get as get_type;
 fn with_empty_func(cb:|&Context, &Function| -> ()) -> () {
     let ctx = Context::new();
-    ctx.build(proc(ctx) {
+    ctx.build(|ctx| {
         let sig = Type::create_signature(CDECL, get::<()>(), &mut[]);
         let func = Function::new(ctx, sig);
         cb(ctx, &func)
@@ -79,5 +79,3 @@ test_compile!(i16, test_compile_i16, Short)
 test_compile!(u16, test_compile_u16, UShort)
 test_compile!(i8, test_compile_i8, SByte)
 test_compile!(u8, test_compile_u8, UByte)
-test_compile!(bool, test_compile_bool, SysBool)
-test_compile!(char, test_compile_char, SysChar)

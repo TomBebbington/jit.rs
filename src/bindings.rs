@@ -41,6 +41,7 @@ pub type jit_size_t = ::libc::c_uint;
 pub type jit_memory_context_t = *mut ::libc::c_void;
 pub type jit_function_info_t = *mut ::libc::c_void;
 pub type jit_memory_manager_t = *const Struct_jit_memory_manager;
+#[repr(C)]
 pub struct Struct_jit_memory_manager {
     pub create: ::std::option::Option<extern "C" fn(arg1: jit_context_t)
                                           -> jit_memory_context_t>,
@@ -132,6 +133,7 @@ pub type Struct_jit_debugger = ::libc::c_void;
 pub type jit_debugger_t = *mut Struct_jit_debugger;
 pub type jit_debugger_thread_id_t = jit_nint;
 pub type jit_debugger_breakpoint_id_t = jit_nint;
+#[repr(C)]
 pub struct Struct_jit_debugger_event {
     pub _type: ::libc::c_int,
     pub thread: jit_debugger_thread_id_t,
@@ -142,6 +144,7 @@ pub struct Struct_jit_debugger_event {
     pub trace: jit_stack_trace_t,
 }
 pub type jit_debugger_event_t = Struct_jit_debugger_event;
+#[repr(C)]
 pub struct Struct_jit_debugger_breakpoint_info {
     pub flags: ::libc::c_int,
     pub thread: jit_debugger_thread_id_t,
@@ -162,12 +165,14 @@ pub type jit_writeelf_t = *mut Struct_jit_writeelf;
 pub type jit_exception_func =
     ::std::option::Option<extern "C" fn(arg1: ::libc::c_int)
                               -> *mut ::libc::c_void>;
+#[repr(C)]
 pub struct jit_intrinsic_descr_t {
     pub return_type: jit_type_t,
     pub ptr_result_type: jit_type_t,
     pub arg1_type: jit_type_t,
     pub arg2_type: jit_type_t,
 }
+#[repr(C)]
 pub struct jit_insn_iter_t {
     pub block: jit_block_t,
     pub posn: ::libc::c_int,
@@ -183,20 +188,24 @@ pub type jitom_field_t = *mut Struct_jitom_field;
 pub type Struct_jitom_method = ::libc::c_void;
 pub type jitom_method_t = *mut Struct_jitom_method;
 pub type jit_opcode_info_t = Struct_jit_opcode_info;
+#[repr(C)]
 pub struct Struct_jit_opcode_info {
     pub name: *const ::libc::c_char,
     pub flags: ::libc::c_int,
 }
 pub type _jit_arch_frame_t = Struct__jit_arch_frame;
+#[repr(C)]
 pub struct Struct__jit_arch_frame {
     pub next_frame: *mut _jit_arch_frame_t,
     pub return_address: *mut ::libc::c_void,
 }
+#[repr(C)]
 pub struct jit_unwind_context_t {
     pub frame: *mut ::libc::c_void,
     pub cache: *mut ::libc::c_void,
     pub context: jit_context_t,
 }
+#[repr(C)]
 pub struct Union_Unnamed1 {
     pub data: [u8, ..16u],
 }
@@ -232,6 +241,7 @@ impl Union_Unnamed1 {
         unsafe { ::std::mem::transmute(self) }
     }
 }
+#[repr(C)]
 pub struct jit_constant_t {
     pub _type: jit_type_t,
     pub un: Union_Unnamed1,
@@ -242,6 +252,7 @@ pub static JIT_PROT_READ: ::libc::c_uint = 1;
 pub static JIT_PROT_READ_WRITE: ::libc::c_uint = 2;
 pub static JIT_PROT_EXEC_READ: ::libc::c_uint = 3;
 pub static JIT_PROT_EXEC_READ_WRITE: ::libc::c_uint = 4;
+#[repr(C)]
 pub struct jit_crawl_mark_t {
     pub mark: *mut ::libc::c_void,
 }

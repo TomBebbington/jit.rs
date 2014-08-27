@@ -82,7 +82,7 @@ pub use function::{
 };
 pub use label::Label;
 pub use types::*;
-pub use get_type = types::get;
+pub use types::get as get_type;
 pub use util::NativeRef;
 pub use value::Value;
 

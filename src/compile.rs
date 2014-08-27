@@ -24,7 +24,7 @@ use function::{
     CDECL,
     Function
 };
-use get_type = types::get;
+use types::get as get_type;
 use libc::c_long;
 use value::Value;
 use std::c_str::CString;

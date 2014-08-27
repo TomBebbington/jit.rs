@@ -5,12 +5,7 @@ version = "0.0.2"
 authors = [ "tophattedcoder@gmail.com" ]
 build = "make native"
 
-[[lib]]
+[lib]
 
 name = "jit"
-path = "src/libjit/jit.rs"
-
-[[lib]]
-
-name = "jit_macros"
-path = "src/libjit_macros/jit_macros.rs"
+path = "src/jit.rs"

@@ -23,7 +23,7 @@ impl<'a> Context<'a> {
     }
     #[inline(always)]
     /// Run a closure that can generate IR
-    pub fn build<R>(&self, cb: proc<'a>(&'a Context<'a>) -> R) -> R {
+    pub fn build<R>(&'a self, cb: |&'a Context<'a>| -> R) -> R {
         unsafe {
             jit_context_build_start(self.as_ptr());
             let rv = cb(self);
