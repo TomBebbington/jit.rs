@@ -17,7 +17,6 @@ native:
 	-ln -s native/root/libjit.so target/deps/libjit.so
 doc: build
 	rm -rf doc
-	$(RUSTDOC) src/libjit/jit.rs -o doc -L target -L target/deps -L native/root/usr/local/lib
-	$(RUSTDOC) src/libjit_macros/jit_macros.rs -o doc -L target -L target/deps -L native/root/usr/local/lib
+	$(CARGO) doc
 clean:
 	rm -rf target/*jit*
