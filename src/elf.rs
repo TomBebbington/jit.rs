@@ -70,7 +70,7 @@ impl<'a> ReadElf<'a> {
                 jit_readelf_open(&mut this, c_name, 0)
             );
             if this.is_null() {
-                fail!("'{}' couldn't be opened due to {}", filename, code);
+                panic!("'{}' couldn't be opened due to {}", filename, code);
             } else {
                 NativeRef::from_ptr(this)
             }
