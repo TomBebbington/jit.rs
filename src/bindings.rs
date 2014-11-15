@@ -256,7 +256,7 @@ pub static JIT_PROT_EXEC_READ_WRITE: ::libc::c_uint = 4;
 pub struct jit_crawl_mark_t {
     pub mark: *mut ::libc::c_void,
 }
-#[link(name = "jit")]
+#[link(name = "jit", kind = "static")]
 extern "C" {
     pub static jit_type_void: jit_type_t;
     pub static jit_type_sbyte: jit_type_t;
