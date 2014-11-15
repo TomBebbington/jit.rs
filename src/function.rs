@@ -15,7 +15,6 @@ use libc::{
 };
 use std::kinds::marker::ContravariantLifetime;
 use std::mem::{transmute, uninitialized};
-use std::ptr::mut_null;
 use std::c_str::ToCStr;
 /// A platform's application binary interface
 pub enum ABI {
@@ -535,7 +534,7 @@ impl<'a> Function<'a> {
     /// Execute a function and with some arguments
     pub fn execute(&self, args: &mut [*mut c_void]) {
         unsafe {
-            jit_function_apply(self.as_ptr(), args.as_mut_ptr(), mut_null());
+            jit_function_apply(self.as_ptr(), args.as_mut_ptr(), RawPtr::null());
         }
     }
     #[inline(always)]

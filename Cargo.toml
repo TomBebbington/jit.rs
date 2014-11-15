@@ -3,7 +3,8 @@
 name = "jit"
 version = "0.0.2"
 authors = [ "tophattedcoder@gmail.com" ]
-build = "make native"
+build = "src/build.rs"
+links = "jit"
 
 [lib]
 
