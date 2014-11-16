@@ -20,7 +20,7 @@ fn main() {
 		if !eventual_lib_path.exists() {
 			io::println("No LibJIT found in /usr/lib/ so updating LibJIT");
 			if !submod_path.exists() {
-				io::println!("Initialising submodule");
+				io::println("Initialising submodule");
 				run(Command::new("git").arg("submodule").arg("init"));
 			}
 			run(Command::new("git").arg("submodule").arg("update"));
