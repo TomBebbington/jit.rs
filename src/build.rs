@@ -1,4 +1,5 @@
 #![feature(if_let)]
+extern crate "pkg-config" as pkg_config;
 use std::io;
 use std::io::fs;
 use std::io::fs::PathExtensions;
@@ -7,16 +8,18 @@ use std::path::Path;
 use std::os;
 
 fn main() {
-
 	io::println("Searching for LibJIT");
+    let mut opts = pkg_config::default_options("libjit");
+    opts.atleast_version = Some("0.1.2".into_string());
+    match pkg_config::find_library_opts("libjit", &opts) {
+        Ok(()) => return,
+        Err(..) => {}
+    }
 	let ref out_path = Path::new(os::getenv("OUT_DIR").unwrap());
-	let ref lib_path = Path::new("/usr/lib/libjit.so");
 	let ref eventual_lib_path = Path::new("native/jit/.libs/libjit.so");
 	let ref dest_path = out_path.join("libjit.so");
 	let ref submod_path = Path::new("native");
-	if lib_path.exists() {
-		fs::copy(lib_path, dest_path).unwrap();
-	} else if !dest_path.exists() {
+	if !dest_path.exists() {
 		if !eventual_lib_path.exists() {
 			io::println("No LibJIT found in /usr/lib/ so updating LibJIT");
 			if !submod_path.exists() {

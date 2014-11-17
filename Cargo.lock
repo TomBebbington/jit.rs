@@ -1,4 +1,12 @@
 [root]
 name = "jit"
 version = "0.0.2"
+dependencies = [
+ "pkg-config 0.0.1 (git+https://github.com/alexcrichton/pkg-config-rs)",
+]
+
+[[package]]
+name = "pkg-config"
+version = "0.0.1"
+source = "git+https://github.com/alexcrichton/pkg-config-rs#d24a08d87d63df8dc9526c503944415b86719220"
 

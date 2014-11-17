@@ -10,3 +10,6 @@ links = "jit"
 
 name = "jit"
 path = "src/jit.rs"
+
+[build-dependencies.pkg-config]
+git = "https://github.com/alexcrichton/pkg-config-rs"
