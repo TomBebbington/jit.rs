@@ -24,22 +24,18 @@ fn main() {
 				run(Command::new("git").arg("submodule").arg("init"));
 			}
 			run(Command::new("git").arg("submodule").arg("update"));
-			let old_cwd = os::getcwd();
-			os::change_dir(submod_path);
 			io::println("Configuring LibJIT");
-			run(Command::new("sh").arg("auto_gen.sh"));
-			run_cmd("./configure");
+			run(Command::new("sh").arg("auto_gen.sh").cwd(submod_path));
+			run(Command::new("./configure").cwd(submod_path));
 
 			io::println("Building LibJIT");
-			run_cmd("make");
-			os::change_dir(&old_cwd);
+			run(Command::new("make").cwd(submod_path));
 		}
 		fs::copy(eventual_lib_path, dest_path).unwrap();
 	}
 	println!("cargo:rustc-flags=-L {}", out_path.display());
-}
-fn run_cmd(command: &str) {
-	run(&mut Command::new(command))
+    println!("cargo:root={}", out_path.display());
+    println!("cargo:rustc-flags=-l jit:static");
 }
 fn run(command: &mut Command) {
 	let process = command.output().unwrap();
