@@ -5,7 +5,7 @@ env:
 install:
   - sudo apt-get install texinfo
 script:
-  - cargo build
+  - cargo build --verbose
 notifications:
   email:
     - tophattedcoder@gmail.com
