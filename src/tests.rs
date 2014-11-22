@@ -1,16 +1,17 @@
 use compile::Compile;
 use context::Context;
-use function::{CDECL, Function};
+use function::{ABI, Function};
+use function::ABI::CDECL;
+use types::*;
 use std::default::Default;
 use test::Bencher;
-use types::*;
 use types::get as get_type;
 fn with_empty_func(cb:|&Context, &Function| -> ()) -> () {
-    let ctx = Context::new();
-    ctx.build(|ctx| {
-        let sig = Type::create_signature(CDECL, get::<()>(), &mut[]);
-        let func = Function::new(ctx, sig);
-        cb(ctx, &func)
+    let ref ctx = Context::new();
+    ctx.build(proc() {
+        let sig = get::<fn() -> ()>();
+        let ref func = Function::new(ctx, sig);
+        cb(ctx, func)
     })
 }
 macro_rules! test_compile(
@@ -35,7 +36,7 @@ fn test_sqrt() {
     let sqrt_arg_ui = func.insn_convert(&sqrt_arg, get::<uint>(), false);
     func.insn_return(&sqrt_arg_ui);
     func.compile();
-    func.with_closure1(|sqrt:fn(uint) -> uint| {
+    func.with_closure1(|sqrt:extern "C" fn(uint) -> uint| {
         assert_eq!(sqrt(64), 8);
         assert_eq!(sqrt(16), 4);
         assert_eq!(sqrt(9), 3);

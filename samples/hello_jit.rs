@@ -1,13 +1,13 @@
 extern crate jit;
 use jit::{get, Context, Function};
 use std::f64::consts::PI;
-use std::from_str::from_str;
+use std::str::from_str;
 use std::io::stdio::stdin;
 use std::io::Buffer;
 fn main() {
 	let context = Context::new();
 	let func = Function::new(&context, get::<fn(f64) -> f64>());
-	context.build(|| {
+	context.build(|_| {
 		let pi = func.insn_of(&PI);
 		let radius = func.get_param(0);
 		let radius_square = func.insn_mul(&radius, &radius);

@@ -25,11 +25,9 @@
  */
 #![crate_name = "jit"]
 #![comment = "LibJIT Bindings"]
-#![crate_type = "dylib"]
-#![crate_type = "rlib"]
 #![allow(raw_pointer_deriving, dead_code, non_camel_case_types, non_upper_case_globals, unknown_features)]
 #![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
-#![feature(globs, macro_rules, unsafe_destructor)]
+#![feature(globs, macro_rules, unsafe_destructor, phase)]
 #![stable]
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
@@ -39,7 +37,7 @@
 //! use jit::{C_DECL, Context, Function, Type, Types, get_type};
 //! fn main() {
 //!     let cx = Context::new();
-//!     cx.build(|| {
+//!     cx.build(proc() {
 //!         // build the IR
 //!         let sig = get_type::<fn(int, int) -> int>();
 //!         let func = Function::new(cx, sig);
@@ -59,6 +57,8 @@
 #[cfg(test)]
 extern crate test;
 extern crate libc;
+#[phase(plugin)]
+extern crate bindgen;
 use bindings::{
     jit_init,
     jit_uses_interpreter,
@@ -77,7 +77,6 @@ pub use context::{
 };
 pub use function::{
     ABI,
-    CDECL,
     Function
 };
 pub use label::Label;

@@ -17,19 +17,28 @@ use std::kinds::marker::ContravariantLifetime;
 use std::mem::{transmute, uninitialized};
 use std::c_str::ToCStr;
 /// A platform's application binary interface
+#[repr(C)]
 pub enum ABI {
     /// The C application binary interface
-    CDECL = 0
+    CDECL,
+    /// The C application binary interface with variable arguments
+    VARARG,
+    /// A Windows application binary interface
+    STDCALL,
+    /// A Windows application binary interface
+    FASTCALL
 }
 /// Call flags to a function
-pub enum CallFlags {
-    /// When the function won't throw a value
-    JitCallNothrow = 1,
-    /// When the function won't return a value
-    JitCallNoReturn = 2,
-    /// When the function is tail-recursive
-    JitCallTail = 4,
-}
+bitflags!(
+    flags CallFlags: c_int {
+        /// When the function won't throw a value
+        const JIT_CALL_NO_THROW = 1,
+        /// When the function won't return a value
+        const JIT_CALL_NO_RETURN = 2,
+        /// When the function is tail-recursive
+        const JIT_CALL_TAIL = 4
+    }
+)
 #[deriving(PartialEq)]
 /// A function persists for the lifetime of its containing context. It initially
 /// starts life in the "building" state, where the user constructs instructions
@@ -389,7 +398,7 @@ impl<'a> Function<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
             let cb = |c_name|
-                NativeRef::from_ptr(jit_insn_call(self.as_ptr(), c_name, func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JitCallNothrow as c_int));
+                NativeRef::from_ptr(jit_insn_call(self.as_ptr(), c_name, func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JIT_CALL_NO_THROW.bits()));
             match name {
                 Some(ref name) => name.with_c_str(cb),
                 None => cb(RawPtr::null())
@@ -403,7 +412,7 @@ impl<'a> Function<'a> {
                                args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
-            NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JitCallNothrow as c_int))
+            NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JIT_CALL_NO_THROW.bits() as c_int))
         }
     }
     /// Make an instruction that calls a native function that has the signature
@@ -422,7 +431,7 @@ impl<'a> Function<'a> {
                     signature.as_ptr(),
                     native_args.as_mut_ptr(),
                     args.len() as c_uint,
-                    JitCallNothrow as c_int
+                    JIT_CALL_NO_THROW.bits()
                 ))
             };
             match name {
@@ -544,28 +553,28 @@ impl<'a> Function<'a> {
     }
     #[inline(always)]
     /// Turn this function into a closure with 0 arguments
-    pub fn with_closure0<Y, Z>(&self, cb:|fn() -> Z| -> Y) -> Y {
+    pub fn with_closure0<Y, Z>(&self, cb:|extern "C" fn() -> Z| -> Y) -> Y {
         unsafe {
             cb(transmute(self.closure()))
         }
     }
     #[inline(always)]
     /// Turn this function into a closure with 1 argument
-    pub fn with_closure1<A, Y, Z>(&self, cb:|fn(A) -> Z| -> Y)  -> Y {
+    pub fn with_closure1<A, Y, Z>(&self, cb:|extern "C" fn(A) -> Z| -> Y)  -> Y {
         unsafe {
             cb(transmute(self.closure()))
         }
     }
     #[inline(always)]
     /// Turn this function into a closure with 2 arguments
-    pub fn with_closure2<A, B, Y, Z>(&self, cb:|fn(A, B) -> Z| -> Y) -> Y {
+    pub fn with_closure2<A, B, Y, Z>(&self, cb:|extern "C" fn(A, B) -> Z| -> Y) -> Y {
         unsafe {
             cb(transmute(self.closure()))
         }
     }
     #[inline(always)]
     /// Turn this function into a closure with 3 arguments
-    pub fn with_closure3<A, B, C, Y, Z>(&self, cb:|fn(A, B, C) -> Z| -> Y) -> Y {
+    pub fn with_closure3<A, B, C, Y, Z>(&self, cb:|extern "C" fn(A, B, C) -> Z| -> Y) -> Y {
         unsafe {
             cb(transmute(self.closure()))
         }

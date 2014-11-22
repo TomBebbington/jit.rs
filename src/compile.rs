@@ -20,10 +20,8 @@ use bindings::{
     jit_value_create_float64_constant,
     jit_value_create_float32_constant
 };
-use function::{
-    CDECL,
-    Function
-};
+use function::Function;
+use function::ABI::CDECL;
 use types::get as get_type;
 use libc::c_long;
 use value::Value;

@@ -1,36 +1,63 @@
 use bindings::*;
 use compile::Compile;
 use function::ABI;
-use libc::c_uint;
+use libc::{c_uint, c_int};
 use std::kinds::marker::{ContravariantLifetime, NoCopy};
 use std::mem::transmute;
 use std::string::raw::from_buf;
+use std::fmt::{Show, Formatter, Result};
 use std::c_str::ToCStr;
 use util::NativeRef;
-#[repr(i32)]
-#[deriving(Eq, PartialEq, Show)]
-pub enum TypeKind {
-    Void         = 0,
-    SByte        = 1,
-    UByte        = 2,
-    Short        = 3,
-    UShort       = 4,
-    Int          = 5,
-    UInt         = 6,
-    NInt         = 7,
-    NUInt        = 8,
-    Long         = 9,
-    ULong        = 10,
-    Float32      = 11,
-    Float64      = 12,
-    NFloat       = 13,
-    Struct       = 14,
-    Union        = 15,
-    Signature    = 16,
-    Pointer      = 17,
-    FirstTagged  = 32,
-    SysBool      = 10009,
-    SysChar      = 10010
+bitflags!(
+    flags TypeKind: c_int {
+        const Void = 0,
+        const SByte = 1,
+        const UByte = 2,
+        const Short = 3,
+        const UShort = 4,
+        const Int = 5,
+        const UInt = 6,
+        const NInt = 7,
+        const NUInt = 8,
+        const Long = 9,
+        const ULong = 10,
+        const Float32 = 11,
+        const Float64 = 12,
+        const NFloat = 13,
+        const Struct = 14,
+        const Union = 15,
+        const Signature = 16,
+        const Pointer = 17,
+        const FirstTagged = 2,
+        const SysBool = 10009,
+        const SysChar = 10010
+    }
+)
+impl Show for TypeKind {
+    fn fmt(&self, fmt:&mut Formatter) -> Result {
+        write!(fmt, "{}",
+            if self.contains(SysBool) { "SysBool" }
+            else if self.contains(SysChar) { "SysChar" }
+            else if self.contains(SByte) { "SByte" }
+            else if self.contains(UByte) { "UByte" }
+            else if self.contains(Short) { "Short" }
+            else if self.contains(UShort) { "UShort" }
+            else if self.contains(Int) { "Int" }
+            else if self.contains(UInt) { "UInt" }
+            else if self.contains(NInt) { "NInt" }
+            else if self.contains(NUInt) { "NUInt" }
+            else if self.contains(Long) { "Long" }
+            else if self.contains(ULong) { "ULong" }
+            else if self.contains(Float32) { "Float32" }
+            else if self.contains(Float64) { "Float64" }
+            else if self.contains(NFloat) { "NFloat" }
+            else if self.contains(Struct) { "Struct" }
+            else if self.contains(Union) { "Union" }
+            else if self.contains(Signature) { "Signature" }
+            else if self.contains(Pointer) { "Void" }
+            else { "Void" }
+        )
+    }
 }
 /// A single field of a struct
 pub struct Field<'a> {
