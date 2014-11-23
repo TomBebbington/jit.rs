@@ -16,16 +16,14 @@ fn main() {
 	let ref out_dir = Path::new(os::getenv("OUT_DIR").expect("OUT_DIR needed for compilation"));
 	let ref final_lib_dir = Path::new("native/jit/.libs");
 	let ref submod_path = Path::new("native");
-	if !final_lib_dir.exists() {
-		if !final_lib_dir.exists() {
-			if !submod_path.exists() {
-				run(Command::new("git").arg("submodule").arg("init"));
-			}
-			run(Command::new("git").arg("submodule").arg("update"));
-			run(Command::new("sh").arg("auto_gen.sh").cwd(submod_path));
-			run(Command::new("sh").arg("configure").arg("--enable-shared").cwd(submod_path));
-			run(Command::new("make").cwd(submod_path));
+	if !final_lib_dir.join("libjit.a").exists() {
+		if !submod_path.exists() {
+			run(Command::new("git").arg("submodule").arg("init"));
 		}
+		run(Command::new("git").arg("submodule").arg("update"));
+		run(Command::new("sh").arg("auto_gen.sh").cwd(submod_path));
+		run(Command::new("sh").arg("configure").arg("--enable-shared").cwd(submod_path));
+		run(Command::new("make").cwd(submod_path));
 	}
     println!("cargo:root={}", out_dir.display());
     println!("cargo:rustc-flags=-l jit:static");
