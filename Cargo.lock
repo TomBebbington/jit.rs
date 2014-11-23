@@ -3,16 +3,10 @@ name = "jit"
 version = "0.0.3"
 dependencies = [
  "pkg-config 0.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "rust-bindgen 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "pkg-config"
 version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-
-[[package]]
-name = "rust-bindgen"
-version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 

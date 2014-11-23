@@ -57,8 +57,6 @@
 #[cfg(test)]
 extern crate test;
 extern crate libc;
-#[phase(plugin)]
-extern crate bindgen;
 use bindings::{
     jit_init,
     jit_uses_interpreter,

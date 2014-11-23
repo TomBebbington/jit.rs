@@ -11,8 +11,5 @@ links = "jit"
 name = "jit"
 path = "src/jit.rs"
 
-[dependencies]
-rust-bindgen = "*"
-
 [build-dependencies]
 pkg-config = "~0.0.1"
