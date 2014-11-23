@@ -23,7 +23,7 @@ fn main() {
 			}
 			run(Command::new("git").arg("submodule").arg("update"));
 			run(Command::new("sh").arg("auto_gen.sh").cwd(submod_path));
-			run(Command::new("./configure --enable-shared").cwd(submod_path));
+			run(Command::new("sh").arg("configure").arg("--enable-shared").cwd(submod_path));
 			run(Command::new("make").cwd(submod_path));
 		}
 	}
@@ -32,9 +32,12 @@ fn main() {
 	println!("cargo:rustc-flags=-L {}", final_lib_dir.display());
 }
 fn run(command: &mut Command) {
-	let process = command.output().unwrap();
 	println!("{}", command);
-	if !process.status.success() {
-		panic!("failed with output: \n{}\n{}", String::from_utf8_lossy(process.output[]), String::from_utf8_lossy(process.error[]));
+	match command.output() {
+		Ok(ref process) if !process.status.success() => {
+			panic!("failed with output: \n{}\n{}", String::from_utf8_lossy(process.output[]), String::from_utf8_lossy(process.error[]));
+		},
+		Ok(_) => (),
+		Err(err) => panic!("failed due to {}", err)
 	}
 }
