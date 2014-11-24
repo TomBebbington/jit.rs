@@ -2,7 +2,6 @@ use libc::c_void;
 use std::c_str::{CString, ToCStr};
 use std::mem::transmute;
 use std::ptr::RawPtr;
-use std::string::raw::from_buf;
 /// A structure that wraps a native object
 pub trait NativeRef {
     /// Returns the native reference encapsulated by this object
@@ -47,7 +46,7 @@ impl NativeRef for String {
     }
     #[inline(always)]
     unsafe fn from_ptr(ptr:*mut c_void) -> String {
-        from_buf(transmute(ptr))
+        String::from_raw_buf(transmute(ptr))
     }
     #[inline(always)]
     unsafe fn with_ptr<R>(&self, cb:|*mut c_void| -> R) -> R {

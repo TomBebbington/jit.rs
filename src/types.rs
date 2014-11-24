@@ -4,7 +4,6 @@ use function::ABI;
 use libc::{c_uint, c_int};
 use std::kinds::marker::{ContravariantLifetime, NoCopy};
 use std::mem::transmute;
-use std::string::raw::from_buf;
 use std::fmt::{Show, Formatter, Result};
 use std::c_str::ToCStr;
 use util::NativeRef;
@@ -94,7 +93,7 @@ impl<'a> Field<'a> {
             if c_name.is_null() {
                 None
             } else {
-                Some(from_buf(transmute(c_name)))
+                Some(String::from_raw_buf(transmute(c_name)))
             }
         }
     }
