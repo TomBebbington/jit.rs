@@ -1,16 +1,14 @@
 use compile::Compile;
 use context::Context;
-use function::{ABI, Function};
-use function::ABI::CDECL;
+use function::UncompiledFunction;
 use types::*;
-use std::default::Default;
-use test::Bencher;
 use types::get as get_type;
-fn with_empty_func(cb:|&Context, &Function| -> ()) -> () {
+use std::default::Default;
+fn with_empty_func(cb:|&Context, &UncompiledFunction| -> ()) -> () {
     let ref ctx = Context::new();
     ctx.build(proc() {
         let sig = get::<fn() -> ()>();
-        let ref func = Function::new(ctx, sig);
+        let ref func = UncompiledFunction::new(ctx, sig);
         cb(ctx, func)
     })
 }
@@ -30,12 +28,12 @@ macro_rules! test_compile(
 fn test_sqrt() {
     let sig = get::<fn(uint) -> uint>();
     let context = Context::new();
-    let func = Function::new(&context, sig);
+    let func = UncompiledFunction::new(&context, sig);
     let arg = func.get_param(0);
     let sqrt_arg = func.insn_sqrt(&arg);
     let sqrt_arg_ui = func.insn_convert(&sqrt_arg, get::<uint>(), false);
     func.insn_return(&sqrt_arg_ui);
-    func.compile();
+    let func = func.compile();
     func.with_closure1(|sqrt:extern fn(uint) -> uint| {
         assert_eq!(sqrt(64), 8);
         assert_eq!(sqrt(16), 4);
@@ -43,8 +41,6 @@ fn test_sqrt() {
         assert_eq!(sqrt(4), 2);
         assert_eq!(sqrt(1), 1);
     });
-    let result:uint = func.apply1(64u);
-    assert_eq!(result, 8u);
 }
 #[test]
 fn test_struct() {

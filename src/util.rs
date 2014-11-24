@@ -9,6 +9,14 @@ pub trait NativeRef {
     unsafe fn as_ptr(&self) -> *mut c_void;
     /// Returns a wrapped version of the native reference given, even if the reference is null
     unsafe fn from_ptr(ptr:*mut c_void) -> Self;
+    /// Returns a wrapped version of the native reference given
+    unsafe fn from_opt_ptr(ptr:*mut c_void) -> Option<Self> {
+        if ptr.is_null() {
+            None
+        } else {
+            Some(NativeRef::from_ptr(ptr))
+        }
+    }
     #[inline(always)]
     /// Works with the internal pointer in a closure
     unsafe fn with_ptr<R>(&self, cb:|*mut c_void| -> R) -> R {

@@ -59,6 +59,20 @@ impl Show for TypeKind {
         )
     }
 }
+impl Show for Type {
+    fn fmt(&self, fmt:&mut Formatter) -> Result {
+        let kind = self.get_kind();
+        if kind == Signature {
+            try!("fn(".fmt(fmt));
+            for param in self.params() {
+                try!(param.fmt(fmt));
+            }
+            write!(fmt, ") -> ({})", self.get_return())
+        } else {
+            kind.fmt(fmt)
+        }
+    }
+}
 /// A single field of a struct
 pub struct Field<'a> {
     /// The index of the field
@@ -121,32 +135,20 @@ impl<'a> Fields<'a> {
 }
 impl<'a> Iterator<Field<'a>> for Fields<'a> {
     fn next(&mut self) -> Option<Field<'a>> {
-        let index = self.index;
-        self.index += 1;
-        if index < self.length {
+        if self.index < self.length {
+            let index = self.index;
+            self.index += 1;
             Some(Field {
-                _type: self._type.clone(),
                 index: index,
+                _type: self._type,
                 marker: ContravariantLifetime::<'a>
             })
         } else {
             None
         }
     }
-    #[inline]
     fn size_hint(&self) -> (uint, Option<uint>) {
         ((self.length - self.index) as uint, None)
-    }
-    #[inline]
-    fn count(&mut self) -> uint {
-        let count = self.length - self.index;
-        self.index = self.length;
-        count as uint
-    }
-    #[inline]
-    fn nth(&mut self, n:uint) -> Option<Field<'a>> {
-        self.index += n as c_uint;
-        self.next()
     }
 }
 pub struct Params<'a> {
@@ -156,12 +158,11 @@ pub struct Params<'a> {
     marker: ContravariantLifetime<'a>
 }
 impl<'a> Params<'a> {
-    #[inline(always)]
     fn new(ty:Type) -> Params<'a> {
         unsafe {
             Params {
                 _type: ty.as_ptr(),
-                index: 0 as c_uint,
+                index: 0,
                 length: jit_type_num_params(ty.as_ptr()),
                 marker: ContravariantLifetime::<'a>
             }
@@ -170,12 +171,10 @@ impl<'a> Params<'a> {
 }
 impl<'a> Iterator<Type> for Params<'a> {
     fn next(&mut self) -> Option<Type> {
-        let index = self.index;
-        self.index += 1;
-        if index < self.length {
-            Some(unsafe {
-                NativeRef::from_ptr(jit_type_get_param(self._type, index))
-            })
+        if self.index < self.length {
+            let index = self.index;
+            self.index += 1;
+            unsafe { NativeRef::from_opt_ptr(jit_type_get_param(self._type, index)) }
         } else {
             None
         }
@@ -183,17 +182,6 @@ impl<'a> Iterator<Type> for Params<'a> {
     #[inline]
     fn size_hint(&self) -> (uint, Option<uint>) {
         ((self.length - self.index) as uint, None)
-    }
-    #[inline]
-    fn count(&mut self) -> uint {
-        let count = self.length - self.index;
-        self.index = self.length;
-        count as uint
-    }
-    #[inline]
-    fn nth(&mut self, n:uint) -> Option<Type> {
-        self.index += n as c_uint;
-        self.next()
     }
 }
 /// An object that represents a native system type.
@@ -294,6 +282,13 @@ impl Type {
     pub fn get_ref(&self) -> Type {
         unsafe {
             NativeRef::from_ptr(jit_type_get_ref(self.as_ptr()))
+        }
+    }
+    #[inline(always)]
+    /// Get the type returned by this function type.
+    pub fn get_return(&self) -> Type {
+        unsafe {
+            NativeRef::from_ptr(jit_type_get_return(self.as_ptr()))
         }
     }
     /// Set the field or parameter names of this type.

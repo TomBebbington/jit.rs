@@ -27,14 +27,14 @@
 #![comment = "LibJIT Bindings"]
 #![allow(raw_pointer_deriving, dead_code, non_camel_case_types, non_upper_case_globals, unknown_features)]
 #![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
-#![feature(globs, macro_rules, unsafe_destructor, phase)]
+#![feature(globs, macro_rules, slicing_syntax, unsafe_destructor, phase)]
 #![stable]
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
 //! 
 //! ```rust
 //! extern crate jit;
-//! use jit::{Context, Function, get_type};
+//! use jit::{Context, UncompiledFunction, get_type};
 //! fn main() {
 //!     // make a new context to make functions on
 //!     let ref ctx = Context::new();
@@ -42,13 +42,13 @@
 //!         // get the type of the function
 //!         let sig = get_type::<fn(int, int) -> int>();
 //!         // make the function
-//!         let func = Function::new(ctx, sig);
+//!         let func = UncompiledFunction::new(ctx, sig);
 //!         let ref x = func.get_param(0);
 //!         let ref y = func.get_param(1);
 //!         let ref result = func.insn_mul(x, y);
 //!         func.insn_return(result);
 //!         // compile the IR into machine code
-//!         func.compile();
+//!         let func = func.compile();
 //!         // get the machine code as a function
 //!         func.with_closure2(|mul:extern fn(int, int) -> int| {
 //!             assert_eq!(mul(4, 5), 20);
@@ -70,14 +70,11 @@ pub use bindings::{
     jit_nuint
 };
 pub use compile::Compile;
-pub use context::{
-    Context,
-    InContext,
-    Functions
-};
+pub use context::Context;
 pub use function::{
     ABI,
-    Function
+    CompiledFunction,
+    UncompiledFunction
 };
 pub use label::Label;
 pub use types::*;

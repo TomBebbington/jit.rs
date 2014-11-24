@@ -1,6 +1,6 @@
 use bindings::*;
 use context::Context;
-use function::Function;
+use function::CompiledFunction;
 use libc::c_uint;
 use util::NativeRef;
 use std::fmt::Show;
@@ -131,7 +131,7 @@ impl<'a> WriteElf<'a> {
     }
     #[inline]
     /// Add a function to the ELF
-    pub fn add_function<S:ToCStr>(&self, func:&Function<'a>, name:S) -> bool {
+    pub fn add_function<S:ToCStr>(&self, func:&'a CompiledFunction<'a>, name:S) -> bool {
         name.with_c_str(|c_name| unsafe {
             jit_writeelf_add_function(self.as_ptr(), func.as_ptr(), c_name) != 0
         })

@@ -20,7 +20,7 @@ use bindings::{
     jit_value_create_float64_constant,
     jit_value_create_float32_constant
 };
-use function::Function;
+use function::UncompiledFunction;
 use function::ABI::CDECL;
 use types::get as get_type;
 use libc::c_long;
@@ -32,13 +32,13 @@ use util::NativeRef;
 /// A type that can be compiled into a LibJIT representation
 pub trait Compile {
     /// Get a JIT representation of this value
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a>;
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a>;
     /// Get the JIT type repr of the value
     fn jit_type(_:Option<Self>) -> Type;
 }
 impl Compile for () {
     #[inline(always)]
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let ty = ::get::<()>();
         Value::new(func, ty)
     }
@@ -64,7 +64,7 @@ compile_prim!(u8, jit_type_ubyte, jit_value_create_nint_constant, c_long)
 compile_prim!(bool, jit_type_sys_bool, jit_value_create_nint_constant, c_long)
 compile_prim!(char, jit_type_sys_char, jit_value_create_nint_constant, c_long)
 impl Compile for *const u8 {
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let c_str = unsafe { CString::new(transmute(*self), false) };
         let ty = jit!(&u8);
         let ptr = Value::new(func, ty);
@@ -84,7 +84,7 @@ impl Compile for *const u8 {
     }
 }
 impl<T:Compile> Compile for *mut T {
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
@@ -99,7 +99,7 @@ impl<T:Compile> Compile for *mut T {
     }
 }
 impl<'s> Compile for CString {
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let ty = jit!(CString);
         let val = Value::new(func, ty.clone());
         let string:*const u8 = unsafe { transmute(self.as_ptr()) };
@@ -116,7 +116,7 @@ impl<'s> Compile for CString {
     }
 }
 impl<'a> Compile for &'a str {
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let str_ptr = {
             let ty = ::get::<*const u8>();
             let ptr = Value::new(func, ty);
@@ -143,7 +143,7 @@ impl<'a> Compile for &'a str {
     }
 }
 impl<'a> Compile for String {
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let str_ptr = {
             let ty = ::get::<*const u8>();
             let ptr = Value::new(func, ty);
@@ -172,7 +172,7 @@ impl<'a> Compile for String {
     }
 }
 impl<'a, T:Compile> Compile for Vec<T> {
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let vec_ptr = {
             let ty = ::get::<&T>();
             let inner_ty = jit!(T);
@@ -205,7 +205,7 @@ impl<'a, T:Compile> Compile for Vec<T> {
 }
 impl<'a, T:Compile> Compile for &'a T {
     #[inline(always)]
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
@@ -221,7 +221,7 @@ impl<'a, T:Compile> Compile for &'a T {
 }
 impl<R:Compile> Compile for fn() -> R {
     #[inline(always)]
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let ptr = (self as *const fn() -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn() -> R>(), false)
     }
@@ -232,7 +232,7 @@ impl<R:Compile> Compile for fn() -> R {
 }
 impl<A:Compile, R:Compile> Compile for fn(A) -> R {
     #[inline(always)]
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let ptr = (self as *const fn(A) -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn(A) -> R>(), false)
     }
@@ -243,7 +243,7 @@ impl<A:Compile, R:Compile> Compile for fn(A) -> R {
 }
 impl<A:Compile, B:Compile, R:Compile> Compile for fn(A, B) -> R {
     #[inline(always)]
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let ptr = (self as *const fn(A, B) -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn(A, B) -> R>(), false)
     }
@@ -254,7 +254,7 @@ impl<A:Compile, B:Compile, R:Compile> Compile for fn(A, B) -> R {
 }
 impl<A:Compile, B:Compile, C:Compile, R:Compile> Compile for fn(A, B, C) -> R {
     #[inline(always)]
-    fn compile<'a>(&self, func:&'a Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let ptr = (self as *const fn(A, B, C) -> R).to_uint().compile(func);
         func.insn_convert(&ptr, get_type::<fn(A, B, C) -> R>(), false)
     }

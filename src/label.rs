@@ -2,7 +2,7 @@ use bindings::{
     jit_label_t,
     jit_function_reserve_label
 };
-use function::Function;
+use function::UncompiledFunction;
 use std::kinds::marker::ContravariantLifetime;
 use util::NativeRef;
 #[deriving(PartialEq)]
@@ -14,7 +14,7 @@ pub struct Label<'a> {
 impl<'a> Label<'a> {
     #[inline(always)]
     /// Create a new label
-    pub fn new(func:&Function<'a>) -> Label<'a> {
+    pub fn new(func:&UncompiledFunction<'a>) -> Label<'a> {
         unsafe {
             Label {
                 _label: jit_function_reserve_label(func.as_ptr()),

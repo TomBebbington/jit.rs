@@ -1,9 +1,9 @@
 #[macro_export]
 macro_rules! compile_prim(
-    ($ty:ty, $type_name:ident, $make_constant:ident) =>
-(impl Compile for $ty {
+    ($ty:ty, $type_name:ident, $make_constant:ident) => (
+impl Compile for $ty {
     #[inline(always)]
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr($make_constant(func.as_ptr(), $type_name, *self) )
         }
@@ -15,10 +15,10 @@ macro_rules! compile_prim(
         }
     }
 });
-    ($ty:ty, $type_name:ident, $make_constant:ident, $cast:ty) =>
-(impl Compile for $ty {
+    ($ty:ty, $type_name:ident, $make_constant:ident, $cast:ty) => (
+impl Compile for $ty {
     #[inline(always)]
-    fn compile<'a>(&self, func:&Function<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr($make_constant(func.as_ptr(), $type_name, *self as $cast) )
         }

@@ -1,8 +1,5 @@
 use bindings::*;
-use context::{
-    Context,
-    InContext
-};
+use context::Context;
 use compile::Compile;
 use label::Label;
 use types::Type;
@@ -13,9 +10,9 @@ use libc::{
     c_uint,
     c_void
 };
-use std::kinds::marker::ContravariantLifetime;
-use std::mem::{transmute, uninitialized};
 use std::c_str::ToCStr;
+use std::kinds::marker::ContravariantLifetime;
+use std::mem;
 /// A platform's application binary interface
 #[repr(C)]
 pub enum ABI {
@@ -40,15 +37,16 @@ bitflags!(
     }
 )
 #[deriving(PartialEq)]
+/// A function which has already been compiled.
 /// A function persists for the lifetime of its containing context. It initially
 /// starts life in the "building" state, where the user constructs instructions
 /// that represents the function body. Once the build process is complete, the
 /// user calls `function.compile()` to convert it into its executable form.
-pub struct Function<'a> {
+pub struct CompiledFunction<'a> {
     _func: jit_function_t,
     marker: ContravariantLifetime<'a>
 }
-impl<'a> NativeRef for Function<'a> {
+impl<'a> NativeRef for CompiledFunction<'a> {
     #[inline(always)]
     /// Convert to a native pointer
     unsafe fn as_ptr(&self) -> jit_function_t {
@@ -56,15 +54,15 @@ impl<'a> NativeRef for Function<'a> {
     }
     #[inline(always)]
     /// Convert from a native pointer
-    unsafe fn from_ptr(ptr:jit_function_t) -> Function<'a> {
-        Function {
+    unsafe fn from_ptr(ptr:jit_function_t) -> CompiledFunction<'a> {
+        CompiledFunction {
             _func: ptr,
             marker: ContravariantLifetime::<'a>
         }
     }
 }
 #[unsafe_destructor]
-impl<'a> Drop for Function<'a> {
+impl<'a> Drop for CompiledFunction<'a> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe {
@@ -72,17 +70,82 @@ impl<'a> Drop for Function<'a> {
         }
     }
 }
-impl<'a> InContext<'a> for Function<'a> {
-    #[inline(always())]
-    /// Get the context this function was made in
-    fn get_context(&self) -> Context<'a> {
+impl<'a> CompiledFunction<'a> {
+    #[inline(always)]
+    /// Get the signature of this function
+    pub fn get_signature(&self) -> Type {
+        unsafe { NativeRef::from_ptr(jit_function_get_signature(self.as_ptr())) }
+    }
+    #[inline(always)]
+    unsafe fn closure(&self, count: uint) -> *mut c_void {
+        let sig = self.get_signature();
+        debug_assert_eq!(sig.params().count(), count);
+        jit_function_to_closure(self.as_ptr())
+    }
+    #[inline(always)]
+    /// Call the given closure with this function compiled with no arguments
+    pub fn with_closure0<Y, Z>(&self, cb:|extern "C" fn() -> Z| -> Y) -> Y {
         unsafe {
-            let context = jit_function_get_context(self.as_ptr());
-            NativeRef::from_ptr(context)
+            cb(mem::transmute(self.closure(0)))
+        }
+    }
+    #[inline(always)]
+    /// Call the given closure with this function compiled with 1 argument
+    pub fn with_closure1<A, Y, Z>(&self, cb:|extern "C" fn(A) -> Z| -> Y)  -> Y {
+        unsafe {
+            cb(mem::transmute(self.closure(1)))
+        }
+    }
+    #[inline(always)]
+    /// Call the given closure with this function compiled with 2 arguments
+    pub fn with_closure2<A, B, Y, Z>(&self, cb:|extern "C" fn(A, B) -> Z| -> Y) -> Y {
+        unsafe {
+            cb(mem::transmute(self.closure(2)))
+        }
+    }
+    #[inline(always)]
+    /// Call the given closure with this function compiled with 3 arguments
+    pub fn with_closure3<A, B, C, Y, Z>(&self, cb:|extern "C" fn(A, B, C) -> Z| -> Y) -> Y {
+        unsafe {
+            cb(mem::transmute(self.closure(3)))
         }
     }
 }
-impl<'a> Function<'a> {
+
+#[deriving(PartialEq)]
+/// A function persists for the lifetime of its containing context. It initially
+/// starts life in the "building" state, where the user constructs instructions
+/// that represents the function body. Once the build process is complete, the
+/// user calls `function.compile()` to convert it into its executable form.
+pub struct UncompiledFunction<'a> {
+    _func: jit_function_t,
+    marker: ContravariantLifetime<'a>
+}
+impl<'a> NativeRef for UncompiledFunction<'a> {
+    #[inline(always)]
+    /// Convert to a native pointer
+    unsafe fn as_ptr(&self) -> jit_function_t {
+        self._func
+    }
+    #[inline(always)]
+    /// Convert from a native pointer
+    unsafe fn from_ptr(ptr:jit_function_t) -> UncompiledFunction<'a> {
+        UncompiledFunction {
+            _func: ptr,
+            marker: ContravariantLifetime::<'a>
+        }
+    }
+}
+#[unsafe_destructor]
+impl<'a> Drop for UncompiledFunction<'a> {
+    #[inline(always)]
+    fn drop(&mut self) {
+        unsafe {
+            jit_function_abandon(self.as_ptr());
+        }
+    }
+}
+impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Create a new function block and associate it with a JIT context.
     /// It is recommended that you call `Function::new` and `function.compile()`
@@ -90,8 +153,7 @@ impl<'a> Function<'a> {
     /// 
     /// This will protect the JIT's internal data structures within a
     /// multi-threaded environment.
-    pub fn new(context:&'a Context<'a>,
-               signature:Type) -> Function<'a> {
+    pub fn new(context:&'a Context<'a>, signature:Type) -> UncompiledFunction<'a> {
         unsafe {
             NativeRef::from_ptr(jit_function_create(
                 context.as_ptr(),
@@ -109,9 +171,8 @@ impl<'a> Function<'a> {
     /// never be called by anyone except its parent and sibling functions.
     /// The front end is also responsible for ensuring that the nested function
     /// is compiled before its parent.
-    pub fn new_nested(context:&'a Context<'a>,
-                        signature: Type,
-                        parent: &'a Function<'a>) -> Function<'a> {
+    pub fn new_nested(context:&'a Context<'a>, signature: Type,
+                        parent: &'a UncompiledFunction<'a>) -> UncompiledFunction<'a> {
         unsafe {
             NativeRef::from_ptr(jit_function_create_nested(
                 context.as_ptr(),
@@ -121,48 +182,16 @@ impl<'a> Function<'a> {
         }
     }
     #[inline(always)]
-    fn insn_binop(&self,
-                    v1: &Value<'a>, v2: &Value<'a>,
-                    f: unsafe extern "C" fn(
-                        jit_function_t,
-                        jit_value_t,
-                        jit_value_t) -> jit_value_t)
-                    -> Value<'a> {
+    /// Make an instruction that converts the value to the type given
+    pub fn insn_convert(&self, v: &Value<'a>,
+                            t:Type, overflow_check:bool) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(f(self.as_ptr(), v1.as_ptr(), v2.as_ptr()))
-        }
-    }
-    #[inline(always)]
-    fn insn_unop(&self,
-                    value: &Value<'a>,
-                    f: unsafe extern "C" fn(
-                        jit_function_t,
-                        jit_value_t) -> jit_value_t)
-                    -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(f(self.as_ptr(), value.as_ptr()))
-        }
-    }
-    #[inline(always)]
-    /// Set the optimization level of the function, where the bigger the level,
-    /// the more effort should be spent optimising
-    pub fn set_optimization_level(&self, level: c_uint) {
-        unsafe {
-            jit_function_set_optimization_level(self.as_ptr(), level);
-        }
-    }
-    #[inline(always)]
-    /// Make this function a candidate for recompilation
-    pub fn set_recompilable(&self) {
-        unsafe {
-            jit_function_set_recompilable(self.as_ptr());
-        }
-    }
-    #[inline(always)]
-    /// Compile the function
-    pub fn compile(&self) {
-        unsafe {
-            jit_function_compile(self.as_ptr());
+            NativeRef::from_ptr(jit_insn_convert(
+                self.as_ptr(),
+                v.as_ptr(),
+                t.as_ptr(),
+                overflow_check as c_int
+            ))
         }
     }
     /// Get the value that corresponds to a specified function parameter.
@@ -391,207 +420,6 @@ impl<'a> Function<'a> {
             );
         }
     }
-    /// Call the function, which may or may not be translated yet
-    pub fn insn_call<S:ToCStr>(&self, name:Option<S>, func:&Function<'a>,
-                                sig:Option<Type>,
-                                args: &mut [&Value<'a>]) -> Value<'a> {
-        unsafe {
-            let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
-            let cb = |c_name|
-                NativeRef::from_ptr(jit_insn_call(self.as_ptr(), c_name, func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JIT_CALL_NO_THROW.bits()));
-            match name {
-                Some(ref name) => name.with_c_str(cb),
-                None => cb(RawPtr::null())
-            }
-        }
-    }
-    #[inline(always)]
-    /// Make an instruction that calls a function that has the signature given
-    /// with some arguments
-    pub fn insn_call_indirect(&self, func:&Function<'a>, signature: Type,
-                               args: &mut [&Value<'a>]) -> Value<'a> {
-        unsafe {
-            let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
-            NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JIT_CALL_NO_THROW.bits() as c_int))
-        }
-    }
-    /// Make an instruction that calls a native function that has the signature
-    /// given with some arguments
-    fn insn_call_native<S:ToCStr>(&self, name: Option<S>,
-                        native_func: *mut c_void, signature: Type,
-                        args: &mut [&Value<'a>]) -> Value<'a> {
-        unsafe {
-            let mut native_args:Vec<_> = args.iter()
-                .map(|arg| arg.as_ptr()).collect();
-            let cb = |c_name| {
-                NativeRef::from_ptr(jit_insn_call_native(
-                    self.as_ptr(),
-                    c_name,
-                    native_func,
-                    signature.as_ptr(),
-                    native_args.as_mut_ptr(),
-                    args.len() as c_uint,
-                    JIT_CALL_NO_THROW.bits()
-                ))
-            };
-            match name {
-                Some(ref name) => name.with_c_str(cb),
-                None => cb(RawPtr::null())
-            }
-        }
-    }
-    #[inline(always)]
-    /// Make an instruction that calls a Rust function that has the signature
-    /// given with no arguments and expects a return value
-    pub fn insn_call_native0<R, S:ToCStr>(&self, name: Option<S>,
-                                native_func: fn() -> R,
-                                signature: Type,
-                                mut args: [&Value<'a>, ..0]) -> Value<'a> {
-        let func_ptr = unsafe { transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice())
-    }
-    #[inline(always)]
-    /// Make an instruction that calls a Rust function that has the signature
-    /// given with a single argument and expects a return value
-    pub fn insn_call_native1<A,R, S:ToCStr>(&self, name: Option<S>,
-                                  native_func: fn(A) -> R,
-                                  signature: Type,
-                                  mut args: [&Value<'a>, ..1]) -> Value<'a> {
-        let func_ptr = unsafe { transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice())
-    }
-    #[inline(always)]
-    /// Make an instruction that calls a Rust function that has the signature
-    /// given with two arguments and expects a return value
-    pub fn insn_call_native2<A,B,R, S:ToCStr>(&self, name: Option<S>,
-                                  native_func: fn(A, B) -> R,
-                                  signature: Type,
-                                  mut args: [&Value<'a>, ..2]) -> Value<'a> {
-        let func_ptr = unsafe { transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice())
-    }
-    #[inline(always)]
-    /// Make an instruction that calls a Rust function that has the signature
-    /// given with three arguments and expects a return value
-    pub fn insn_call_native3<A,B,C,R, S:ToCStr>(&self, name: Option<S>,
-                                  native_func: fn(A, B, C) -> R,
-                                  signature: Type,
-                                  mut args: [&Value<'a>, ..3]) -> Value<'a> {
-        let func_ptr = unsafe { transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice())
-    }
-    #[inline(always)]
-    /// Make an instruction that calls a Rust function that has the signature
-    /// given with four arguments and expects a return value
-    pub fn insn_call_native4<A,B,C,D,R, S:ToCStr>(&self, name: Option<S>,
-                                  native_func: fn(A, B, C, D) -> R,
-                                  signature: Type,
-                                  mut args: [&Value<'a>, ..4]) -> Value<'a> {
-        let func_ptr = unsafe { transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice())
-    }
-    #[inline(always)]
-    /// Make an instruction that allocates some space
-    pub fn insn_alloca(&self, size: &Value<'a>) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_insn_alloca(self.as_ptr(), size.as_ptr()))
-        }
-    }
-    #[inline(always)]
-    /// Apply a function to some arguments and return the result
-    pub unsafe fn apply<R>(&self, args: &mut [*mut c_void]) -> R {
-        let mut retval = uninitialized();
-        jit_function_apply(self.as_ptr(), args.as_mut_ptr(), transmute(&mut retval));
-        retval
-    }
-    #[inline(always)]
-    /// Apply the function and return the result
-    pub fn apply0<R>(&self) -> R {
-        unsafe {
-            self.apply([].as_mut_slice())
-        }
-    }
-    #[inline(always)]
-    /// Apply the function to an argument and return the result
-    pub fn apply1<A, R>(&self, ref arg:A) -> R {
-        unsafe {
-            self.apply([transmute(arg)].as_mut_slice())
-        }
-    }
-    #[inline(always)]
-    /// Apply the function to some arguments and return the result
-    pub fn apply2<A, B, R>(&self, ref arg1:A, ref arg2:B) -> R {
-        unsafe {
-            self.apply([transmute(arg1), transmute(arg2)].as_mut_slice())
-        }
-    }
-    #[inline(always)]
-    /// Apply the function to some arguments and return the result
-    pub fn apply3<A, B, C, R>(&self, ref arg1:A, ref arg2:B, ref arg3:C) -> R {
-        unsafe {
-            self.apply([transmute(arg1), transmute(arg2), transmute(arg3)].as_mut_slice())
-        }
-    }
-    #[inline(always)]
-    /// Apply the function to some arguments and return the result
-    pub fn apply4<A, B, C, D, R>(&self, ref arg1:A, ref arg2:B, ref arg3:C, ref arg4:D) -> R {
-        unsafe {
-            self.apply([transmute(arg1), transmute(arg2), transmute(arg3), transmute(arg4)].as_mut_slice())
-        }
-    }
-    #[inline(always)]
-    /// Execute a function and with some arguments
-    pub fn execute(&self, args: &mut [*mut c_void]) {
-        unsafe {
-            jit_function_apply(self.as_ptr(), args.as_mut_ptr(), RawPtr::null());
-        }
-    }
-    #[inline(always)]
-    /// Turn this function into a closure
-    pub unsafe fn closure(&self) -> *mut c_void {
-        jit_function_to_closure(self.as_ptr())
-    }
-    #[inline(always)]
-    /// Call the given closure with this function compiled with no arguments
-    pub fn with_closure0<Y, Z>(&self, cb:|extern "C" fn() -> Z| -> Y) -> Y {
-        unsafe {
-            cb(transmute(self.closure()))
-        }
-    }
-    #[inline(always)]
-    /// Call the given closure with this function compiled with 1 argument
-    pub fn with_closure1<A, Y, Z>(&self, cb:|extern "C" fn(A) -> Z| -> Y)  -> Y {
-        unsafe {
-            cb(transmute(self.closure()))
-        }
-    }
-    #[inline(always)]
-    /// Call the given closure with this function compiled with 2 arguments
-    pub fn with_closure2<A, B, Y, Z>(&self, cb:|extern "C" fn(A, B) -> Z| -> Y) -> Y {
-        unsafe {
-            cb(transmute(self.closure()))
-        }
-    }
-    #[inline(always)]
-    /// Call the given closure with this function compiled with 3 arguments
-    pub fn with_closure3<A, B, C, Y, Z>(&self, cb:|extern "C" fn(A, B, C) -> Z| -> Y) -> Y {
-        unsafe {
-            cb(transmute(self.closure()))
-        }
-    }
-    #[inline(always)]
-    /// Make an instruction that converts the value to the type given
-    pub fn insn_convert(&self, v: &Value<'a>,
-                            t:Type, overflow_check:bool) -> Value<'a> {
-        unsafe {
-            NativeRef::from_ptr(jit_insn_convert(
-                self.as_ptr(),
-                v.as_ptr(),
-                t.as_ptr(),
-                overflow_check as c_int
-            ))
-        }
-    }
     #[inline(always)]
     /// Make an instruction that gets the inverse cosine of the number given
     pub fn insn_acos(&self, v: &Value<'a>) -> Value<'a>{
@@ -730,5 +558,161 @@ impl<'a> Function<'a> {
     /// Make an instruction that gets the sign of a number
     pub fn insn_sign(&self, v: &Value<'a>) -> Value<'a>{
         self.insn_unop(v, jit_insn_sign)
+    }
+
+    /// Call the function, which may or may not be translated yet
+    pub fn insn_call<S:ToCStr>(&self, name:Option<S>, func:&CompiledFunction<'a>,
+                                sig:Option<Type>,
+                                args: &mut [&Value<'a>]) -> Value<'a> {
+        unsafe {
+            let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
+            let cb = |c_name|
+                NativeRef::from_ptr(jit_insn_call(self.as_ptr(), c_name, func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JIT_CALL_NO_THROW.bits()));
+            match name {
+                Some(ref name) => name.with_c_str(cb),
+                None => cb(RawPtr::null())
+            }
+        }
+    }
+    #[inline(always)]
+    /// Make an instruction that calls a function that has the signature given
+    /// with some arguments
+    pub fn insn_call_indirect(&self, func:&CompiledFunction<'a>, signature: Type,
+                               args: &mut [&Value<'a>]) -> Value<'a> {
+        unsafe {
+            let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
+            NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, JIT_CALL_NO_THROW.bits() as c_int))
+        }
+    }
+    /// Make an instruction that calls a native function that has the signature
+    /// given with some arguments
+    fn insn_call_native<S:ToCStr>(&self, name: Option<S>,
+                        native_func: *mut c_void, signature: Type,
+                        args: &mut [&Value<'a>]) -> Value<'a> {
+        unsafe {
+            let mut native_args:Vec<_> = args.iter()
+                .map(|arg| arg.as_ptr()).collect();
+            let cb = |c_name| {
+                NativeRef::from_ptr(jit_insn_call_native(
+                    self.as_ptr(),
+                    c_name,
+                    native_func,
+                    signature.as_ptr(),
+                    native_args.as_mut_ptr(),
+                    args.len() as c_uint,
+                    JIT_CALL_NO_THROW.bits()
+                ))
+            };
+            match name {
+                Some(ref name) => name.with_c_str(cb),
+                None => cb(RawPtr::null())
+            }
+        }
+    }
+    #[inline(always)]
+    /// Make an instruction that calls a Rust function that has the signature
+    /// given with no arguments and expects a return value
+    pub fn insn_call_native0<R, S:ToCStr>(&self, name: Option<S>,
+                                native_func: fn() -> R,
+                                signature: Type,
+                                mut args: [&Value<'a>, ..0]) -> Value<'a> {
+        let func_ptr = unsafe { mem::transmute(native_func) };
+        self.insn_call_native(name, func_ptr, signature, args[mut])
+    }
+    #[inline(always)]
+    /// Make an instruction that calls a Rust function that has the signature
+    /// given with a single argument and expects a return value
+    pub fn insn_call_native1<A,R, S:ToCStr>(&self, name: Option<S>,
+                                  native_func: fn(A) -> R,
+                                  signature: Type,
+                                  mut args: [&Value<'a>, ..1]) -> Value<'a> {
+        let func_ptr = unsafe { mem::transmute(native_func) };
+        self.insn_call_native(name, func_ptr, signature, args[mut])
+    }
+    #[inline(always)]
+    /// Make an instruction that calls a Rust function that has the signature
+    /// given with two arguments and expects a return value
+    pub fn insn_call_native2<A,B,R, S:ToCStr>(&self, name: Option<S>,
+                                  native_func: fn(A, B) -> R,
+                                  signature: Type,
+                                  mut args: [&Value<'a>, ..2]) -> Value<'a> {
+        let func_ptr = unsafe { mem::transmute(native_func) };
+        self.insn_call_native(name, func_ptr, signature, args[mut])
+    }
+    #[inline(always)]
+    /// Make an instruction that calls a Rust function that has the signature
+    /// given with three arguments and expects a return value
+    pub fn insn_call_native3<A,B,C,R, S:ToCStr>(&self, name: Option<S>,
+                                  native_func: fn(A, B, C) -> R,
+                                  signature: Type,
+                                  mut args: [&Value<'a>, ..3]) -> Value<'a> {
+        let func_ptr = unsafe { mem::transmute(native_func) };
+        self.insn_call_native(name, func_ptr, signature, args[mut])
+    }
+    #[inline(always)]
+    /// Make an instruction that calls a Rust function that has the signature
+    /// given with four arguments and expects a return value
+    pub fn insn_call_native4<A,B,C,D,R, S:ToCStr>(&self, name: Option<S>,
+                                  native_func: fn(A, B, C, D) -> R,
+                                  signature: Type,
+                                  mut args: [&Value<'a>, ..4]) -> Value<'a> {
+        let func_ptr = unsafe { mem::transmute(native_func) };
+        self.insn_call_native(name, func_ptr, signature, args[mut])
+    }
+    #[inline(always)]
+    /// Make an instruction that allocates some space
+    pub fn insn_alloca(&self, size: &Value<'a>) -> Value<'a> {
+        unsafe {
+            NativeRef::from_ptr(jit_insn_alloca(self.as_ptr(), size.as_ptr()))
+        }
+    }
+    #[inline(always)]
+    fn insn_binop(&self,
+                    v1: &Value<'a>, v2: &Value<'a>,
+                    f: unsafe extern "C" fn(
+                        jit_function_t,
+                        jit_value_t,
+                        jit_value_t) -> jit_value_t)
+                    -> Value<'a> {
+        unsafe {
+            NativeRef::from_ptr(f(self.as_ptr(), v1.as_ptr(), v2.as_ptr()))
+        }
+    }
+    #[inline(always)]
+    fn insn_unop(&self,
+                    value: &Value<'a>,
+                    f: unsafe extern "C" fn(
+                        jit_function_t,
+                        jit_value_t) -> jit_value_t)
+                    -> Value<'a> {
+        unsafe {
+            NativeRef::from_ptr(f(self.as_ptr(), value.as_ptr()))
+        }
+    }
+    #[inline(always)]
+    /// Set the optimization level of the function, where the bigger the level,
+    /// the more effort should be spent optimising
+    pub fn set_optimization_level(&self, level: c_uint) {
+        unsafe {
+            jit_function_set_optimization_level(self.as_ptr(), level);
+        }
+    }
+    #[inline(always)]
+    /// Make this function a candidate for recompilation
+    pub fn set_recompilable(&self) {
+        unsafe {
+            jit_function_set_recompilable(self.as_ptr());
+        }
+    }
+    #[inline(always)]
+    /// Compile the function
+    pub fn compile(self) -> CompiledFunction<'a> {
+        unsafe {
+            jit_function_compile(self.as_ptr());
+        }
+        CompiledFunction {
+            _func: self._func,
+            marker: ContravariantLifetime::<'a>
+        }
     }
 }
