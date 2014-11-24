@@ -6,6 +6,7 @@ install:
   - sudo apt-get install texinfo
 script:
   - cargo build --verbose
+  - cargo test --verbose
 notifications:
   email:
     - tophattedcoder@gmail.com
