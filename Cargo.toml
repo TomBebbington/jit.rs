@@ -1,6 +1,12 @@
 [package]
 
 name = "jit"
+description = "Just-In-Time Compilation in Rust using LibJIT bindings"
+documentation = "http://www.rust-ci.org/TomBebbington/jit.rs/doc/jit/"
+repository = "https://github.com/TomBebbington/jit.rs"
+readme = "README.md"
+keywords = [ "compile", "compiler", "jit", "interpreter" ]
+license = "MIT"
 version = "0.0.4"
 authors = [ "tophattedcoder@gmail.com" ]
 build = "src/build.rs"
