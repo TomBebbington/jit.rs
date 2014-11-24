@@ -552,28 +552,28 @@ impl<'a> Function<'a> {
         jit_function_to_closure(self.as_ptr())
     }
     #[inline(always)]
-    /// Turn this function into a closure with 0 arguments
+    /// Call the given closure with this function compiled with no arguments
     pub fn with_closure0<Y, Z>(&self, cb:|extern "C" fn() -> Z| -> Y) -> Y {
         unsafe {
             cb(transmute(self.closure()))
         }
     }
     #[inline(always)]
-    /// Turn this function into a closure with 1 argument
+    /// Call the given closure with this function compiled with 1 argument
     pub fn with_closure1<A, Y, Z>(&self, cb:|extern "C" fn(A) -> Z| -> Y)  -> Y {
         unsafe {
             cb(transmute(self.closure()))
         }
     }
     #[inline(always)]
-    /// Turn this function into a closure with 2 arguments
+    /// Call the given closure with this function compiled with 2 arguments
     pub fn with_closure2<A, B, Y, Z>(&self, cb:|extern "C" fn(A, B) -> Z| -> Y) -> Y {
         unsafe {
             cb(transmute(self.closure()))
         }
     }
     #[inline(always)]
-    /// Turn this function into a closure with 3 arguments
+    /// Call the given closure with this function compiled with 3 arguments
     pub fn with_closure3<A, B, C, Y, Z>(&self, cb:|extern "C" fn(A, B, C) -> Z| -> Y) -> Y {
         unsafe {
             cb(transmute(self.closure()))

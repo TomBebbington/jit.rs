@@ -36,7 +36,7 @@ fn test_sqrt() {
     let sqrt_arg_ui = func.insn_convert(&sqrt_arg, get::<uint>(), false);
     func.insn_return(&sqrt_arg_ui);
     func.compile();
-    func.with_closure1(|sqrt:extern "C" fn(uint) -> uint| {
+    func.with_closure1(|sqrt:extern fn(uint) -> uint| {
         assert_eq!(sqrt(64), 8);
         assert_eq!(sqrt(16), 4);
         assert_eq!(sqrt(9), 3);

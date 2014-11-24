@@ -34,21 +34,23 @@
 //! 
 //! ```rust
 //! extern crate jit;
-//! use jit::{C_DECL, Context, Function, Type, Types, get_type};
+//! use jit::{Context, Function, get_type};
 //! fn main() {
-//!     let cx = Context::new();
-//!     cx.build(proc() {
-//!         // build the IR
+//!     // make a new context to make functions on
+//!     let ref ctx = Context::new();
+//!     ctx.build(proc() {
+//!         // get the type of the function
 //!         let sig = get_type::<fn(int, int) -> int>();
-//!         let func = Function::new(cx, sig);
-//!         let x = func.get_param(0);
-//!         let y = func.get_param(1);
-//!         let result = func.insn_mul(&x, &y);
-//!         func.insn_return(&result);
-//!         /// compile the IR into machine code
+//!         // make the function
+//!         let func = Function::new(ctx, sig);
+//!         let ref x = func.get_param(0);
+//!         let ref y = func.get_param(1);
+//!         let ref result = func.insn_mul(x, y);
+//!         func.insn_return(result);
+//!         // compile the IR into machine code
 //!         func.compile();
-//!         /// get the machine code as a function
-//!         func.with_closure2(|mul:fn(int, int) -> int| {
+//!         // get the machine code as a function
+//!         func.with_closure2(|mul:extern fn(int, int) -> int| {
 //!             assert_eq!(mul(4, 5), 20);
 //!         });
 //!     });

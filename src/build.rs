@@ -20,7 +20,7 @@ fn main() {
 			run(Command::new("git").arg("clone").arg("git://git.savannah.gnu.org/libjit.git").arg("native"));
 		}
 		run(Command::new("sh").arg("auto_gen.sh").cwd(submod_path));
-		run(Command::new("sh").arg("configure").arg("--enable-shared").cwd(submod_path));
+		run(Command::new("sh").arg("configure").arg("--enable-static").arg("--disable-shared").arg("CFLAGS=-fPIC").cwd(submod_path));
 		run(Command::new("make").cwd(submod_path));
 	}
     println!("cargo:rustc-flags=-l jit:static");
