@@ -1,7 +1,7 @@
 language: rust
 env:
   global:
-    - secure: o1PpGrcSWvluiK1m3VydfHiwZjmXApmX5BIZkVF4psCEZjhyEKBk6Uq9g9JAgs2suA+GereVVnVcjdTjCbDzLbXyU2bWg8FfU23hjFVZtil4gMsd3e1cta5AMgohGO8nc8IWEdr6qnybTOtBlbklnf3I88Yak1NE6pWkqHpVTfg=
+    - secure: AxN3lnmiaWamhuhdV3MDELHbhf76qcxFu711s75Y5ztmq07I4BNHAA2bwJ9XLly6hJKC6Er390iTYenWBvjxpu3ZtDqQ9vBDzqaSKsUQoeWFNAPY7fKSJrJlTQkKeJtuXz9vSCrxH3nm+XGUvDeu1z8/Nhbqsq1LjxGPx3zf90c=
 install:
   - sudo apt-get install texinfo
 script:
