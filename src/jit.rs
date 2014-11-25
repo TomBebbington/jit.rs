@@ -38,34 +38,33 @@
 //! fn main() {
 //!     // make a new context to make functions on
 //!     let ref ctx = Context::new();
-//!     ctx.build(proc() {
-//!         // get the type of the function
-//!         let sig = get_type::<fn(int, int) -> int>();
-//!         // make the function
-//!         let func = UncompiledFunction::new(ctx, sig);
+//!     // get the type of the function
+//!     let sig = get_type::<fn(int, int) -> int>();
+//!     // make the function
+//!     let func = UncompiledFunction::new(ctx, sig);
+//!     ctx.build(|| {
 //!         let ref x = func.get_param(0);
 //!         let ref y = func.get_param(1);
 //!         let ref result = func.insn_mul(x, y);
 //!         func.insn_return(result);
-//!         // compile the IR into machine code
-//!         let func = func.compile();
-//!         // get the machine code as a function
-//!         func.with_closure2(|mul:extern fn(int, int) -> int| {
-//!             assert_eq!(mul(4, 5), 20);
-//!         });
+//!     });
+//!     // compile the IR and get the machine code as a function
+//!     func.compile().with_closure2(|mul:extern fn(int, int) -> int| {
+//!         assert_eq!(mul(4, 5), 20);
 //!     });
 //! }
 //! ```
+extern crate libc;
 #[cfg(test)]
 extern crate test;
-extern crate libc;
-use bindings::{
+extern crate "libjit-sys" as raw;
+use raw::{
     jit_init,
     jit_uses_interpreter,
     jit_supports_threads,
     jit_supports_virtual_memory
 };
-pub use bindings::{
+pub use raw::{
     jit_nint,
     jit_nuint
 };
@@ -112,7 +111,6 @@ pub fn supports_virtual_memory() -> bool {
 }
 #[macro_escape]
 mod macros;
-mod bindings;
 mod context;
 mod compile;
 mod elf;

@@ -1,0 +1,13 @@
+[package]
+name = "libjit-sys"
+version = "0.0.1"
+authors = ["Tom Bebbington <tophattedcoder@gmail.com>"]
+links = "jit"
+build = "build.rs"
+
+[lib]
+name = "libjit-sys"
+path = "lib.rs"
+
+[build-dependencies.pkg-config]
+git = "https://github.com/alexcrichton/pkg-config-rs"

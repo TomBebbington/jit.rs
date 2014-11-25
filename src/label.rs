@@ -1,4 +1,4 @@
-use bindings::{
+use raw::{
     jit_label_t,
     jit_function_reserve_label
 };

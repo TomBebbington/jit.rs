@@ -1,4 +1,4 @@
-use bindings::*;
+use raw::*;
 use context::Context;
 use compile::Compile;
 use label::Label;
@@ -36,6 +36,7 @@ bitflags!(
         const JIT_CALL_TAIL = 4
     }
 )
+pub trait Function : NativeRef { }
 #[deriving(PartialEq)]
 /// A function which has already been compiled.
 /// A function persists for the lifetime of its containing context. It initially
@@ -46,6 +47,7 @@ pub struct CompiledFunction<'a> {
     _func: jit_function_t,
     marker: ContravariantLifetime<'a>
 }
+impl<'a> Function for CompiledFunction<'a> {}
 impl<'a> NativeRef for CompiledFunction<'a> {
     #[inline(always)]
     /// Convert to a native pointer
@@ -78,37 +80,32 @@ impl<'a> CompiledFunction<'a> {
     }
     #[inline(always)]
     unsafe fn closure(&self, count: uint) -> *mut c_void {
-        let sig = self.get_signature();
-        debug_assert_eq!(sig.params().count(), count);
+        if cfg!(debug) {
+            let sig = self.get_signature();
+            assert_eq!(sig.params().count(), count);
+
+        }
         jit_function_to_closure(self.as_ptr())
     }
     #[inline(always)]
     /// Call the given closure with this function compiled with no arguments
     pub fn with_closure0<Y, Z>(&self, cb:|extern "C" fn() -> Z| -> Y) -> Y {
-        unsafe {
-            cb(mem::transmute(self.closure(0)))
-        }
+        unsafe { cb(mem::transmute(self.closure(0))) }
     }
     #[inline(always)]
     /// Call the given closure with this function compiled with 1 argument
     pub fn with_closure1<A, Y, Z>(&self, cb:|extern "C" fn(A) -> Z| -> Y)  -> Y {
-        unsafe {
-            cb(mem::transmute(self.closure(1)))
-        }
+        unsafe { cb(mem::transmute(self.closure(1))) }
     }
     #[inline(always)]
     /// Call the given closure with this function compiled with 2 arguments
     pub fn with_closure2<A, B, Y, Z>(&self, cb:|extern "C" fn(A, B) -> Z| -> Y) -> Y {
-        unsafe {
-            cb(mem::transmute(self.closure(2)))
-        }
+        unsafe { cb(mem::transmute(self.closure(2))) }
     }
     #[inline(always)]
     /// Call the given closure with this function compiled with 3 arguments
     pub fn with_closure3<A, B, C, Y, Z>(&self, cb:|extern "C" fn(A, B, C) -> Z| -> Y) -> Y {
-        unsafe {
-            cb(mem::transmute(self.closure(3)))
-        }
+        unsafe { cb(mem::transmute(self.closure(3))) }
     }
 }
 
@@ -121,6 +118,7 @@ pub struct UncompiledFunction<'a> {
     _func: jit_function_t,
     marker: ContravariantLifetime<'a>
 }
+impl<'a> Function for UncompiledFunction<'a> {}
 impl<'a> NativeRef for UncompiledFunction<'a> {
     #[inline(always)]
     /// Convert to a native pointer
@@ -378,7 +376,7 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that sets a label
-    pub fn insn_set_label(&self, label: &mut Label<'a>) {
+    pub fn insn_label(&self, label: &mut Label<'a>) {
         unsafe {
             jit_insn_label(self.as_ptr(), &mut (label.get_value() as jit_label_t));
         }
@@ -561,7 +559,7 @@ impl<'a> UncompiledFunction<'a> {
     }
 
     /// Call the function, which may or may not be translated yet
-    pub fn insn_call<S:ToCStr>(&self, name:Option<S>, func:&CompiledFunction<'a>,
+    pub fn insn_call<S:ToCStr, F:Function>(&self, name:Option<S>, func:&F,
                                 sig:Option<Type>,
                                 args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
@@ -577,7 +575,7 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that calls a function that has the signature given
     /// with some arguments
-    pub fn insn_call_indirect(&self, func:&CompiledFunction<'a>, signature: Type,
+    pub fn insn_call_indirect<F:Function>(&self, func:&F, signature: Type,
                                args: &mut [&Value<'a>]) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();

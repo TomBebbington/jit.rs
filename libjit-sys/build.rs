@@ -9,15 +9,15 @@ fn main() {
 		Ok(()) => return,
 		Err(..) => {}
 	}
-	let ref final_lib_dir = Path::new("native/jit/.libs");
-	let ref submod_path = Path::new("native");
+	let ref submod_path = Path::new("libjit");
+	let ref final_lib_dir = submod_path.join("jit/.libs");
 	if !final_lib_dir.join("libjit.a").exists() {
 		if !submod_path.exists() {
 			run(Command::new("git").arg("submodule").arg("init"));
 		}
 		run(Command::new("git").arg("submodule").arg("update"));
 		if !submod_path.exists() {
-			run(Command::new("git").arg("clone").arg("git://git.savannah.gnu.org/libjit.git").arg("native"));
+			run(Command::new("git").arg("clone").arg("git://git.savannah.gnu.org/libjit.git").arg(submod_path.display().to_string().as_slice()));
 		}
 		run(Command::new("sh").arg("auto_gen.sh").cwd(submod_path));
 		run(Command::new("sh").arg("configure").arg("--enable-static").arg("--disable-shared").arg("CFLAGS=-fPIC").cwd(submod_path));

@@ -1,4 +1,4 @@
-use bindings::{
+use raw::{
     jit_type_ubyte,
     jit_type_sbyte,
     jit_type_ushort,

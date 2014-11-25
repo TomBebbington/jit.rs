@@ -1,10 +1,4 @@
-use bindings::{
-    jit_context_t,
-    jit_context_create,
-    jit_context_destroy,
-    jit_context_build_start,
-    jit_context_build_end
-};
+use raw::*;
 use std::kinds::marker::ContravariantLifetime;
 use util::NativeRef;
 /// Holds all of the functions you have built and compiled. There can be
@@ -20,7 +14,7 @@ impl<'a> Context<'a> {
     }
     #[inline(always)]
     /// Run a closure that can generate IR
-    pub fn build<R>(&'a self, cb: proc() -> R) -> R {
+    pub fn build<R>(&'a self, cb: || -> R) -> R {
         unsafe {
             jit_context_build_start(self.as_ptr());
             let value = cb();
