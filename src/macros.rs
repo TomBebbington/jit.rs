@@ -31,6 +31,13 @@ impl Compile for $ty {
     }
 });
 )
+
+macro_rules! compile_prims(
+    ($(($ty:ty, $cast: ty) => ($type_name:ident, $make_constant:ident)),+) => (
+        $(compile_prim!($ty, $type_name, $make_constant, $cast))+
+    );
+)
+
 #[macro_export]
 macro_rules! native_ref(
     ($name:ident, $field:ident, $pointer_ty:ty) => (

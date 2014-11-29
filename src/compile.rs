@@ -49,20 +49,22 @@ impl Compile for () {
         }
     }
 }
-compile_prim!(f64, jit_type_float64, jit_value_create_float64_constant)
-compile_prim!(f32, jit_type_float32, jit_value_create_float32_constant)
-compile_prim!(int, jit_type_nint, jit_value_create_nint_constant, c_long)
-compile_prim!(uint,jit_type_nuint, jit_value_create_nint_constant, c_long)
-compile_prim!(i64, jit_type_long, jit_value_create_long_constant, c_long)
-compile_prim!(u64, jit_type_ulong, jit_value_create_long_constant, c_long)
-compile_prim!(i32, jit_type_int, jit_value_create_nint_constant, c_long)
-compile_prim!(u32, jit_type_uint, jit_value_create_nint_constant, c_long)
-compile_prim!(i16, jit_type_short, jit_value_create_nint_constant, c_long)
-compile_prim!(u16, jit_type_ushort, jit_value_create_nint_constant, c_long)
-compile_prim!(i8, jit_type_sbyte, jit_value_create_nint_constant, c_long)
-compile_prim!(u8, jit_type_ubyte, jit_value_create_nint_constant, c_long)
-compile_prim!(bool, jit_type_sys_bool, jit_value_create_nint_constant, c_long)
-compile_prim!(char, jit_type_sys_char, jit_value_create_nint_constant, c_long)
+compile_prims!{
+    (f64, f64) => (jit_type_float64, jit_value_create_float64_constant),
+    (f32, f32) => (jit_type_float32, jit_value_create_float32_constant),
+    (int, c_long) => (jit_type_nint, jit_value_create_nint_constant),
+    (uint, c_long) => (jit_type_nuint, jit_value_create_nint_constant),
+    (i64, c_long) => (jit_type_long, jit_value_create_long_constant),
+    (u64, c_long) => (jit_type_ulong, jit_value_create_long_constant),
+    (i32, c_long) => (jit_type_int, jit_value_create_nint_constant),
+    (u32, c_long) => (jit_type_uint, jit_value_create_nint_constant),
+    (i16, c_long) => (jit_type_short, jit_value_create_nint_constant),
+    (u16, c_long) => (jit_type_ushort, jit_value_create_nint_constant),
+    (i8, c_long) => (jit_type_sbyte, jit_value_create_nint_constant),
+    (u8, c_long) => (jit_type_ubyte, jit_value_create_nint_constant),
+    (bool, c_long) => (jit_type_sys_bool, jit_value_create_nint_constant),
+    (char, c_long) => (jit_type_sys_char, jit_value_create_nint_constant)
+}
 impl Compile for *const u8 {
     fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
         let c_str = unsafe { CString::new(transmute(*self), false) };
