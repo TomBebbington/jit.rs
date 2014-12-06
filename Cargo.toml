@@ -1,5 +1,6 @@
 [package]
 
+exclude = [ ".gitmodules", ".gitignore", ".travis.yml" ]
 authors = [ "tophattedcoder@gmail.com" ]
 description = "Just-In-Time Compilation in Rust using LibJIT bindings"
 documentation = "http://www.rust-ci.org/TomBebbington/jit.rs/doc/jit/"
