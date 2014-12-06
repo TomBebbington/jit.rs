@@ -46,17 +46,6 @@ impl<'a> Iterator<String> for Needed<'a> {
     fn size_hint(&self) -> (uint, Option<uint>) {
         ((self.length - self.index) as uint, None)
     }
-    #[inline]
-    fn count(&mut self) -> uint {
-        let count = self.length - self.index;
-        self.index = self.length;
-        count as uint
-    }
-    #[inline]
-    fn nth(&mut self, n:uint) -> Option<String> {
-        self.index += n as c_uint;
-        self.next()
-    }
 }
 /// An ELF binary reader
 native_ref!(ReadElf, _reader, jit_readelf_t, ContravariantLifetime)
