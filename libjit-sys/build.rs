@@ -4,9 +4,8 @@ use std::io::process::Command;
 use std::path::Path;
 
 fn main() {
-	match pkg_config::find_library("jit") {
-		Ok(()) => return,
-		Err(..) => {}
+	if pkg_config::find_library("jit").is_ok() {
+		return;
 	}
 	let ref submod_path = Path::new("libjit");
 	let ref final_lib_dir = submod_path.join("jit/.libs");
