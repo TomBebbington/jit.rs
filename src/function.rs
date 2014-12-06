@@ -63,15 +63,6 @@ impl<'a> NativeRef for CompiledFunction<'a> {
         }
     }
 }
-#[unsafe_destructor]
-impl<'a> Drop for CompiledFunction<'a> {
-    #[inline(always)]
-    fn drop(&mut self) {
-        unsafe {
-            jit_function_abandon(self.as_ptr());
-        }
-    }
-}
 impl<'a> CompiledFunction<'a> {
     #[inline(always)]
     /// Get the signature of this function
