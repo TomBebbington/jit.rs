@@ -9,11 +9,11 @@ dependencies = [
 name = "libjit-sys"
 version = "0.0.1"
 dependencies = [
- "pkg-config 0.0.1 (git+https://github.com/alexcrichton/pkg-config-rs)",
+ "pkg-config 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "pkg-config"
-version = "0.0.1"
-source = "git+https://github.com/alexcrichton/pkg-config-rs#d24a08d87d63df8dc9526c503944415b86719220"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 

@@ -33,8 +33,8 @@ impl Compile for $ty {
 )
 
 macro_rules! compile_func(
-    (fn($($arg:ty),*) -> $ret:ty, $sig:ty) => (
-    impl<($arg,)* R:Compile> Compile for $sig {
+    (fn($($arg:ident),*) -> $ret:ty, $sig:ty) => (
+    impl<$($arg:Compile,)* R:Compile> Compile for $sig {
         #[inline(always)]
         fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
             let ptr = (self as *const $sig).to_uint().compile(func);
