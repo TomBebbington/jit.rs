@@ -293,7 +293,7 @@ impl Type {
     /// Set the field or parameter names of this type.
     pub fn set_names<T:ToCStr>(&self, names:&[T]) -> bool {
         unsafe {
-            let native_names : Vec<*const i8> = names.iter().map(|name| name.to_c_str().unwrap()).collect();
+            let native_names : Vec<*const i8> = names.iter().map(|name| name.to_c_str().into_inner()).collect();
             jit_type_set_names(self.as_ptr(), native_names.as_ptr() as *mut *mut i8, names.len() as u32) != 0
         }
     }

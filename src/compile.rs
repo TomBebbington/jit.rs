@@ -221,47 +221,8 @@ impl<'a, T:Compile> Compile for &'a T {
         Type::create_pointer(jit!(T))
     }
 }
-impl<R:Compile> Compile for fn() -> R {
-    #[inline(always)]
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
-        let ptr = (self as *const fn() -> R).to_uint().compile(func);
-        func.insn_convert(&ptr, get_type::<fn() -> R>(), false)
-    }
-    #[inline(always)]
-    fn jit_type(_:Option<fn() -> R>) -> Type {
-        Type::create_signature(CDECL, jit!(R), &mut [])
-    }
-}
-impl<A:Compile, R:Compile> Compile for fn(A) -> R {
-    #[inline(always)]
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
-        let ptr = (self as *const fn(A) -> R).to_uint().compile(func);
-        func.insn_convert(&ptr, get_type::<fn(A) -> R>(), false)
-    }
-    #[inline(always)]
-    fn jit_type(_:Option<fn(A) -> R>) -> Type {
-        Type::create_signature(CDECL, jit!(R), &mut [jit!(A)])
-    }
-}
-impl<A:Compile, B:Compile, R:Compile> Compile for fn(A, B) -> R {
-    #[inline(always)]
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
-        let ptr = (self as *const fn(A, B) -> R).to_uint().compile(func);
-        func.insn_convert(&ptr, get_type::<fn(A, B) -> R>(), false)
-    }
-    #[inline(always)]
-    fn jit_type(_:Option<fn(A, B) -> R>) -> Type {
-        Type::create_signature(CDECL, jit!(R), &mut [jit!(A), jit!(B)])
-    }
-}
-impl<A:Compile, B:Compile, C:Compile, R:Compile> Compile for fn(A, B, C) -> R {
-    #[inline(always)]
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
-        let ptr = (self as *const fn(A, B, C) -> R).to_uint().compile(func);
-        func.insn_convert(&ptr, get_type::<fn(A, B, C) -> R>(), false)
-    }
-    #[inline(always)]
-    fn jit_type(_:Option<fn(A, B, C) -> R>) -> Type {
-        Type::create_signature(CDECL, jit!(R), &mut [jit!(A), jit!(B), jit!(C)])
-    }
-}
+compile_func!(fn() -> R, fn() -> R)
+compile_func!(fn(A) -> R, fn(A) -> R)
+compile_func!(fn(A, B) -> R, fn(A, B) -> R)
+compile_func!(fn(A, B, C) -> R, fn(A, B, C) -> R)
+compile_func!(fn(A, B, C, D) -> R, fn(A, B, C, D) -> R)

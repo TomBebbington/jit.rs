@@ -32,6 +32,21 @@ impl Compile for $ty {
 });
 )
 
+macro_rules! compile_func(
+    (fn($($arg:ty),*) -> $ret:ty, $sig:ty) => (
+    impl<($arg,)* R:Compile> Compile for $sig {
+        #[inline(always)]
+        fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
+            let ptr = (self as *const $sig).to_uint().compile(func);
+            func.insn_convert(&ptr, get_type::<$sig>(), false)
+        }
+        #[inline(always)]
+        fn jit_type(_:Option<$sig>) -> Type {
+            Type::create_signature(CDECL, jit!(R), [$(get_type::<$arg>()),*][mut])
+        }
+    })
+)
+
 macro_rules! compile_prims(
     ($(($ty:ty, $cast: ty) => ($type_name:ident, $make_constant:ident)),+) => (
         $(compile_prim!($ty, $type_name, $make_constant, $cast))+

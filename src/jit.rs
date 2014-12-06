@@ -24,7 +24,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #![crate_name = "jit"]
-#![comment = "LibJIT Bindings"]
 #![allow(raw_pointer_deriving, dead_code, non_camel_case_types, non_upper_case_globals, unknown_features)]
 #![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
 #![feature(globs, macro_rules, slicing_syntax, unsafe_destructor, phase)]

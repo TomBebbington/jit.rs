@@ -42,7 +42,7 @@ impl<T:NativeRef> NativeRef for Option<T> {
 impl NativeRef for String {
     #[inline(always)]
     unsafe fn as_ptr(&self) -> *mut c_void {
-        transmute(self.to_c_str().unwrap())
+        transmute(self.to_c_str().into_inner())
     }
     #[inline(always)]
     unsafe fn from_ptr(ptr:*mut c_void) -> String {
@@ -56,7 +56,7 @@ impl NativeRef for String {
 impl NativeRef for CString {
     #[inline(always)]
     unsafe fn as_ptr(&self) -> *mut c_void {
-        transmute(self.clone().unwrap())
+        transmute(self.clone().into_inner())
     }
     #[inline(always)]
     unsafe fn from_ptr(ptr:*mut c_void) -> CString {
