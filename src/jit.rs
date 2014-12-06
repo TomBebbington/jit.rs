@@ -72,7 +72,9 @@ pub use context::Context;
 pub use function::{
     ABI,
     CompiledFunction,
-    UncompiledFunction
+    UncompiledFunction,
+    Function,
+    CallFlags
 };
 pub use label::Label;
 pub use types::*;
