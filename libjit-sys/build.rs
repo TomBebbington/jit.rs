@@ -1,4 +1,3 @@
-#![feature(if_let)]
 extern crate "pkg-config" as pkg_config;
 use std::io::fs::PathExtensions;
 use std::io::process::Command;
