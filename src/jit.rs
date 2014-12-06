@@ -42,8 +42,8 @@
 //!     // make the function
 //!     let func = UncompiledFunction::new(ctx, sig);
 //!     ctx.build(|| {
-//!         let ref x = func.get_param(0);
-//!         let ref y = func.get_param(1);
+//!         let ref x = func[0];
+//!         let ref y = func[1];
 //!         let ref result = func.insn_mul(x, y);
 //!         func.insn_return(result);
 //!     });

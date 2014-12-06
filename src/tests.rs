@@ -3,34 +3,36 @@ use context::Context;
 use function::UncompiledFunction;
 use types::*;
 use types::get as get_type;
-use std::default::Default;
-fn with_empty_func(cb:|&Context, &UncompiledFunction| -> ()) -> () {
-    let ref ctx = Context::new();
-    ctx.build(|| {
-        let sig = get::<fn() -> ()>();
-        let ref func = UncompiledFunction::new(ctx, sig);
-        cb(ctx, func)
-    })
-}
 macro_rules! test_compile(
     ($ty:ty, $test_name:ident, $kind:expr) => (
         #[test]
         fn $test_name() {
-            with_empty_func(|_, func| {
-                let pval:$ty = Default::default();
-                let val = pval.compile(func);
-                assert_eq!(val.get_type().get_kind(), $kind);
-            })
+            use std::default::Default;
+            let ref context = Context::new();
+            let sig = get::<fn() -> $ty>();
+            let func = UncompiledFunction::new(context, sig);
+            let default_value:$ty = Default::default();
+            context.build_with(&func, |func:&UncompiledFunction| {
+                let val = func.insn_of(&default_value);
+                assert!(val.get_type().get_kind() == $kind);
+                func.insn_return(&val);
+            });
+            func.compile().with_closure0(|gen_value: extern fn() -> $ty| {
+                let ret_val:$ty = gen_value();
+                assert_eq!(ret_val, default_value);
+            });
         }
     );
 )
 #[test]
 fn test_sqrt() {
+    println!("Testing square root");
     let sig = get::<fn(uint) -> uint>();
     let context = Context::new();
     let func = UncompiledFunction::new(&context, sig);
     context.build(|| {
-        let arg = func.get_param(0);
+        let arg = func[0];
+        assert_eq!(arg.get_type(), get::<uint>());
         let sqrt_arg = func.insn_sqrt(&arg);
         let sqrt_arg_ui = func.insn_convert(&sqrt_arg, get::<uint>(), false);
         func.insn_return(&sqrt_arg_ui);
@@ -43,8 +45,10 @@ fn test_sqrt() {
         assert_eq!(sqrt(1), 1);
     });
 }
+
 #[test]
 fn test_struct() {
+    println!("Testing struct");
     ::init();
     let double_float_t = jit!(struct {
         "first": f64,
@@ -63,6 +67,7 @@ fn test_struct() {
         field.unwrap().as_slice() == "second"
     });
 }
+
 test_compile!((), test_compile_void, Void)
 test_compile!(f64, test_compile_f64, Float64)
 test_compile!(f32, test_compile_f32, Float32)

@@ -11,6 +11,7 @@ use libc::{
     c_void
 };
 use std::c_str::ToCStr;
+use std::ops::Index;
 use std::kinds::marker::ContravariantLifetime;
 use std::mem;
 /// A platform's application binary interface
@@ -107,6 +108,7 @@ impl<'a> CompiledFunction<'a> {
 /// user calls `function.compile()` to convert it into its executable form.
 pub struct UncompiledFunction<'a> {
     _func: jit_function_t,
+    args: Vec<Value<'a>>,
     marker: ContravariantLifetime<'a>
 }
 impl<'a> Function for UncompiledFunction<'a> {}
@@ -119,8 +121,10 @@ impl<'a> NativeRef for UncompiledFunction<'a> {
     #[inline(always)]
     /// Convert from a native pointer
     unsafe fn from_ptr(ptr:jit_function_t) -> UncompiledFunction<'a> {
+        let sig = jit_function_get_signature(ptr);
         UncompiledFunction {
             _func: ptr,
+            args: Vec::from_fn(jit_type_num_params(sig) as uint, |i| NativeRef::from_ptr(jit_value_get_param(ptr, i as c_uint))),
             marker: ContravariantLifetime::<'a>
         }
     }
@@ -132,6 +136,12 @@ impl<'a> Drop for UncompiledFunction<'a> {
         unsafe {
             jit_function_abandon(self.as_ptr());
         }
+    }
+}
+impl<'a> Index<uint, Value<'a>> for UncompiledFunction<'a> {
+    /// Get the value that corresponds to a specified function parameter.
+    fn index(&self, param: &uint) -> &Value<'a> {
+        &self.args[*param]
     }
 }
 impl<'a> UncompiledFunction<'a> {
@@ -181,13 +191,6 @@ impl<'a> UncompiledFunction<'a> {
                 t.as_ptr(),
                 overflow_check as c_int
             ))
-        }
-    }
-    /// Get the value that corresponds to a specified function parameter.
-    pub fn get_param(&self, param: uint) -> Value<'a> {
-        unsafe {
-            let value = jit_value_get_param(self.as_ptr(), param as c_uint);
-            NativeRef::from_ptr(value)
         }
     }
     #[inline(always)]

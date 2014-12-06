@@ -32,6 +32,7 @@ bitflags!(
         const SysChar = 10010
     }
 )
+#[cfg(not(ndebug))]
 impl Show for TypeKind {
     fn fmt(&self, fmt:&mut Formatter) -> Result {
         write!(fmt, "{}",
@@ -58,6 +59,7 @@ impl Show for TypeKind {
         )
     }
 }
+#[cfg(not(ndebug))]
 impl Show for Type {
     fn fmt(&self, fmt:&mut Formatter) -> Result {
         let kind = self.get_kind();
