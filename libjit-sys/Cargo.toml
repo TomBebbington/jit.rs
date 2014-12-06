@@ -9,5 +9,5 @@ build = "build.rs"
 name = "libjit-sys"
 path = "lib.rs"
 
-[build-dependencies.pkg-config]
-git = "https://github.com/alexcrichton/pkg-config-rs"
+[build-dependencies]
+pkg-config = "*"
