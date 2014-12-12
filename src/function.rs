@@ -40,7 +40,7 @@ bitflags!(
         const JIT_CALL_TAIL = 4
     }
 )
-
+/// Any kind of function, compiled or not
 pub trait Function : NativeRef {
     /// Check if this function is compiled
     fn is_compiled(&self) -> bool;
