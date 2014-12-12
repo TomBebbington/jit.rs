@@ -705,11 +705,13 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Compile the function
     pub fn compile(self) -> CompiledFunction<'a> {
-        unsafe {
-            jit_function_compile(self.as_ptr());
-        }
         CompiledFunction {
-            _func: self._func,
+            _func: unsafe {
+                let ptr = self.as_ptr();
+                jit_function_compile(ptr);
+                mem::forget(self);
+                ptr
+            },
             marker: ContravariantLifetime::<'a>
         }
     }
