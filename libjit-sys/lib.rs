@@ -1,4 +1,4 @@
-#![allow(bad_style)]
+#![allow(bad_style, missing_copy_implementations)]
 #![feature(globs)]
 
 extern crate libc;
