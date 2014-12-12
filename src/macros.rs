@@ -38,11 +38,11 @@ macro_rules! compile_func(
         #[inline(always)]
         fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
             let ptr = (self as *const $sig).to_uint().compile(func);
-            func.insn_convert(&ptr, get_type::<$sig>(), false)
+            func.insn_convert(&ptr, get::<$sig>(), false)
         }
         #[inline(always)]
         fn jit_type(_:Option<$sig>) -> Type {
-            Type::create_signature(CDECL, jit!(R), [$(get_type::<$arg>()),*][mut])
+            Type::create_signature(CDECL, get::<R>(), [$(get::<$arg>()),*][mut])
         }
     })
 )
@@ -104,7 +104,7 @@ macro_rules! jit(
         $($name:expr: $ty:ty),*
     }) => ({
         let structure = Type::create_struct([
-            $(get_type::<$ty>()),*
+            $(get::<$ty>()),*
         ].as_mut_slice());
         structure.set_names(&[$($name),*]);
         structure
@@ -113,23 +113,56 @@ macro_rules! jit(
         $($name:expr: $ty:ty),+
     }) => ({
         let structure = Type::create_union([
-            $(get_type::<$ty>()),+
+            $(get::<$ty>()),+
         ].as_mut_slice());
         structure.set_names(&[$($name),+]);
         structure
     });
-    ($func:expr, return) => (
+    ($func:ident, return) => (
         $func.insn_default_return()
     );
-    ($func:expr, return $($t:tt)+) => (
+    ($func:ident, return $($t:tt)+) => (
         $func.insn_return(jit!($($t)+))
     );
-    ($func:expr, call($call:expr,
+    ($func:ident, $var:ident += $num:expr) => (
+        $func.insn_store($var, &$func.insn_add($var, $num));
+    );
+    ($func:ident, $var:ident -= $num:expr) => (
+        $func.insn_store($var, &$func.insn_sub($var, $num));
+    );
+    ($func:ident, $var:ident *= $num:expr) => (
+        $func.insn_store($var, &$func.insn_mul($var, $num));
+    );
+    ($func:ident, $var:ident /= $num:expr) => (
+        $func.insn_store($var, &$func.insn_div($var, $num));
+    );
+    ($func:ident, $a:expr + $b:expr) => (
+        $func.insn_add($a, $b)
+    );
+    ($func:ident, $a:expr - $b:expr) => (
+        $func.insn_sub($a, $b)
+    );
+    ($func:ident, $a:expr * $b:expr) => (
+        $func.insn_mul($a, $b)
+    );
+    ($func:ident, $a:expr / $b:expr) => (
+        $func.insn_div($a, $b)
+    );
+    ($func:ident, $a:expr % $b:expr) => (
+        $func.insn_rem($a, $b)
+    );
+    ($func:ident, $var:ident = $val:expr) => (
+        $func.insn_store($var, $val);
+    );
+    ($func:ident, *$var:ident) => (
+        $func.insn_load($var)
+    );
+    ($func:ident, call($call:expr,
         $($arg:expr),+
     )) => (
         $func.insn_call(None::<String>, $call, None, [$($arg),+].as_mut_slice())
     );
-    ($func:expr, jump_table($value:expr,
+    ($func:ident, jump_table($value:expr,
         $($label:ident),+
     )) => (
     let ($($label),+) = {
@@ -141,8 +174,5 @@ macro_rules! jit(
     });
     ($func:expr, $value:expr) => (
         $func.insn_of(&$value)
-    );
-    ($ty:ty) => (
-        get_type::<$ty>()
     );
 )
