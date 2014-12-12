@@ -1,8 +1,6 @@
-use compile::Compile;
 use context::Context;
-use function::UncompiledFunction;
+use function::*;
 use types::*;
-use types::get as get_type;
 macro_rules! test_compile(
     ($ty:ty, $test_name:ident, $kind:expr) => (
         #[test]
@@ -17,9 +15,8 @@ macro_rules! test_compile(
                 assert!(val.get_type().get_kind() == $kind);
                 func.insn_return(&val);
             });
-            func.compile().with_closure0(|gen_value: extern fn() -> $ty| {
-                let ret_val:$ty = gen_value();
-                assert_eq!(ret_val, default_value);
+            func.compile_with::<(), $ty>(|gen_value| {
+                assert_eq!(gen_value(()), default_value)
             });
         }
     );
@@ -31,14 +28,14 @@ fn test_sqrt() {
     let context = Context::new();
     let func = UncompiledFunction::new(&context, sig);
     context.build(|| {
-        let arg = func[0];
+        let ref arg = func[0];
         assert_eq!(arg.get_type(), get::<uint>());
-        let sqrt_arg = func.insn_sqrt(&arg);
+        let sqrt_arg = func.insn_sqrt(arg);
         let sqrt_arg_ui = func.insn_convert(&sqrt_arg, get::<uint>(), false);
         func.insn_return(&sqrt_arg_ui);
     });
-    func.compile().with_closure1(|sqrt:extern fn(uint) -> uint| {
-        assert_eq!(sqrt(64), 8);
+    func.compile_with::<uint, uint>(|sqrt| {
+        assert_eq!(sqrt(64u), 8u);
         assert_eq!(sqrt(16), 4);
         assert_eq!(sqrt(9), 3);
         assert_eq!(sqrt(4), 2);

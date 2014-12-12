@@ -8,6 +8,7 @@ use std::fmt::{Show, Formatter, Result};
 use std::c_str::ToCStr;
 use util::NativeRef;
 bitflags!(
+    #[deriving(Copy)]
     flags TypeKind: c_int {
         const Void = 0,
         const SByte = 1,

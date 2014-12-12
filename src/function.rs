@@ -14,7 +14,9 @@ use std::c_str::ToCStr;
 use std::ops::Index;
 use std::kinds::marker::ContravariantLifetime;
 use std::mem;
+use std::ptr;
 /// A platform's application binary interface
+#[deriving(Copy)]
 #[repr(C)]
 pub enum ABI {
     /// The C application binary interface
@@ -28,6 +30,7 @@ pub enum ABI {
 }
 /// Call flags to a function
 bitflags!(
+    #[deriving(Copy)]
     flags CallFlags: c_int {
         /// When the function won't throw a value
         const JIT_CALL_NO_THROW = 1,
@@ -37,6 +40,7 @@ bitflags!(
         const JIT_CALL_TAIL = 4
     }
 )
+
 pub trait Function : NativeRef {
     /// Check if this function is compiled
     fn is_compiled(&self) -> bool;
@@ -76,33 +80,17 @@ impl<'a> NativeRef for CompiledFunction<'a> {
     }
 }
 impl<'a> CompiledFunction<'a> {
-    #[inline(always)]
-    unsafe fn closure(&self, count: uint) -> *mut c_void {
-        if cfg!(debug) {
-            let sig = self.get_signature();
-            assert_eq!(sig.params().count(), count);
+    pub fn with<A, R>(&self, cb:|extern fn(A) -> R|) {
+        cb(unsafe {
+            mem::transmute(jit_function_to_closure(self._func))
+        })
+    }
+    pub fn call<A, R>(&self, ref mut args: A) -> R {
+        unsafe {
+            let mut ret = mem::uninitialized::<R>();
+            jit_function_apply(self._func, mem::transmute([args][mut].as_mut_ptr()), mem::transmute(&mut ret));
+            ret
         }
-        jit_function_to_closure(self.as_ptr())
-    }
-    #[inline(always)]
-    /// Call the given closure with this function compiled with no arguments
-    pub fn with_closure0<Y, Z>(&self, cb:|extern "C" fn() -> Z| -> Y) -> Y {
-        unsafe { cb(mem::transmute(self.closure(0))) }
-    }
-    #[inline(always)]
-    /// Call the given closure with this function compiled with 1 argument
-    pub fn with_closure1<A, Y, Z>(&self, cb:|extern "C" fn(A) -> Z| -> Y)  -> Y {
-        unsafe { cb(mem::transmute(self.closure(1))) }
-    }
-    #[inline(always)]
-    /// Call the given closure with this function compiled with 2 arguments
-    pub fn with_closure2<A, B, Y, Z>(&self, cb:|extern "C" fn(A, B) -> Z| -> Y) -> Y {
-        unsafe { cb(mem::transmute(self.closure(2))) }
-    }
-    #[inline(always)]
-    /// Call the given closure with this function compiled with 3 arguments
-    pub fn with_closure3<A, B, C, Y, Z>(&self, cb:|extern "C" fn(A, B, C) -> Z| -> Y) -> Y {
-        unsafe { cb(mem::transmute(self.closure(3))) }
     }
 }
 
@@ -570,7 +558,7 @@ impl<'a> UncompiledFunction<'a> {
                 NativeRef::from_ptr(jit_insn_call(self.as_ptr(), c_name, func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, flags.bits()));
             match name {
                 Some(ref name) => name.with_c_str(cb),
-                None => cb(RawPtr::null())
+                None => cb(ptr::null())
             }
         }
     }
@@ -605,7 +593,7 @@ impl<'a> UncompiledFunction<'a> {
             };
             match name {
                 Some(ref name) => name.with_c_str(cb),
-                None => cb(RawPtr::null())
+                None => cb(ptr::null())
             }
         }
     }
@@ -711,14 +699,18 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Compile the function
     pub fn compile(self) -> CompiledFunction<'a> {
-        CompiledFunction {
-            _func: unsafe {
-                let ptr = self.as_ptr();
-                jit_function_compile(ptr);
-                mem::forget(self);
-                ptr
-            },
-            marker: ContravariantLifetime::<'a>
+        unsafe {
+            let ptr = self.as_ptr();
+            mem::forget(self);
+            jit_function_compile(ptr);
+            NativeRef::from_ptr(ptr)
         }
+    }
+    #[inline(always)]
+    /// Compile the function into a closure directly
+    pub fn compile_with<A, R>(self, cb: |extern "C" fn(A) -> R|) -> CompiledFunction<'a> {
+        let compiled = self.compile();
+        compiled.with(cb);
+        compiled
     }
 }

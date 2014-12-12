@@ -26,7 +26,7 @@
 #![crate_name = "jit"]
 #![allow(raw_pointer_deriving, dead_code, non_camel_case_types, non_upper_case_globals, unknown_features)]
 #![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
-#![feature(globs, macro_rules, slicing_syntax, unsafe_destructor, phase)]
+#![feature(globs, macro_rules, slicing_syntax, unboxed_closures, unsafe_destructor, phase)]
 #![stable]
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
@@ -48,8 +48,8 @@
 //!         func.insn_return(result);
 //!     });
 //!     // compile the IR and get the machine code as a function
-//!     func.compile().with_closure2(|mul:extern fn(int, int) -> int| {
-//!         assert_eq!(mul(4, 5), 20);
+//!     let mul = func.compile_with::<(int, int), int>(|mul| {
+//!         assert_eq!(mul((4, 5)), 20);
 //!     });
 //! }
 //! ```
