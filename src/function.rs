@@ -39,9 +39,7 @@ bitflags!(
 )
 pub trait Function : NativeRef {
     /// Check if this function is compiled
-    fn is_compiled(&self) -> bool {
-        unsafe { jit_function_is_compiled(self.as_ptr()) != 0 }
-    }
+    fn is_compiled(&self) -> bool;
     /// Get the signature of this function
     fn get_signature(&self) -> Type {
         unsafe { NativeRef::from_ptr(jit_function_get_signature(self.as_ptr())) }
@@ -57,7 +55,11 @@ pub struct CompiledFunction<'a> {
     _func: jit_function_t,
     marker: ContravariantLifetime<'a>
 }
-impl<'a> Function for CompiledFunction<'a> {}
+impl<'a> Function for CompiledFunction<'a> {
+    fn is_compiled(&self) -> bool {
+        true
+    }
+}
 impl<'a> NativeRef for CompiledFunction<'a> {
     #[inline(always)]
     /// Convert to a native pointer
@@ -114,7 +116,11 @@ pub struct UncompiledFunction<'a> {
     args: Vec<Value<'a>>,
     marker: ContravariantLifetime<'a>
 }
-impl<'a> Function for UncompiledFunction<'a> {}
+impl<'a> Function for UncompiledFunction<'a> {
+    fn is_compiled(&self) -> bool {
+        false
+    }
+}
 impl<'a> NativeRef for UncompiledFunction<'a> {
     #[inline(always)]
     /// Convert to a native pointer
