@@ -1,6 +1,6 @@
 [package]
 name = "libjit-sys"
-version = "0.1.0"
+version = "0.1.1"
 description = "Just-In-Time Compilation in Rust using LibJIT bindings"
 authors = ["Tom Bebbington <tophattedcoder@gmail.com>"]
 keywords = [ "compile", "compiler", "jit", "interpreter" ]

@@ -1,6 +1,6 @@
 [root]
 name = "libjit-sys"
-version = "0.0.1"
+version = "0.1.1"
 dependencies = [
  "pkg-config 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
