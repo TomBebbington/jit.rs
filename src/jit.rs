@@ -69,13 +69,7 @@ pub use raw::{
 };
 pub use compile::Compile;
 pub use context::Context;
-pub use function::{
-    ABI,
-    CompiledFunction,
-    UncompiledFunction,
-    Function,
-    CallFlags
-};
+pub use function::*;
 pub use label::Label;
 pub use types::*;
 pub use types::get as get_type;
