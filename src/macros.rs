@@ -56,6 +56,7 @@ macro_rules! compile_prims(
 #[macro_export]
 macro_rules! native_ref(
     ($name:ident, $field:ident, $pointer_ty:ty) => (
+        #[allow(missing_copy_implementations)]
         #[deriving(PartialEq)]
         pub struct $name {
             $field: $pointer_ty
