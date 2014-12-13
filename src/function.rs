@@ -64,21 +64,7 @@ impl<'a> Function for CompiledFunction<'a> {
         true
     }
 }
-impl<'a> NativeRef for CompiledFunction<'a> {
-    #[inline(always)]
-    /// Convert to a native pointer
-    unsafe fn as_ptr(&self) -> jit_function_t {
-        self._func
-    }
-    #[inline(always)]
-    /// Convert from a native pointer
-    unsafe fn from_ptr(ptr:jit_function_t) -> CompiledFunction<'a> {
-        CompiledFunction {
-            _func: ptr,
-            marker: ContravariantLifetime::<'a>
-        }
-    }
-}
+native_ref!(CompiledFunction, _func, jit_function_t, ContravariantLifetime)
 impl<'a> CompiledFunction<'a> {
     pub fn with<A, R>(&self, cb:|extern fn(A) -> R|) {
         cb(unsafe {

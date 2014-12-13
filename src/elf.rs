@@ -3,11 +3,13 @@ use context::Context;
 use function::CompiledFunction;
 use libc::c_uint;
 use util::NativeRef;
-use std::fmt::Show;
+use std::fmt::{Show, Formatter};
+use std::fmt::Result as FResult;
 use std::kinds::marker::ContravariantLifetime;
-use std::mem::transmute;
+use std::mem;
 use std::iter::Iterator;
 use std::c_str::ToCStr;
+use std::error::Error;
 /// An ELF dependency iterator
 pub struct Needed<'a> {
     _reader: jit_readelf_t,
@@ -17,7 +19,7 @@ pub struct Needed<'a> {
 }
 impl<'a> Needed<'a> {
     #[inline(always)]
-    fn new(read:&ReadElf<'a>) -> Needed<'a> {
+    fn new(read:&'a ReadElf) -> Needed<'a> {
         unsafe {
             Needed {
                 _reader: read.as_ptr(),
@@ -35,7 +37,7 @@ impl<'a> Iterator<String> for Needed<'a> {
         unsafe {
             if index < self.length {
                 let c_name = jit_readelf_get_needed(self._reader, index);
-                let name = String::from_raw_buf(transmute(c_name));
+                let name = String::from_raw_buf(mem::transmute(c_name));
                 Some(name)
             } else {
                 None
@@ -48,19 +50,68 @@ impl<'a> Iterator<String> for Needed<'a> {
     }
 }
 /// An ELF binary reader
-native_ref!(ReadElf, _reader, jit_readelf_t, ContravariantLifetime)
-impl<'a> ReadElf<'a> {
+pub struct ReadElf {
+    _reader: jit_readelf_t
+}
+native_ref!(ReadElf, _reader, jit_readelf_t)
+#[deriving(Copy)]
+#[repr(i32)]
+pub enum ReadElfErrorCode {
+    CannotOpen,
+    NotElf,
+    WrongArch,
+    BadFormat,
+    Memory
+}
+impl Show for ReadElfErrorCode {
+    fn fmt(&self, fmt: &mut Formatter) -> FResult {
+        write!(fmt, "{}", self.description())
+    }
+}
+impl Error for ReadElfErrorCode {
+    fn description(&self) -> &str {
+        match *self {
+            ReadElfErrorCode::CannotOpen => "Could not open the file",
+            ReadElfErrorCode::NotElf => "Not an ELF-format binary",
+            ReadElfErrorCode::WrongArch => "Wrong architecture for local system",
+            ReadElfErrorCode::BadFormat => "ELF file, but badly formatted",
+            ReadElfErrorCode::Memory => "Insufficient memory to load the file"
+        }
+    }
+}
+#[deriving(Copy)]
+pub struct ReadElfError<S> {
+    filename: S,
+    error: ReadElfErrorCode
+}
+impl<S:Show> Show for ReadElfError<S> {
+    fn fmt(&self, fmt: &mut Formatter) -> FResult {
+        write!(fmt, "'{}': {}", self.filename, self.error.description())
+    }
+}
+impl<S> Error for ReadElfError<S> where S:Send + Show + ToCStr {
+    fn description(&self) -> &str {
+        self.error.description()
+    }
+    fn detail(&self) -> Option<String> {
+        Some(self.to_string())
+    }
+}
+impl ReadElf {
     /// Open a new ELF binary
-    pub fn new<S:ToCStr+Show>(filename:S) -> ReadElf<'a> {
+    pub fn new<S:ToCStr>(filename:S) -> Result<ReadElf, ReadElfError<S>> {
         unsafe {
             let mut this = RawPtr::null();
             let code = filename.with_c_str(|c_name|
                 jit_readelf_open(&mut this, c_name, 0)
             );
-            if this.is_null() {
-                panic!("'{}' couldn't be opened due to {}", filename, code);
+            if code == 0 {
+                Ok(NativeRef::from_ptr(this))
             } else {
-                NativeRef::from_ptr(this)
+                Err(ReadElfError {
+                    filename: filename,
+                    error: mem::transmute(code)
+                })
             }
         }
     }
@@ -68,30 +119,30 @@ impl<'a> ReadElf<'a> {
     /// Get the name of this ELF binary
     pub fn get_name(&self) -> String {
         unsafe {
-            String::from_raw_buf(transmute(jit_readelf_get_name(self.as_ptr())))
+            String::from_raw_buf(mem::transmute(jit_readelf_get_name(self.as_ptr())))
         }
     }
     #[inline]
-    pub fn add_to_context(&self, ctx:&'a Context) {
+    pub fn add_to_context(&self, ctx:&Context) {
         unsafe {
             jit_readelf_add_to_context(self.as_ptr(), ctx.as_ptr())
         }
     }
     #[inline]
     /// Get a symbol in the ELF binary
-    pub unsafe fn get_symbol<T, S:ToCStr>(&self, symbol:S) -> &'a mut T {
+    pub unsafe fn get_symbol<T, S:ToCStr>(&self, symbol:S) -> &mut T {
         symbol.with_c_str(|c_symbol|
-            transmute(jit_readelf_get_symbol(self.as_ptr(), c_symbol))
+            mem::transmute(jit_readelf_get_symbol(self.as_ptr(), c_symbol))
         )
     }
     #[inline]
     /// Iterate over the needed libraries
-    pub fn needed<'a>(&'a self) -> Needed<'a> {
+    pub fn needed(&self) -> Needed {
         Needed::new(self)
     }
 }
 #[unsafe_destructor]
-impl<'a> Drop for ReadElf<'a> {
+impl Drop for ReadElf {
     #[inline]
     fn drop(&mut self) {
         unsafe {
@@ -101,11 +152,14 @@ impl<'a> Drop for ReadElf<'a> {
 }
 
 /// An ELF binary reader
-native_ref!(WriteElf, _writer, jit_writeelf_t, ContravariantLifetime)
-impl<'a> WriteElf<'a> {
+pub struct WriteElf {
+    _writer: jit_writeelf_t
+}
+native_ref!(WriteElf, _writer, jit_writeelf_t)
+impl WriteElf {
     #[inline]
     /// Create a new ELF binary reader
-    pub fn new<S:ToCStr>(lib_name:S) -> WriteElf<'a> {
+    pub fn new<S:ToCStr>(lib_name:S) -> WriteElf {
         lib_name.with_c_str(|c_lib_name| unsafe {
             NativeRef::from_ptr(jit_writeelf_create(c_lib_name))
         })
@@ -119,7 +173,7 @@ impl<'a> WriteElf<'a> {
     }
     #[inline]
     /// Add a function to the ELF
-    pub fn add_function<S:ToCStr>(&self, func:&'a CompiledFunction<'a>, name:S) -> bool {
+    pub fn add_function<S:ToCStr>(&self, func:&CompiledFunction, name:S) -> bool {
         name.with_c_str(|c_name| unsafe {
             jit_writeelf_add_function(self.as_ptr(), func.as_ptr(), c_name) != 0
         })
@@ -133,7 +187,7 @@ impl<'a> WriteElf<'a> {
     }
 }
 #[unsafe_destructor]
-impl<'a> Drop for WriteElf<'a> {
+impl Drop for WriteElf {
     #[inline]
     fn drop(&mut self) {
         unsafe {

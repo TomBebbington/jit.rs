@@ -54,11 +54,6 @@ macro_rules! compile_prims(
 
 macro_rules! native_ref(
     ($name:ident, $field:ident, $pointer_ty:ty) => (
-        #[allow(missing_copy_implementations)]
-        #[deriving(PartialEq)]
-        pub struct $name {
-            $field: $pointer_ty
-        }
         impl NativeRef for $name {
             #[inline(always)]
             /// Convert to a native pointer
@@ -75,11 +70,6 @@ macro_rules! native_ref(
         }
     );
     ($name:ident, $field:ident, $pointer_ty:ty, $lifetime:ident) => (
-        #[deriving(PartialEq)]
-        pub struct $name<'a> {
-            $field: $pointer_ty,
-            marker: $lifetime<'a>
-        }
         impl<'a> NativeRef for $name<'a> {
             #[inline]
             /// Convert to a native pointer

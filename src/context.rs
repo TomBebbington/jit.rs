@@ -4,9 +4,18 @@ use util::NativeRef;
 use {CompiledFunction, Type, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
 /// multiple, but normally there is only one.
+pub struct Context {
+    _context: jit_context_t
+}
 native_ref!(Context, _context, jit_context_t)
+
 /// A context that is in the build phase while generating IR
+#[allow(missing_copy_implementations)]
+pub struct Builder {
+    _context: jit_context_t
+}
 native_ref!(Builder, _context, jit_context_t)
+
 impl Context {
     #[inline(always)]
     /// Create a new JIT Context

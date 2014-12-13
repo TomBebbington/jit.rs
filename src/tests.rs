@@ -1,3 +1,4 @@
+use elf::*;
 use context::Context;
 use function::*;
 use types::Type;
