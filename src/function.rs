@@ -1,5 +1,5 @@
 use raw::*;
-use context::Context;
+use context::Builder;
 use compile::Compile;
 use label::Label;
 use types::Type;
@@ -149,7 +149,7 @@ impl<'a> UncompiledFunction<'a> {
     /// 
     /// This will protect the JIT's internal data structures within a
     /// multi-threaded environment.
-    pub fn new(context:&'a Context<'a>, signature:Type) -> UncompiledFunction<'a> {
+    pub fn new(context:&'a Builder, signature:Type) -> UncompiledFunction<'a> {
         unsafe {
             NativeRef::from_ptr(jit_function_create(
                 context.as_ptr(),
@@ -167,7 +167,7 @@ impl<'a> UncompiledFunction<'a> {
     /// never be called by anyone except its parent and sibling functions.
     /// The front end is also responsible for ensuring that the nested function
     /// is compiled before its parent.
-    pub fn new_nested(context:&'a Context<'a>, signature: Type,
+    pub fn new_nested(context:&'a Builder, signature: Type,
                         parent: &'a UncompiledFunction<'a>) -> UncompiledFunction<'a> {
         unsafe {
             NativeRef::from_ptr(jit_function_create_nested(

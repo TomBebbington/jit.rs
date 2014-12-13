@@ -1,42 +1,43 @@
 use raw::*;
-use std::kinds::marker::ContravariantLifetime;
+use std::mem;
 use util::NativeRef;
-use UncompiledFunction;
+use {CompiledFunction, Type, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
 /// multiple, but normally there is only one.
-native_ref!(Context, _context, jit_context_t, ContravariantLifetime)
-impl<'a> Context<'a> {
+native_ref!(Context, _context, jit_context_t)
+/// A context that is in the build phase while generating IR
+native_ref!(Builder, _context, jit_context_t)
+impl Context {
     #[inline(always)]
     /// Create a new JIT Context
-    pub fn new() -> Context<'a> {
+    pub fn new() -> Context {
         unsafe {
             NativeRef::from_ptr(jit_context_create())
         }
     }
     #[inline(always)]
-    /// Run a closure that can generate IR
-    pub fn build<R>(&'a self, cb: || -> R) -> R {
+    /// Lock the context so you can safely generate IR
+    pub fn build<'a, R: 'a>(&'a self, cb: |&'a Builder| -> R) -> R {
         unsafe {
             jit_context_build_start(self.as_ptr());
-            let value = cb();
+            let r = cb(mem::transmute(self));
             jit_context_build_end(self.as_ptr());
-            value
+            r
         }
     }
     #[inline(always)]
-    /// Run a closure that can generate IR
-    pub fn build_with<R>(&'a self, function: &UncompiledFunction, cb: |&UncompiledFunction| -> R) -> R {
-        unsafe {
-            jit_context_build_start(self.as_ptr());
-            let value = cb(function);
-            jit_context_build_end(self.as_ptr());
-            value
-        }
+    /// Lock the context so you can safely generate IR in a new function on the context
+    pub fn build_func<'a>(&'a self, signature: Type, cb: |&UncompiledFunction<'a>|) -> CompiledFunction<'a> {
+        self.build(|builder| {
+            let func = UncompiledFunction::new(builder, signature.clone());
+            cb(&func);
+            func
+        }).compile()
     }
 }
 
 #[unsafe_destructor]
-impl<'a> Drop for Context<'a> {
+impl Drop for Context {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe {

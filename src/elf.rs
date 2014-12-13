@@ -72,7 +72,7 @@ impl<'a> ReadElf<'a> {
         }
     }
     #[inline]
-    pub fn add_to_context(&self, ctx:&Context<'a>) {
+    pub fn add_to_context(&self, ctx:&'a Context) {
         unsafe {
             jit_readelf_add_to_context(self.as_ptr(), ctx.as_ptr())
         }

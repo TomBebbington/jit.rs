@@ -6,16 +6,12 @@ macro_rules! test_compile(
         #[test]
         fn $test_name() {
             use std::default::Default;
-            let ref context = Context::new();
-            let sig = get::<fn() -> $ty>();
-            let func = UncompiledFunction::new(context, sig);
             let default_value:$ty = Default::default();
-            context.build_with(&func, |func:&UncompiledFunction| {
+            Context::new().build_func(get::<fn() -> $ty>(), |func| {
                 let val = func.insn_of(&default_value);
                 assert!(val.get_type().get_kind() == $kind);
                 func.insn_return(&val);
-            });
-            func.compile_with::<(), $ty>(|gen_value| {
+            }).with::<(), $ty>(|gen_value| {
                 assert_eq!(gen_value(()), default_value)
             });
         }
@@ -24,18 +20,14 @@ macro_rules! test_compile(
 #[test]
 fn test_sqrt() {
     println!("Testing square root");
-    let sig = get::<fn(uint) -> uint>();
-    let context = Context::new();
-    let func = UncompiledFunction::new(&context, sig);
-    context.build(|| {
+    Context::new().build_func(get::<fn(uint) -> uint>(), |func:&UncompiledFunction| {
         let ref arg = func[0];
         assert_eq!(arg.get_type(), get::<uint>());
         let sqrt_arg = func.insn_sqrt(arg);
         let sqrt_arg_ui = func.insn_convert(&sqrt_arg, get::<uint>(), false);
         func.insn_return(&sqrt_arg_ui);
-    });
-    func.compile_with::<uint, uint>(|sqrt| {
-        assert_eq!(sqrt(64u), 8u);
+    }).with::<uint, uint>(|sqrt| {
+        assert_eq!(sqrt(64), 8);
         assert_eq!(sqrt(16), 4);
         assert_eq!(sqrt(9), 3);
         assert_eq!(sqrt(4), 2);
