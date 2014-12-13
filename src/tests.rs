@@ -1,28 +1,26 @@
-use elf::*;
 use context::Context;
 use function::*;
+use get;
+use std::default::Default;
 use types::Type;
 use types::kind::*;
-use get;
 macro_rules! test_compile(
     ($ty:ty, $test_name:ident, $kind:expr) => (
         #[test]
         fn $test_name() {
-            use std::default::Default;
             let default_value:$ty = Default::default();
             Context::new().build_func(get::<fn() -> $ty>(), |func| {
-                let val = func.insn_of(&default_value);
+                let ref val = func.insn_of(&default_value);
                 assert!(val.get_type().get_kind() == $kind);
-                func.insn_return(&val);
-            }).with::<(), $ty>(|gen_value| {
-                assert_eq!(gen_value(()), default_value)
+                func.insn_return(val);
+            }).with::<(), $ty>(|func| {
+                assert_eq!(func(()), default_value);
             });
         }
     );
 )
 #[test]
 fn test_sqrt() {
-    println!("Testing square root");
     Context::new().build_func(get::<fn(uint) -> uint>(), |func:&UncompiledFunction| {
         let ref arg = func[0];
         assert_eq!(arg.get_type(), get::<uint>());
@@ -40,7 +38,6 @@ fn test_sqrt() {
 
 #[test]
 fn test_struct() {
-    println!("Testing struct");
     ::init();
     let double_float_t = jit!(struct {
         "first": f64,
