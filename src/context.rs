@@ -26,7 +26,8 @@ impl Context {
         }
     }
     #[inline(always)]
-    /// Lock the context so you can safely generate IR in a new function on the context
+    /// Lock the context so you can safely generate IR in a new function on the context which is
+    /// compiled for you
     pub fn build_func<'a>(&'a self, signature: Type, cb: |&UncompiledFunction<'a>|) -> CompiledFunction<'a> {
         self.build(|builder| {
             let func = UncompiledFunction::new(builder, signature.clone());
