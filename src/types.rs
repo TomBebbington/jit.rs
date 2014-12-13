@@ -2,6 +2,7 @@ use raw::*;
 use compile::Compile;
 use function::ABI;
 use libc::c_uint;
+#[cfg(not(ndebug))]
 use std::fmt::{Show, Formatter, Result};
 use std::kinds::marker::{ContravariantLifetime, NoCopy};
 use std::mem::transmute;
@@ -9,6 +10,7 @@ use std::c_str::ToCStr;
 use util::NativeRef;
 pub mod kind {
     use libc::c_int;
+    #[cfg(not(ndebug))]
     use std::fmt::{Show, Formatter, Result};
     bitflags!(
         #[deriving(Copy)]
