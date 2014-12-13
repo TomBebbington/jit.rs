@@ -33,22 +33,21 @@
 //! 
 //! ```rust
 //! extern crate jit;
-//! use jit::{Context, UncompiledFunction, get_type};
+//! use jit::{Context, get_type};
 //! fn main() {
 //!     // make a new context to make functions on
 //!     let ref ctx = Context::new();
 //!     // get the type of the function
 //!     let sig = get_type::<fn(int, int) -> int>();
 //!     // make the function
-//!     let func = UncompiledFunction::new(ctx, sig);
-//!     ctx.build(|| {
+//!     let func = ctx.build_func(sig, |func| {
 //!         let ref x = func[0];
 //!         let ref y = func[1];
 //!         let ref result = func.insn_mul(x, y);
 //!         func.insn_return(result);
 //!     });
 //!     // compile the IR and get the machine code as a function
-//!     let mul = func.compile_with::<(int, int), int>(|mul| {
+//!     let mul = func.with::<(int, int), int>(|mul| {
 //!         assert_eq!(mul((4, 5)), 20);
 //!     });
 //! }
