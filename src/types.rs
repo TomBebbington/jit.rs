@@ -1,70 +1,74 @@
 use raw::*;
 use compile::Compile;
 use function::ABI;
-use libc::{c_uint, c_int};
+use libc::c_uint;
+use std::fmt::{Show, Formatter, Result};
 use std::kinds::marker::{ContravariantLifetime, NoCopy};
 use std::mem::transmute;
-use std::fmt::{Show, Formatter, Result};
 use std::c_str::ToCStr;
 use util::NativeRef;
-bitflags!(
-    #[deriving(Copy)]
-    flags TypeKind: c_int {
-        const Void = 0,
-        const SByte = 1,
-        const UByte = 2,
-        const Short = 3,
-        const UShort = 4,
-        const Int = 5,
-        const UInt = 6,
-        const NInt = 7,
-        const NUInt = 8,
-        const Long = 9,
-        const ULong = 10,
-        const Float32 = 11,
-        const Float64 = 12,
-        const NFloat = 13,
-        const Struct = 14,
-        const Union = 15,
-        const Signature = 16,
-        const Pointer = 17,
-        const FirstTagged = 2,
-        const SysBool = 10009,
-        const SysChar = 10010
-    }
-)
-#[cfg(not(ndebug))]
-impl Show for TypeKind {
-    fn fmt(&self, fmt:&mut Formatter) -> Result {
-        write!(fmt, "{}",
-            if self.contains(SysBool) { "SysBool" }
-            else if self.contains(SysChar) { "SysChar" }
-            else if self.contains(SByte) { "SByte" }
-            else if self.contains(UByte) { "UByte" }
-            else if self.contains(Short) { "Short" }
-            else if self.contains(UShort) { "UShort" }
-            else if self.contains(Int) { "Int" }
-            else if self.contains(UInt) { "UInt" }
-            else if self.contains(NInt) { "NInt" }
-            else if self.contains(NUInt) { "NUInt" }
-            else if self.contains(Long) { "Long" }
-            else if self.contains(ULong) { "ULong" }
-            else if self.contains(Float32) { "Float32" }
-            else if self.contains(Float64) { "Float64" }
-            else if self.contains(NFloat) { "NFloat" }
-            else if self.contains(Struct) { "Struct" }
-            else if self.contains(Union) { "Union" }
-            else if self.contains(Signature) { "Signature" }
-            else if self.contains(Pointer) { "Void" }
-            else { "Void" }
-        )
+pub mod kind {
+    use libc::c_int;
+    use std::fmt::{Show, Formatter, Result};
+    bitflags!(
+        #[deriving(Copy)]
+        flags TypeKind: c_int {
+            const Void = 0,
+            const SByte = 1,
+            const UByte = 2,
+            const Short = 3,
+            const UShort = 4,
+            const Int = 5,
+            const UInt = 6,
+            const NInt = 7,
+            const NUInt = 8,
+            const Long = 9,
+            const ULong = 10,
+            const Float32 = 11,
+            const Float64 = 12,
+            const NFloat = 13,
+            const Struct = 14,
+            const Union = 15,
+            const Signature = 16,
+            const Pointer = 17,
+            const FirstTagged = 2,
+            const SysBool = 10009,
+            const SysChar = 10010
+        }
+    )
+    #[cfg(not(ndebug))]
+    impl Show for TypeKind {
+        fn fmt(&self, fmt:&mut Formatter) -> Result {
+            write!(fmt, "{}",
+                if self.contains(SysBool) { "SysBool" }
+                else if self.contains(SysChar) { "SysChar" }
+                else if self.contains(SByte) { "SByte" }
+                else if self.contains(UByte) { "UByte" }
+                else if self.contains(Short) { "Short" }
+                else if self.contains(UShort) { "UShort" }
+                else if self.contains(Int) { "Int" }
+                else if self.contains(UInt) { "UInt" }
+                else if self.contains(NInt) { "NInt" }
+                else if self.contains(NUInt) { "NUInt" }
+                else if self.contains(Long) { "Long" }
+                else if self.contains(ULong) { "ULong" }
+                else if self.contains(Float32) { "Float32" }
+                else if self.contains(Float64) { "Float64" }
+                else if self.contains(NFloat) { "NFloat" }
+                else if self.contains(Struct) { "Struct" }
+                else if self.contains(Union) { "Union" }
+                else if self.contains(Signature) { "Signature" }
+                else if self.contains(Pointer) { "Void" }
+                else { "Void" }
+            )
+        }
     }
 }
 #[cfg(not(ndebug))]
 impl Show for Type {
     fn fmt(&self, fmt:&mut Formatter) -> Result {
         let kind = self.get_kind();
-        if kind == Signature {
+        if kind == kind::Signature {
             try!("fn(".fmt(fmt));
             for param in self.params() {
                 try!(param.fmt(fmt));
@@ -274,7 +278,7 @@ impl Type {
     #[inline]
     /// Get a value that indicates the kind of this type. This allows callers to
     /// quickly classify a type to determine how it should be handled further.
-    pub fn get_kind(&self) -> TypeKind {
+    pub fn get_kind(&self) -> kind::TypeKind {
         unsafe {
             transmute(jit_type_get_kind(self.as_ptr()))
         }

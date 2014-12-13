@@ -1,6 +1,8 @@
 use context::Context;
 use function::*;
-use types::*;
+use types::Type;
+use types::kind::*;
+use get;
 macro_rules! test_compile(
     ($ty:ty, $test_name:ident, $kind:expr) => (
         #[test]

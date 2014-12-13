@@ -67,9 +67,10 @@ pub use raw::{
     jit_nuint
 };
 pub use compile::Compile;
-pub use context::Context;
+pub use context::{Builder, Context};
 pub use function::*;
 pub use label::Label;
+pub use types::kind::TypeKind;
 pub use types::*;
 pub use types::get as get_type;
 pub use util::NativeRef;
