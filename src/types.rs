@@ -8,12 +8,14 @@ use std::kinds::marker::{ContravariantLifetime, NoCopy};
 use std::mem::transmute;
 use std::c_str::ToCStr;
 use util::NativeRef;
+/// The integer representation of a type
 pub mod kind {
     use libc::c_int;
     #[cfg(not(ndebug))]
     use std::fmt::{Show, Formatter, Result};
     bitflags!(
         #[deriving(Copy)]
+        /// The integer representation of a type
         flags TypeKind: c_int {
             const Void = 0,
             const SByte = 1,
@@ -121,7 +123,7 @@ impl<'a> Field<'a> {
         }
     }
 }
-/// A type field iterator
+/// Iterates through all the fields of a struct
 pub struct Fields<'a> {
     _type: jit_type_t,
     index: c_uint,
@@ -159,6 +161,7 @@ impl<'a> Iterator<Field<'a>> for Fields<'a> {
         ((self.length - self.index) as uint, None)
     }
 }
+/// Iterator through all the arguments a function takes
 pub struct Params<'a> {
     _type: jit_type_t,
     index: c_uint,

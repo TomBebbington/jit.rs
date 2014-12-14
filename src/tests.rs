@@ -1,5 +1,4 @@
 use context::Context;
-use function::*;
 use get;
 use std::default::Default;
 use types::Type;

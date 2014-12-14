@@ -33,12 +33,12 @@
 //! 
 //! ```rust
 //! extern crate jit;
-//! use jit::{Context, get_type};
+//! use jit::{Context, get};
 //! fn main() {
 //!     // make a new context to make functions on
 //!     let ref ctx = Context::new();
 //!     // get the type of the function
-//!     let sig = get_type::<fn(int, int) -> int>();
+//!     let sig = get::<fn(int, int) -> int>();
 //!     // make the function
 //!     let func = ctx.build_func(sig, |func| {
 //!         let ref x = func[0];
@@ -69,10 +69,10 @@ pub use raw::{
 pub use compile::Compile;
 pub use context::{Builder, Context};
 pub use function::*;
+pub use function::flags::CallFlags;
 pub use label::Label;
 pub use types::kind::TypeKind;
 pub use types::*;
-pub use types::get as get_type;
 pub use util::NativeRef;
 pub use value::Value;
 

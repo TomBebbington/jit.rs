@@ -11,6 +11,8 @@ use libc::{
     c_void
 };
 use std::c_str::ToCStr;
+#[cfg(not(ndebug))]
+use std::fmt::{Formatter, Show, Result};
 use std::ops::Index;
 use std::kinds::marker::ContravariantLifetime;
 use std::mem;
@@ -29,18 +31,22 @@ pub enum ABI {
     FASTCALL
 }
 /// Call flags to a function
-bitflags!(
-    #[deriving(Copy)]
-    flags CallFlags: c_int {
-        /// When the function won't throw a value
-        const JIT_CALL_NO_THROW = 1,
-        /// When the function won't return a value
-        const JIT_CALL_NO_RETURN = 2,
-        /// When the function is tail-recursive
-        const JIT_CALL_TAIL = 4
-    }
-)
-/// Any kind of function, compiled or not
+pub mod flags {
+    use libc::c_int;
+    /// Call flags to a function
+    bitflags!(
+        #[deriving(Copy)]
+        flags CallFlags: c_int {
+            /// When the function won't throw a value
+            const JIT_CALL_NO_THROW = 1,
+            /// When the function won't return a value
+            const JIT_CALL_NO_RETURN = 2,
+            /// When the function is tail-recursive
+            const JIT_CALL_TAIL = 4
+        }
+    )
+}
+/// A function that can be compiled or not
 pub trait Function : NativeRef {
     /// Check if this function is compiled
     fn is_compiled(&self) -> bool;
@@ -50,50 +56,46 @@ pub trait Function : NativeRef {
     }
 }
 #[deriving(PartialEq)]
-/// A function which has already been compiled.
-/// A function persists for the lifetime of its containing context. It initially
-/// starts life in the "building" state, where the user constructs instructions
-/// that represents the function body. Once the build process is complete, the
-/// user calls `function.compile()` to convert it into its executable form.
+/// A function which has already been compiled from an `UncompiledFunction`.
+///
+/// A function persists for the lifetime of its containing context. This is
+/// a function which has already been compiled and is now in executable form.
 pub struct CompiledFunction<'a> {
     _func: jit_function_t,
     marker: ContravariantLifetime<'a>
 }
+native_ref!(CompiledFunction, _func, jit_function_t, ContravariantLifetime)
 impl<'a> Function for CompiledFunction<'a> {
     fn is_compiled(&self) -> bool {
         true
     }
 }
-native_ref!(CompiledFunction, _func, jit_function_t, ContravariantLifetime)
+#[cfg(not(ndebug))]
+impl<'a> Show for CompiledFunction<'a> {
+    fn fmt(&self, fmt:&mut Formatter) -> Result {
+        write!(fmt, "compiled {}", self.get_signature())
+    }
+}
 impl<'a> CompiledFunction<'a> {
-    pub fn with<A, R>(&self, cb:|extern fn(A) -> R|) {
+    /// Run a closure with the compiled function as an argument
+    pub fn with<A, R>(&self, cb:|extern "C" fn(A) -> R|) {
         cb(unsafe {
             mem::transmute(jit_function_to_closure(self._func))
         })
     }
-    pub fn call<A, R>(&self, ref mut args: A) -> R {
-        unsafe {
-            let mut ret = mem::uninitialized::<R>();
-            jit_function_apply(self._func, mem::transmute([args][mut].as_mut_ptr()), mem::transmute(&mut ret));
-            ret
-        }
-    }
 }
 
 #[deriving(PartialEq)]
-/// A function persists for the lifetime of its containing context. It initially
-/// starts life in the "building" state, where the user constructs instructions
+/// A function which has not been compiled yet.
+///
+/// A function persists for the lifetime of its containing context. This represents
+/// the function in the "building" state, where the user constructs instructions
 /// that represents the function body. Once the build process is complete, the
 /// user calls `function.compile()` to convert it into its executable form.
 pub struct UncompiledFunction<'a> {
     _func: jit_function_t,
     args: Vec<Value<'a>>,
     marker: ContravariantLifetime<'a>
-}
-impl<'a> Function for UncompiledFunction<'a> {
-    fn is_compiled(&self) -> bool {
-        false
-    }
 }
 impl<'a> NativeRef for UncompiledFunction<'a> {
     #[inline(always)]
@@ -110,6 +112,17 @@ impl<'a> NativeRef for UncompiledFunction<'a> {
             args: Vec::from_fn(jit_type_num_params(sig) as uint, |i| NativeRef::from_ptr(jit_value_get_param(ptr, i as c_uint))),
             marker: ContravariantLifetime::<'a>
         }
+    }
+}
+impl<'a> Function for UncompiledFunction<'a> {
+    fn is_compiled(&self) -> bool {
+        false
+    }
+}
+#[cfg(not(ndebug))]
+impl<'a> Show for UncompiledFunction<'a> {
+    fn fmt(&self, fmt:&mut Formatter) -> Result {
+        write!(fmt, "uncompiled {}", self.get_signature())
     }
 }
 #[unsafe_destructor]
@@ -537,7 +550,7 @@ impl<'a> UncompiledFunction<'a> {
 
     /// Call the function, which may or may not be translated yet
     pub fn insn_call<S:ToCStr, F:Function>(&self, name:Option<S>, func:&F,
-                            sig:Option<Type>, args: &mut [&Value<'a>], flags: CallFlags) -> Value<'a> {
+                            sig:Option<Type>, args: &mut [&Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
             let cb = |c_name|
@@ -552,7 +565,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that calls a function that has the signature given
     /// with some arguments
     pub fn insn_call_indirect<F:Function>(&self, func:&F, signature: Type,
-                               args: &mut [&Value<'a>], flags: CallFlags) -> Value<'a> {
+                               args: &mut [&Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
             NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, flags.bits() as c_int))
@@ -562,7 +575,7 @@ impl<'a> UncompiledFunction<'a> {
     /// given with some arguments
     fn insn_call_native<S:ToCStr>(&self, name: Option<S>,
                         native_func: *mut c_void, signature: Type,
-                        args: &mut [&Value<'a>], flags: CallFlags) -> Value<'a> {
+                        args: &mut [&Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter()
                 .map(|arg| arg.as_ptr()).collect();
@@ -589,7 +602,7 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_call_native0<R, S:ToCStr>(&self, name: Option<S>,
                             native_func: fn() -> R,
                             signature: Type,
-                            flags: CallFlags) -> Value<'a> {
+                            flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, [][mut], flags)
     }
@@ -600,7 +613,7 @@ impl<'a> UncompiledFunction<'a> {
                                 native_func: fn(A) -> R,
                                 signature: Type,
                                 mut args: [&Value<'a>, ..1],
-                                flags: CallFlags) -> Value<'a> {
+                                flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, args[mut], flags)
     }
@@ -611,7 +624,7 @@ impl<'a> UncompiledFunction<'a> {
                                 native_func: fn(A, B) -> R,
                                 signature: Type,
                                 mut args: [&Value<'a>, ..2],
-                                flags: CallFlags) -> Value<'a> {
+                                flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, args[mut], flags)
     }
@@ -622,7 +635,7 @@ impl<'a> UncompiledFunction<'a> {
                                 native_func: fn(A, B, C) -> R,
                                 signature: Type,
                                 mut args: [&Value<'a>, ..3],
-                                flags: CallFlags) -> Value<'a> {
+                                flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, args[mut], flags)
     }
@@ -633,7 +646,7 @@ impl<'a> UncompiledFunction<'a> {
                                 native_func: fn(A, B, C, D) -> R,
                                 signature: Type,
                                 mut args: [&Value<'a>, ..4],
-                                flags: CallFlags) -> Value<'a> {
+                                flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, args[mut], flags)
     }
