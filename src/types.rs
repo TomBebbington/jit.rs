@@ -44,26 +44,26 @@ pub mod kind {
     impl Show for TypeKind {
         fn fmt(&self, fmt:&mut Formatter) -> Result {
             write!(fmt, "{}",
-                if self.contains(SysBool) { "SysBool" }
-                else if self.contains(SysChar) { "SysChar" }
-                else if self.contains(SByte) { "SByte" }
-                else if self.contains(UByte) { "UByte" }
-                else if self.contains(Short) { "Short" }
-                else if self.contains(UShort) { "UShort" }
-                else if self.contains(Int) { "Int" }
-                else if self.contains(UInt) { "UInt" }
-                else if self.contains(NInt) { "NInt" }
-                else if self.contains(NUInt) { "NUInt" }
-                else if self.contains(Long) { "Long" }
-                else if self.contains(ULong) { "ULong" }
-                else if self.contains(Float32) { "Float32" }
-                else if self.contains(Float64) { "Float64" }
-                else if self.contains(NFloat) { "NFloat" }
-                else if self.contains(Struct) { "Struct" }
-                else if self.contains(Union) { "Union" }
-                else if self.contains(Signature) { "Signature" }
-                else if self.contains(Pointer) { "Void" }
-                else { "Void" }
+                if self.contains(Union) { "union" }
+                else if self.contains(Signature) { "signature" }
+                else if self.contains(Pointer) { "pointer" }
+                else if self.contains(Struct) { "struct" }
+                else if self.contains(SysBool) { "bool" }
+                else if self.contains(SysChar) { "char" }
+                else if self.contains(SByte) { "i8" }
+                else if self.contains(UByte) { "u8" }
+                else if self.contains(Short) { "i16" }
+                else if self.contains(UShort) { "u16" }
+                else if self.contains(Int) { "i32" }
+                else if self.contains(UInt) { "u32" }
+                else if self.contains(NInt) { "int" }
+                else if self.contains(NUInt) { "uint" }
+                else if self.contains(Long) { "i64" }
+                else if self.contains(ULong) { "u64" }
+                else if self.contains(Float32) { "f32" }
+                else if self.contains(Float64) { "f64" }
+                else if self.contains(NFloat) { "float" }
+                else { "()" }
             )
         }
     }
@@ -72,12 +72,34 @@ pub mod kind {
 impl Show for Type {
     fn fmt(&self, fmt:&mut Formatter) -> Result {
         let kind = self.get_kind();
-        if kind == kind::Signature {
+        if kind.contains(kind::Signature) {
             try!("fn(".fmt(fmt));
             for param in self.params() {
                 try!(param.fmt(fmt));
             }
             write!(fmt, ") -> ({})", self.get_return())
+        } else if kind.contains(kind::Pointer) {
+            write!(fmt, "&mut {}", self.get_ref())
+        } else if kind.contains(kind::Struct) {
+            try!("struct {".fmt(fmt));
+            for field in self.fields() {
+                try!("\n\t".fmt(fmt));
+                if let Some(name) = field.get_name() {
+                    try!(write!(fmt, "{}: ", name));
+                }
+                try!(write!(fmt, "{},", field.get_type()));
+            }
+            "\n}".fmt(fmt)
+        } else if kind.contains(kind::Union) {
+            try!("union {".fmt(fmt));
+            for field in self.fields() {
+                try!("\n\t".fmt(fmt));
+                if let Some(name) = field.get_name() {
+                    try!(write!(fmt, "{}: ", name));
+                }
+                try!(write!(fmt, "{},", field.get_type()));
+            }
+            "\n}".fmt(fmt)
         } else {
             kind.fmt(fmt)
         }
