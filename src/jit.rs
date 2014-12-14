@@ -68,6 +68,7 @@ pub use raw::{
 };
 pub use compile::Compile;
 pub use context::{Builder, Context};
+pub use elf::*;
 pub use function::*;
 pub use function::flags::CallFlags;
 pub use label::Label;
