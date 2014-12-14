@@ -34,26 +34,21 @@ fn test_sqrt() {
         assert_eq!(sqrt(1), 1);
     });
 }
-
 #[test]
 fn test_struct() {
     ::init();
-    let double_float_t = jit!(struct {
-        "first": f64,
-        "second": f64
+    let pos_t = jit!(struct {
+        "x": f64,
+        "y": f64
     });
-    assert_eq!(double_float_t.find_name("first").index, 0);
-    assert_eq!(double_float_t.find_name("second").index, 1);
-    let fields:Vec<String> = double_float_t.fields().map(|field| field.get_name().unwrap()).collect();
-    assert_eq!(fields[], [
-        "first".into_string(),
-        "second".into_string()
-    ][]);
-    assert_eq!(double_float_t.fields().count(), 2);
-    assert!({
-        let field:Option<String> = double_float_t.fields().nth(1).unwrap().get_name();
-        field.unwrap().as_slice() == "second"
-    });
+    for (i, field) in pos_t.fields().enumerate() {
+        assert_eq!(field.get_type(), get::<f64>());
+        assert_eq!(field.get_name().unwrap()[], match i {
+            0 => "x",
+            1 => "y",
+            _ => unimplemented!()
+        })
+    }
 }
 
 test_compile!((), test_compile_void, Void)
