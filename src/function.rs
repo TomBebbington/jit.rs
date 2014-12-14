@@ -36,6 +36,9 @@ pub mod flags {
     /// Call flags to a function
     bitflags!(
         #[deriving(Copy)]
+        /// Flags given whenever you call a function.
+        ///
+        /// These tell LibJIT how to handle the function and how to optimise it bests
         flags CallFlags: c_int {
             /// When the function won't throw a value
             const JIT_CALL_NO_THROW = 1,
@@ -56,7 +59,8 @@ pub trait Function : NativeRef {
     }
 }
 #[deriving(PartialEq)]
-/// A function which has already been compiled from an `UncompiledFunction`.
+/// A function which has already been compiled from an `UncompiledFunction`. This can
+/// be called but not added to.
 ///
 /// A function persists for the lifetime of its containing context. This is
 /// a function which has already been compiled and is now in executable form.
@@ -86,7 +90,7 @@ impl<'a> CompiledFunction<'a> {
 }
 
 #[deriving(PartialEq)]
-/// A function which has not been compiled yet.
+/// A function which has not been compiled yet, so it can have instructions added to it.
 ///
 /// A function persists for the lifetime of its containing context. This represents
 /// the function in the "building" state, where the user constructs instructions

@@ -56,11 +56,17 @@ pub struct ReadElf {
 native_ref!(ReadElf, _reader, jit_readelf_t)
 #[deriving(Copy)]
 #[repr(i32)]
+/// An error from trying to open the ELF
 pub enum ReadElfErrorCode {
+    /// The file couldn't be opened
     CannotOpen,
+    /// The file isn't an ELF
     NotElf,
+    /// The ELF is for a different architecture
     WrongArch,
+    /// The ELF is badly formatted
     BadFormat,
+    /// The ELF is too big to be loaded
     Memory
 }
 impl Show for ReadElfErrorCode {
@@ -80,6 +86,7 @@ impl Error for ReadElfErrorCode {
     }
 }
 #[deriving(Copy)]
+/// An error from trying to open the ELF, including the filename
 pub struct ReadElfError<S> {
     filename: S,
     error: ReadElfErrorCode
@@ -165,7 +172,8 @@ impl WriteElf {
         })
     }
     #[inline]
-    /// Write to the filename given (not implemented by LibJIT yet)
+    /// Write to the filename given (not implemented by LibJIT yet, so there's no point to this yet
+    /// but I'm sure GNU will hear the people sing the songs of angry men soon enough)
     pub fn write<S:ToCStr>(&self, filename:S) -> bool {
         filename.with_c_str(|c_filename| unsafe {
             jit_writeelf_write(self.as_ptr(), c_filename) != 0
