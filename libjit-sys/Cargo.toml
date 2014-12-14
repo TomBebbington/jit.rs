@@ -5,6 +5,7 @@ description = "Just-In-Time Compilation in Rust using LibJIT bindings"
 authors = ["Tom Bebbington <tophattedcoder@gmail.com>"]
 keywords = [ "compile", "compiler", "jit", "interpreter" ]
 repository = "https://github.com/TomBebbington/jit.rs"
+documentation = "http://tombebbington.github.io/jit.rs/libjit-sys/index.html"
 license = "MIT"
 links = "jit"
 build = "build.rs"
