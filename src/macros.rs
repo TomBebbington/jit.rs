@@ -35,7 +35,7 @@ macro_rules! compile_func(
     (fn($($arg:ident),*) -> $ret:ty, $sig:ty) => (
     impl<$($arg:Compile,)* R:Compile> Compile for $sig {
         #[inline(always)]
-        fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
+        fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
             let ptr = (self as *const $sig).to_uint().compile(func);
             func.insn_convert(&ptr, get::<$sig>(), false)
         }

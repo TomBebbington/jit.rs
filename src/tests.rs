@@ -21,7 +21,7 @@ macro_rules! test_compile(
 )
 #[test]
 fn test_sqrt() {
-    Context::new().build_func(get::<fn(uint) -> uint>(), |func:&UncompiledFunction| {
+    Context::new().build_func(get::<fn(uint) -> uint>(), |func| {
         let ref arg = func[0];
         assert_eq!(arg.get_type(), get::<uint>());
         let sqrt_arg = func.insn_sqrt(arg);

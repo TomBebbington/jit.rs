@@ -32,13 +32,13 @@ use util::NativeRef;
 /// A type that can be compiled into a LibJIT representation
 pub trait Compile {
     /// Get a JIT representation of this value
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a>;
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a>;
     /// Get the JIT type repr of the value
     fn jit_type(_:Option<Self>) -> Type;
 }
 impl Compile for () {
     #[inline(always)]
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         let ty = get::<()>();
         Value::new(func, ty)
     }
@@ -66,7 +66,7 @@ compile_prims!{
     (char, c_long) => (jit_type_sys_char, jit_value_create_nint_constant)
 }
 impl Compile for *const u8 {
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         let c_str = unsafe { CString::new(transmute(*self), false) };
         let ty = get::<&u8>();
         let ptr = Value::new(func, ty);
@@ -86,7 +86,7 @@ impl Compile for *const u8 {
     }
 }
 impl<T:Compile> Compile for *mut T {
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
@@ -101,7 +101,7 @@ impl<T:Compile> Compile for *mut T {
     }
 }
 impl<'s> Compile for CString {
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         let ty = get::<CString>();
         let val = Value::new(func, ty.clone());
         let string:*const u8 = unsafe { transmute(self.as_ptr()) };
@@ -118,7 +118,7 @@ impl<'s> Compile for CString {
     }
 }
 impl<'a> Compile for &'a str {
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         let str_ptr = {
             let ty = get::<*const u8>();
             let ptr = Value::new(func, ty);
@@ -145,7 +145,7 @@ impl<'a> Compile for &'a str {
     }
 }
 impl<'a> Compile for String {
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         let str_ptr = {
             let ty = get::<*const u8>();
             let ptr = Value::new(func, ty);
@@ -174,7 +174,7 @@ impl<'a> Compile for String {
     }
 }
 impl<'a, T:Compile> Compile for Vec<T> {
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         let vec_ptr = {
             let ty = get::<&T>();
             let inner_ty = get::<T>();
@@ -207,7 +207,7 @@ impl<'a, T:Compile> Compile for Vec<T> {
 }
 impl<'a, T:Compile> Compile for &'a T {
     #[inline(always)]
-    fn compile<'a>(&self, func:&'a UncompiledFunction<'a>) -> Value<'a> {
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),

@@ -178,7 +178,7 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instructional representation of a Rust value
-    pub fn insn_of<T:Compile>(&'a self, val:&T) -> Value<'a> {
+    pub fn insn_of<T:Compile>(&self, val:&T) -> Value<'a> {
         val.compile(self)
     }
     #[inline(always)]
