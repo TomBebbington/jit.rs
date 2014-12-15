@@ -35,10 +35,6 @@ pub mod flags {
     use libc::c_int;
     /// Call flags to a function
     bitflags!(
-        #[deriving(Copy)]
-        /// Flags given whenever you call a function.
-        ///
-        /// These tell LibJIT how to handle the function and how to optimise it bests
         flags CallFlags: c_int {
             /// When the function won't throw a value
             const JIT_CALL_NO_THROW = 1,

@@ -14,8 +14,6 @@ pub mod kind {
     #[cfg(not(ndebug))]
     use std::fmt::{Show, Formatter, Result};
     bitflags!(
-        #[deriving(Copy)]
-        /// The integer representation of a type
         flags TypeKind: c_int {
             const Void = 0,
             const SByte = 1,
