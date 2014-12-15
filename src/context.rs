@@ -26,7 +26,7 @@ impl Context {
     }
     #[inline(always)]
     /// Lock the context so you can safely generate IR
-    pub fn build<'a, R: 'a>(&'a self, cb: |&'a Builder| -> R) -> R {
+    pub fn build<'a, R, F:FnOnce(&'a Builder) -> R>(&'a self, cb: F) -> R {
         unsafe {
             jit_context_build_start(self.as_ptr());
             let r = cb(mem::transmute(self));
@@ -37,12 +37,14 @@ impl Context {
     #[inline(always)]
     /// Lock the context so you can safely generate IR in a new function on the context which is
     /// compiled for you
-    pub fn build_func<'a>(&'a self, signature: Type, cb: |&UncompiledFunction<'a>|) -> CompiledFunction<'a> {
-        self.build(|builder| {
-            let func = UncompiledFunction::new(builder, signature.clone());
-            cb(&func);
-            func
-        }).compile()
+    pub fn build_func<'a, F:FnOnce(&UncompiledFunction<'a>)>(&'a self, signature: Type, cb: F) -> CompiledFunction<'a> {
+        unsafe {
+            jit_context_build_start(self.as_ptr());
+            let func = UncompiledFunction::new(mem::transmute(self), signature.clone());
+            cb(mem::transmute(self));
+            jit_context_build_end(self.as_ptr());
+            func.compile()
+        }
     }
 }
 

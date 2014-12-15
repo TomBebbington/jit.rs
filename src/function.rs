@@ -548,17 +548,20 @@ impl<'a> UncompiledFunction<'a> {
         self.insn_unop(v, jit_insn_sign)
     }
 
+
     /// Call the function, which may or may not be translated yet
     pub fn insn_call<S:ToCStr, F:Function>(&self, name:Option<S>, func:&F,
                             sig:Option<Type>, args: &mut [&Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
-            let cb = |c_name|
-                NativeRef::from_ptr(jit_insn_call(self.as_ptr(), c_name, func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, flags.bits()));
-            match name {
-                Some(ref name) => name.with_c_str(cb),
-                None => cb(ptr::null())
-            }
+            let cname = name.map(|name| name.to_c_str().as_ptr()).unwrap_or(ptr::null());
+            NativeRef::from_ptr(jit_insn_call(
+                self.as_ptr(),
+                cname,
+                func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(),
+                args.len() as c_uint,
+                flags.bits()
+            ))
         }
     }
     #[inline(always)]
@@ -579,21 +582,16 @@ impl<'a> UncompiledFunction<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter()
                 .map(|arg| arg.as_ptr()).collect();
-            let cb = |c_name| {
-                NativeRef::from_ptr(jit_insn_call_native(
-                    self.as_ptr(),
-                    c_name,
-                    native_func,
-                    signature.as_ptr(),
-                    native_args.as_mut_ptr(),
-                    args.len() as c_uint,
-                    flags.bits()
-                ))
-            };
-            match name {
-                Some(ref name) => name.with_c_str(cb),
-                None => cb(ptr::null())
-            }
+            let cname = name.map(|name| name.to_c_str().as_ptr()).unwrap_or(ptr::null());
+            NativeRef::from_ptr(jit_insn_call_native(
+                self.as_ptr(),
+                cname,
+                native_func,
+                signature.as_ptr(),
+                native_args.as_mut_ptr(),
+                args.len() as c_uint,
+                flags.bits()
+            ))
         }
     }
     #[inline(always)]

@@ -1,5 +1,5 @@
 use libc::c_void;
-use std::c_str::{CString, ToCStr};
+use std::c_str::CString;
 use std::mem::transmute;
 use std::ptr::RawPtr;
 /// A structure that wraps a native object
@@ -18,7 +18,7 @@ pub trait NativeRef {
     }
     #[inline(always)]
     /// Works with the internal pointer in a closure
-    unsafe fn with_ptr<R>(&self, cb:|*mut c_void| -> R) -> R {
+    unsafe fn with_ptr<F:Fn(*mut c_void) -> R, R>(&self, cb:F) -> R {
         cb(self.as_ptr())
     }
 }
@@ -39,24 +39,10 @@ impl<T:NativeRef> NativeRef for Option<T> {
         }
     }
 }
-impl NativeRef for String {
-    #[inline(always)]
-    unsafe fn as_ptr(&self) -> *mut c_void {
-        transmute(self.to_c_str().into_inner())
-    }
-    #[inline(always)]
-    unsafe fn from_ptr(ptr:*mut c_void) -> String {
-        String::from_raw_buf(transmute(ptr))
-    }
-    #[inline(always)]
-    unsafe fn with_ptr<R>(&self, cb:|*mut c_void| -> R) -> R {
-        self.with_c_str(transmute(cb))
-    }
-}
 impl NativeRef for CString {
     #[inline(always)]
     unsafe fn as_ptr(&self) -> *mut c_void {
-        transmute(self.clone().into_inner())
+        transmute(self.as_ptr())
     }
     #[inline(always)]
     unsafe fn from_ptr(ptr:*mut c_void) -> CString {
