@@ -78,7 +78,7 @@ impl<'a> Show for CompiledFunction<'a> {
 }
 impl<'a> CompiledFunction<'a> {
     /// Run a closure with the compiled function as an argument
-    pub fn with<A, R>(&self, cb:|extern "C" fn(A) -> R|) {
+    pub fn with<A, R, F:FnOnce(extern "C" fn(A) -> R)>(&self, cb:F) {
         cb(unsafe {
             mem::transmute(jit_function_to_closure(self._func))
         })
@@ -705,7 +705,7 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Compile the function into a closure directly
-    pub fn compile_with<A, R>(self, cb: |extern "C" fn(A) -> R|) -> CompiledFunction<'a> {
+    pub fn compile_with<A, R, F:FnOnce(extern "C" fn(A) -> R)>(self, cb: F) -> CompiledFunction<'a> {
         let compiled = self.compile();
         compiled.with(cb);
         compiled
