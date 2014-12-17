@@ -1,5 +1,6 @@
 use raw::*;
 use std::mem;
+use std::kinds::marker::{NoSync, NoSend};
 use util::NativeRef;
 use {CompiledFunction, Type, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
@@ -10,11 +11,25 @@ pub struct Context {
 native_ref!(Context, _context, jit_context_t)
 
 /// A context that is in the build phase while generating IR
-#[allow(missing_copy_implementations)]
 pub struct Builder {
-    _context: jit_context_t
+    _context: jit_context_t,
+    no_sync: NoSync,
+    no_send: NoSend
 }
-native_ref!(Builder, _context, jit_context_t)
+impl NativeRef for Builder {
+    #[inline(always)]
+    unsafe fn as_ptr(&self) -> jit_context_t {
+        self._context
+    }
+    #[inline(always)]
+    unsafe fn from_ptr(ptr:jit_context_t) -> Builder {
+        Builder {
+            _context: ptr,
+            no_sync: NoSync,
+            no_send: NoSend
+        }
+    }
+}
 
 impl Context {
     #[inline(always)]
@@ -47,7 +62,6 @@ impl Context {
         }
     }
 }
-
 #[unsafe_destructor]
 impl Drop for Context {
     #[inline(always)]
