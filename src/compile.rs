@@ -221,8 +221,8 @@ impl<T:Compile> Compile for &'static T {
         Type::create_pointer(get::<T>())
     }
 }
-compile_func!(fn() -> R, fn() -> R)
-compile_func!(fn(A) -> R, fn(A) -> R)
-compile_func!(fn(A, B) -> R, fn(A, B) -> R)
-compile_func!(fn(A, B, C) -> R, fn(A, B, C) -> R)
-compile_func!(fn(A, B, C, D) -> R, fn(A, B, C, D) -> R)
+compile_func!(fn() -> R, fn() -> R, extern fn() -> R)
+compile_func!(fn(A) -> R, fn(A) -> R, extern fn(A) -> R)
+compile_func!(fn(A, B) -> R, fn(A, B) -> R, extern fn(A, B) -> R)
+compile_func!(fn(A, B, C) -> R, fn(A, B, C) -> R, extern fn(A, B, C) -> R)
+compile_func!(fn(A, B, C, D) -> R, fn(A, B, C, D) -> R, extern fn(A, B, C, D) -> R)

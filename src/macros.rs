@@ -32,18 +32,30 @@ impl Compile for $ty {
 )
 
 macro_rules! compile_func(
-    (fn($($arg:ident),*) -> $ret:ty, $sig:ty) => (
-    impl<$($arg:Compile,)* R:Compile> Compile for $sig {
-        #[inline(always)]
-        fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
-            let ptr = (self as *const $sig).to_uint().compile(func);
-            func.insn_convert(&ptr, get::<$sig>(), false)
+    (fn($($arg:ident),*) -> $ret:ty, $sig:ty, $ext_sig:ty) => (
+        impl<$($arg:Compile,)* R:Compile> Compile for $sig {
+            #[inline(always)]
+            fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
+                let ptr = (self as *const $sig).to_uint().compile(func);
+                func.insn_convert(&ptr, get::<$sig>(), false)
+            }
+            #[inline(always)]
+            fn jit_type(_:Option<$sig>) -> Type {
+                Type::create_signature(CDECL, get::<R>(), [$(get::<$arg>()),*][mut])
+            }
         }
-        #[inline(always)]
-        fn jit_type(_:Option<$sig>) -> Type {
-            Type::create_signature(CDECL, get::<R>(), [$(get::<$arg>()),*][mut])
+        impl<$($arg:Compile,)* R:Compile> Compile for $ext_sig {
+            #[inline(always)]
+            fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
+                let ptr = (self as *const $ext_sig).to_uint().compile(func);
+                func.insn_convert(&ptr, get::<$ext_sig>(), false)
+            }
+            #[inline(always)]
+            fn jit_type(_:Option<$ext_sig>) -> Type {
+                get::<$sig>()
+            }
         }
-    })
+    )
 )
 
 macro_rules! compile_prims(
