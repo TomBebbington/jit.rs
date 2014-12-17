@@ -1,7 +1,7 @@
 [package]
 
 exclude = [ ".gitmodules", ".gitignore", ".travis.yml" ]
-authors = [ "tophattedcoder@gmail.com" ]
+authors = [ "Tom Bebbington <tophattedcoder@gmail.com>" ]
 description = "Just-In-Time Compilation in Rust using LibJIT bindings"
 documentation = "http://tombebbington.github.io/jit.rs/"
 keywords = [ "compile", "compiler", "jit", "interpreter" ]
