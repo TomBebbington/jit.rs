@@ -51,8 +51,7 @@ impl Compile for *const u8 {
         let ptr = Value::new(func, ty);
         let length = c_str.len() + 1u;
         func.insn_store(&ptr, &func.insn_alloca(&func.insn_of(&length)));
-        for enum_char in c_str.iter().enumerate() {
-            let (pos, ch) = enum_char;
+        for (pos, ch) in c_str.iter().enumerate() {
             let char_v = ch.compile(func);
             func.insn_store_relative(&ptr, pos as int, &char_v);
         }
