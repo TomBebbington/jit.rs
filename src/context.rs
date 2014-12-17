@@ -59,7 +59,7 @@ impl Context {
     #[inline(always)]
     /// Lock the context so you can safely generate IR in a new function on the context which is
     /// compiled for you
-    pub fn build_func<'a, F:FnOnce(&UncompiledFunction<'a>)>(&'a mut self, signature: Type, cb: F) -> CompiledFunction {
+    pub fn build_func<'a, F:FnOnce(&UncompiledFunction<'a>)>(&'a mut self, signature: Type, cb: F) -> CompiledFunction<'a> {
         unsafe {
             jit_context_build_start(self.as_ptr());
             let builder = self.as_builder();
