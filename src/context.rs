@@ -32,6 +32,13 @@ impl NativeRef for Builder {
 }
 
 impl Context {
+    unsafe fn as_builder(&mut self) -> Builder {
+        Builder{
+            _context: self._context,
+            no_sync: NoSync,
+            no_send: NoSend
+        }
+    }
     #[inline(always)]
     /// Create a new JIT Context
     pub fn new() -> Context {
@@ -41,10 +48,10 @@ impl Context {
     }
     #[inline(always)]
     /// Lock the context so you can safely generate IR
-    pub fn build<'a, R, F:FnOnce(&'a Builder) -> R>(&'a self, cb: F) -> R {
+    pub fn build<R, F:FnOnce(&Builder) -> R>(&mut self, cb: F) -> R {
         unsafe {
             jit_context_build_start(self.as_ptr());
-            let r = cb(mem::transmute(self));
+            let r = cb(&self.as_builder());
             jit_context_build_end(self.as_ptr());
             r
         }
@@ -52,11 +59,12 @@ impl Context {
     #[inline(always)]
     /// Lock the context so you can safely generate IR in a new function on the context which is
     /// compiled for you
-    pub fn build_func<'a, F:FnOnce(&UncompiledFunction<'a>)>(&'a self, signature: Type, cb: F) -> CompiledFunction<'a> {
+    pub fn build_func<'a, F:FnOnce(&UncompiledFunction<'a>)>(&'a mut self, signature: Type, cb: F) -> CompiledFunction {
         unsafe {
             jit_context_build_start(self.as_ptr());
-            let func = UncompiledFunction::new(mem::transmute(self), signature.clone());
-            cb(mem::transmute(self));
+            let builder = self.as_builder();
+            let func = UncompiledFunction::new(mem::copy_lifetime(self, &builder), signature.clone());
+            cb(&func);
             jit_context_build_end(self.as_ptr());
             func.compile()
         }

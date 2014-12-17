@@ -12,21 +12,23 @@ macro_rules! test_compile(
                 let ref val = func.insn_of(&default_value);
                 assert!(val.get_type().get_kind() == $kind);
                 func.insn_return(val);
-            }).with::<(), $ty>(|func| {
+            }).with(|func: extern fn(()) -> $ty| {
                 assert_eq!(func(()), default_value);
             });
         }
     );
 )
+type SQRT = extern fn(uint) -> uint;
 #[test]
 fn test_sqrt() {
-    Context::new().build_func(get::<fn(uint) -> uint>(), |func| {
+    println!("Square root");
+    Context::new().build_func(get::<SQRT>(), |func| {
         let ref arg = func[0];
         assert_eq!(arg.get_type(), get::<uint>());
         let sqrt_arg = func.insn_sqrt(arg);
         let sqrt_arg_ui = func.insn_convert(&sqrt_arg, get::<uint>(), false);
         func.insn_return(&sqrt_arg_ui);
-    }).with::<uint, uint>(|sqrt| {
+    }).with(|sqrt: SQRT| {
         assert_eq!(sqrt(64), 8);
         assert_eq!(sqrt(16), 4);
         assert_eq!(sqrt(9), 3);
@@ -36,6 +38,7 @@ fn test_sqrt() {
 }
 #[test]
 fn test_struct() {
+     println!("Struct");
     ::init();
     let pos_t = jit!(struct {
         "x": f64,
