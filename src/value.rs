@@ -27,7 +27,7 @@ impl<'a> NativeRef for Value<'a> {
     }
     #[inline(always)]
     /// Convert from a native pointer
-    unsafe fn from_ptr<'a>(ptr:jit_value_t) -> Value<'a> {
+    unsafe fn from_ptr(ptr:jit_value_t) -> Value<'a> {
         Value {
             _value: ptr,
             marker: ContravariantLifetime::<'a>

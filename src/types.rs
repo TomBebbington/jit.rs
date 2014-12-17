@@ -360,6 +360,6 @@ impl Type {
 }
 #[inline(always)]
 /// Get the Rust type given as a type descriptor
-pub fn get<T:Compile>() -> Type {
+pub fn get<T: Compile>() -> Type {
     Compile::jit_type(None::<T>)
 }

@@ -49,3 +49,8 @@ impl NativeRef for CString {
         CString::new(transmute(ptr), true)
     }
 }
+
+pub enum UnsizedOption<Sized? T> {
+    Some(T),
+    None
+}

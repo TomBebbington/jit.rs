@@ -30,7 +30,7 @@ use std::mem::transmute;
 use types::Type;
 use util::NativeRef;
 /// A type that can be compiled into a LibJIT representation
-pub trait Compile {
+pub trait Compile for Sized? {
     /// Get a JIT representation of this value
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a>;
     /// Get the JIT type repr of the value
@@ -90,14 +90,14 @@ impl<T:Compile> Compile for *mut T {
         unsafe {
             NativeRef::from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
-                get::<&T>().as_ptr(),
+                get::<*mut T>().as_ptr(),
                 self.to_uint() as c_long
             ))
         }
     }
     #[inline(always)]
     fn jit_type(_:Option<*mut T>) -> Type {
-        get::<&T>()
+        Type::create_pointer(get::<T>())
     }
 }
 impl<'s> Compile for CString {
@@ -118,7 +118,7 @@ impl<'s> Compile for CString {
     }
 }
 impl<'a> Compile for &'a str {
-    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
+    fn compile<'b>(&self, func:&UncompiledFunction<'b>) -> Value<'b> {
         let str_ptr = {
             let ty = get::<*const u8>();
             let ptr = Value::new(func, ty);
@@ -145,7 +145,7 @@ impl<'a> Compile for &'a str {
     }
 }
 impl<'a> Compile for String {
-    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
+    fn compile<'b>(&self, func:&UncompiledFunction<'b>) -> Value<'b> {
         let str_ptr = {
             let ty = get::<*const u8>();
             let ptr = Value::new(func, ty);
@@ -173,10 +173,10 @@ impl<'a> Compile for String {
         })
     }
 }
-impl<'a, T:Compile> Compile for Vec<T> {
-    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
+impl<T:Compile> Compile for Vec<T> {
+    fn compile<'b>(&self, func:&UncompiledFunction<'b>) -> Value<'b> {
         let vec_ptr = {
-            let ty = get::<&T>();
+            let ty = get::<*mut T>();
             let inner_ty = get::<T>();
             let ptr = Value::new(func, ty);
             let ptr_size = self.len() * inner_ty.get_size();
@@ -201,23 +201,23 @@ impl<'a, T:Compile> Compile for Vec<T> {
         jit!(struct {
             "len": uint,
             "cap": uint,
-            "ptr": &T
+            "ptr": *mut T
         })
     }
 }
-impl<'a, T:Compile> Compile for &'a T {
+impl<T:Compile> Compile for &'static T {
     #[inline(always)]
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
             NativeRef::from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
-                get::<T>().as_ptr(),
+                get::<&'static T>().as_ptr(),
                 (*self as *const T).to_uint() as c_long
             ))
         }
     }
     #[inline(always)]
-    fn jit_type(_:Option<&'a T>) -> Type {
+    fn jit_type(_:Option<&'static T>) -> Type {
         Type::create_pointer(get::<T>())
     }
 }

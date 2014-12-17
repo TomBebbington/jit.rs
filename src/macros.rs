@@ -78,7 +78,7 @@ macro_rules! native_ref(
             }
             #[inline]
             /// Convert from a native pointer
-            unsafe fn from_ptr<'a>(ptr:$pointer_ty) -> $name<'a> {
+            unsafe fn from_ptr(ptr:$pointer_ty) -> $name<'a> {
                 $name {
                     $field: ptr,
                     marker: $lifetime::<'a>
