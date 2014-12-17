@@ -57,6 +57,26 @@ macro_rules! compile_func(
         }
     )
 )
+macro_rules! compile_tuple(
+    ($($ty:ident),+ => $($name:ident),+) => (
+        impl<$($ty),+> Compile for ($($ty),+) where $($ty:Compile),+ {
+            #[inline(always)]
+            fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
+                let ($(ref $name),+) = *self;
+                let ty = get::<($($ty),+)>();
+                let tuple = Value::new(func, ty.clone());
+                let ($(ref $name),+) = ($(func.insn_of($name)),+);
+                let mut fields = ty.fields();
+                $(func.insn_store_relative(&tuple, fields.next().unwrap().get_offset() as int, $name);)+
+                tuple
+            }
+            #[inline(always)]
+            fn jit_type(_:Option<($($ty),+)>) -> Type {
+                Type::create_struct([$(get::<$ty>()),+][mut])
+            }
+        }
+    )
+)
 
 macro_rules! compile_prims(
     ($(($ty:ty, $cast: ty) => ($type_name:ident, $make_constant:ident)),+) => (

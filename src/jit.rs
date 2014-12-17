@@ -36,18 +36,18 @@
 //! use jit::{Context, get};
 //! fn main() {
 //!     // make a new context to make functions on
-//!     let ref ctx = Context::new();
+//!     let mut ctx = Context::new();
 //!     // get the type of the function
 //!     let sig = get::<fn(int, int) -> int>();
 //!     // make the function
-//!     let func = ctx.build_func(sig, |func| {
+//!     let mut func = ctx.build_func(sig, |func| {
 //!         let ref x = func[0];
 //!         let ref y = func[1];
 //!         let ref result = func.insn_mul(x, y);
 //!         func.insn_return(result);
 //!     });
 //!     // compile the IR and get the machine code as a function
-//!     let mul = func.with::<(int, int), int>(|mul| {
+//!     func.with(move |mul: extern fn((int, int)) -> int| {
 //!         assert_eq!(mul((4, 5)), 20);
 //!     });
 //! }
