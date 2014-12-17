@@ -1,11 +1,4 @@
-use raw::{
-    jit_value_t,
-    jit_value_create,
-    jit_value_is_addressable,
-    jit_value_is_temporary,
-    jit_value_get_type,
-    jit_value_set_addressable
-};
+use raw::*;
 use function::UncompiledFunction;
 use std::kinds::marker::ContravariantLifetime;
 use types::Type;
@@ -14,7 +7,7 @@ use util::NativeRef;
 /// Every value in the system, be it a constant, a local variable, or a
 /// temporary result, is represented by an object of type `Value`. The JIT then
 /// allocates registers or memory locations to the values as appropriate.
-#[deriving(Clone, PartialEq)]
+#[deriving(PartialEq)]
 pub struct Value<'a> {
     _value: jit_value_t,
     marker: ContravariantLifetime<'a>
@@ -31,6 +24,14 @@ impl<'a> NativeRef for Value<'a> {
         Value {
             _value: ptr,
             marker: ContravariantLifetime::<'a>
+        }
+    }
+}
+impl<'a> Clone for Value<'a> {
+    fn clone(&self) -> Value<'a> {
+        unsafe {
+            let func = jit_value_get_function(self.as_ptr());
+            NativeRef::from_ptr(jit_insn_dup(func, self.as_ptr()))
         }
     }
 }
