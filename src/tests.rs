@@ -3,6 +3,7 @@ use get;
 use std::default::Default;
 use types::Type;
 use types::kind::*;
+use Function;
 macro_rules! test_compile(
     ($ty:ty, $test_name:ident, $kind:expr) => (
         #[test]
@@ -10,7 +11,7 @@ macro_rules! test_compile(
             let default_value:$ty = Default::default();
             Context::new().build_func(get::<fn() -> $ty>(), |func| {
                 let ref val = func.insn_of(&default_value);
-                assert!(val.get_type().get_kind() == $kind);
+                assert_eq!(val.get_type().get_kind(), $kind);
                 func.insn_return(val);
             }).with(|func: extern fn(()) -> $ty| {
                 assert_eq!(func(()), default_value);
@@ -21,7 +22,6 @@ macro_rules! test_compile(
 type SQRT = extern fn(uint) -> uint;
 #[test]
 fn test_sqrt() {
-    println!("Square root");
     Context::new().build_func(get::<SQRT>(), |func| {
         let ref arg = func[0];
         assert_eq!(arg.get_type(), get::<uint>());
@@ -38,8 +38,6 @@ fn test_sqrt() {
 }
 #[test]
 fn test_struct() {
-     println!("Struct");
-    ::init();
     let pos_t = jit!(struct {
         "x": f64,
         "y": f64
