@@ -53,7 +53,7 @@ impl<'a> Iterator<String> for Needed<'a> {
 pub struct ReadElf {
     _reader: jit_readelf_t
 }
-native_ref!(ReadElf, _reader, jit_readelf_t)
+native_ref!(ReadElf, _reader, jit_readelf_t);
 #[deriving(Copy)]
 #[repr(i32)]
 /// An error from trying to open the ELF
@@ -162,7 +162,7 @@ impl Drop for ReadElf {
 pub struct WriteElf {
     _writer: jit_writeelf_t
 }
-native_ref!(WriteElf, _writer, jit_writeelf_t)
+native_ref!(WriteElf, _writer, jit_writeelf_t);
 impl WriteElf {
     #[inline]
     /// Create a new ELF binary reader

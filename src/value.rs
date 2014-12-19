@@ -54,6 +54,12 @@ impl<'a> Value<'a> {
             NativeRef::from_ptr(ty)
         }
     }
+    /// Get the function which made this value
+    pub fn get_function(&self) -> UncompiledFunction<'a> {
+        unsafe {
+            NativeRef::from_ptr(jit_value_get_function(self.as_ptr()))
+        }
+    }
     /// Determine if a value is temporary.  i.e. its scope extends over a single
     /// block within its function.
     #[inline]

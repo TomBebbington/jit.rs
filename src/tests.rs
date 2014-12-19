@@ -18,7 +18,7 @@ macro_rules! test_compile(
             });
         }
     );
-)
+);
 type SQRT = extern fn(uint) -> uint;
 #[test]
 fn test_sqrt() {
@@ -52,14 +52,14 @@ fn test_struct() {
     }
 }
 
-test_compile!((), test_compile_void, Void)
-test_compile!(f64, test_compile_f64, Float64)
-test_compile!(f32, test_compile_f32, Float32)
-test_compile!(int, test_compile_int, NInt)
-test_compile!(uint, test_compile_uint, NUInt)
-test_compile!(i32, test_compile_i32, Int)
-test_compile!(u32, test_compile_u32, UInt)
-test_compile!(i16, test_compile_i16, Short)
-test_compile!(u16, test_compile_u16, UShort)
-test_compile!(i8, test_compile_i8, SByte)
-test_compile!(u8, test_compile_u8, UByte)
+test_compile!((), test_compile_void, Void);
+test_compile!(f64, test_compile_f64, Float64);
+test_compile!(f32, test_compile_f32, Float32);
+test_compile!(int, test_compile_int, NInt);
+test_compile!(uint, test_compile_uint, NUInt);
+test_compile!(i32, test_compile_i32, Int);
+test_compile!(u32, test_compile_u32, UInt);
+test_compile!(i16, test_compile_i16, Short);
+test_compile!(u16, test_compile_u16, UShort);
+test_compile!(i8, test_compile_i8, SByte);
+test_compile!(u8, test_compile_u8, UByte);

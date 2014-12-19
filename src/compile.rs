@@ -199,12 +199,12 @@ impl<T:Compile> Compile for &'static T {
         Type::create_pointer(get::<T>())
     }
 }
-compile_tuple!(A, B => a, b)
-compile_tuple!(A, B, C => a, b, c)
-compile_tuple!(A, B, C, D => a, b, c, d)
-compile_tuple!(A, B, C, D, E => a, b, c, d, e)
-compile_func!(fn() -> R, fn() -> R, extern fn() -> R)
-compile_func!(fn(A) -> R, fn(A) -> R, extern fn(A) -> R)
-compile_func!(fn(A, B) -> R, fn(A, B) -> R, extern fn(A, B) -> R)
-compile_func!(fn(A, B, C) -> R, fn(A, B, C) -> R, extern fn(A, B, C) -> R)
-compile_func!(fn(A, B, C, D) -> R, fn(A, B, C, D) -> R, extern fn(A, B, C, D) -> R)
+compile_tuple!(A, B => a, b);
+compile_tuple!(A, B, C => a, b, c);
+compile_tuple!(A, B, C, D => a, b, c, d);
+compile_tuple!(A, B, C, D, E => a, b, c, d, e);
+compile_func!(fn() -> R, fn() -> R, extern fn() -> R);
+compile_func!(fn(A) -> R, fn(A) -> R, extern fn(A) -> R);
+compile_func!(fn(A, B) -> R, fn(A, B) -> R, extern fn(A, B) -> R);
+compile_func!(fn(A, B, C) -> R, fn(A, B, C) -> R, extern fn(A, B, C) -> R);
+compile_func!(fn(A, B, C, D) -> R, fn(A, B, C, D) -> R, extern fn(A, B, C, D) -> R);

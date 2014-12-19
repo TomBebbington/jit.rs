@@ -29,7 +29,7 @@ impl Compile for $ty {
         }
     }
 });
-)
+);
 
 macro_rules! compile_func(
     (fn($($arg:ident),*) -> $ret:ty, $sig:ty, $ext_sig:ty) => (
@@ -56,7 +56,7 @@ macro_rules! compile_func(
             }
         }
     )
-)
+);
 macro_rules! compile_tuple(
     ($($ty:ident),+ => $($name:ident),+) => (
         impl<$($ty),+> Compile for ($($ty),+) where $($ty:Compile),+ {
@@ -76,13 +76,13 @@ macro_rules! compile_tuple(
             }
         }
     )
-)
+);
 
 macro_rules! compile_prims(
     ($(($ty:ty, $cast: ty) => ($type_name:ident, $make_constant:ident)),+) => (
-        $(compile_prim!($ty, $type_name, $make_constant, $cast))+
+        $(compile_prim!($ty, $type_name, $make_constant, $cast);)+
     );
-)
+);
 
 macro_rules! native_ref(
     ($name:ident, $field:ident, $pointer_ty:ty) => (
@@ -118,7 +118,7 @@ macro_rules! native_ref(
             }
         }
     )
-)
+);
 #[macro_export]
 macro_rules! jit(
     (struct {
@@ -196,4 +196,4 @@ macro_rules! jit(
     ($func:expr, $value:expr) => (
         $func.insn_of(&$value)
     );
-)
+);

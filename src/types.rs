@@ -37,7 +37,7 @@ pub mod kind {
             const SysBool = 10009,
             const SysChar = 10010
         }
-    )
+    );
     #[cfg(not(ndebug))]
     impl Show for TypeKind {
         fn fmt(&self, fmt:&mut Formatter) -> Result {
@@ -221,7 +221,6 @@ impl<'a> Iterator<Type> for Params<'a> {
 /// to lay out values in memory.
 /// Types are not attached to a context so they are reference-counted by LibJIT,
 /// so internally they are represented as `Rc<TypeData>`.
-#[deriving(PartialEq)]
 pub struct Type {
     _type: jit_type_t,
     no_copy: NoCopy
@@ -237,6 +236,11 @@ impl NativeRef for Type {
             _type: ptr,
             no_copy: NoCopy
         }
+    }
+}
+impl PartialEq for Type {
+    fn eq(&self, other: &Type) -> bool {
+        self._type == other._type
     }
 }
 impl Clone for Type {

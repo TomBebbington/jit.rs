@@ -8,7 +8,7 @@ use {CompiledFunction, Type, UncompiledFunction};
 pub struct Context {
     _context: jit_context_t
 }
-native_ref!(Context, _context, jit_context_t)
+native_ref!(Context, _context, jit_context_t);
 
 /// A context that is in the build phase while generating IR
 pub struct Builder {
@@ -43,6 +43,7 @@ impl Context {
     /// Create a new JIT Context
     pub fn new() -> Context {
         unsafe {
+            jit_exception_set_handler(Some(::handle_exception));
             NativeRef::from_ptr(jit_context_create())
         }
     }

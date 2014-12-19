@@ -43,7 +43,7 @@ pub mod flags {
             /// When the function is tail-recursive
             const JIT_CALL_TAIL = 4
         }
-    )
+    );
 }
 /// A function that can be compiled or not
 pub trait Function : NativeRef {
@@ -64,7 +64,7 @@ pub struct CompiledFunction<'a> {
     _func: jit_function_t,
     marker: ContravariantLifetime<'a>
 }
-native_ref!(CompiledFunction, _func, jit_function_t, ContravariantLifetime)
+native_ref!(CompiledFunction, _func, jit_function_t, ContravariantLifetime);
 impl<'a> Function for CompiledFunction<'a> {
     fn is_compiled(&self) -> bool {
         true
@@ -95,7 +95,8 @@ impl<'a> CompiledFunction<'a> {
 pub struct UncompiledFunction<'a> {
     _func: jit_function_t,
     args: Vec<Value<'a>>,
-    marker: ContravariantLifetime<'a>
+    marker: ContravariantLifetime<'a>,
+    owned: bool
 }
 impl<'a> NativeRef for UncompiledFunction<'a> {
     #[inline(always)]
@@ -110,7 +111,8 @@ impl<'a> NativeRef for UncompiledFunction<'a> {
         UncompiledFunction {
             _func: ptr,
             args: Vec::from_fn(jit_type_num_params(sig) as uint, |i| NativeRef::from_ptr(jit_value_get_param(ptr, i as c_uint))),
-            marker: ContravariantLifetime::<'a>
+            marker: ContravariantLifetime::<'a>,
+            owned: false
         }
     }
 }
@@ -129,8 +131,10 @@ impl<'a> Show for UncompiledFunction<'a> {
 impl<'a> Drop for UncompiledFunction<'a> {
     #[inline(always)]
     fn drop(&mut self) {
-        unsafe {
-            jit_function_abandon(self.as_ptr());
+        if self.owned {
+            unsafe {
+                jit_function_abandon(self.as_ptr());
+            }
         }
     }
 }
@@ -150,10 +154,12 @@ impl<'a> UncompiledFunction<'a> {
     /// multi-threaded environment.
     pub fn new(context:&'a Builder, signature:Type) -> UncompiledFunction<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_function_create(
+            let mut me:UncompiledFunction = NativeRef::from_ptr(jit_function_create(
                 context.as_ptr(),
                 signature.as_ptr()
-            ))
+            ));
+            me.owned = true;
+            me
         }
     }
     #[inline(always)]
@@ -169,11 +175,13 @@ impl<'a> UncompiledFunction<'a> {
     pub fn new_nested(context:&'a Builder, signature: Type,
                         parent: &'a UncompiledFunction<'a>) -> UncompiledFunction<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_function_create_nested(
+            let mut me:UncompiledFunction = NativeRef::from_ptr(jit_function_create_nested(
                 context.as_ptr(),
                 signature.as_ptr(),
                 parent.as_ptr()
-            ))
+            ));
+            me.owned = true;
+            me
         }
     }
     #[inline(always)]
@@ -696,6 +704,9 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Compile the function
     pub fn compile(self) -> CompiledFunction<'a> {
+        if !self.owned {
+            panic!("The function must be owned")
+        }
         unsafe {
             let ptr = self.as_ptr();
             mem::forget(self);

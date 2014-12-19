@@ -76,6 +76,7 @@ pub use types::kind::TypeKind;
 pub use types::*;
 pub use util::NativeRef;
 pub use value::Value;
+use libc::{c_int, c_void};
 
 /// Initialise the library and prepare for operations
 #[inline]
@@ -104,6 +105,23 @@ pub fn supports_virtual_memory() -> bool {
     unsafe {
         jit_supports_virtual_memory() != 0
     }
+}
+
+extern fn handle_exception(kind: c_int) -> *mut c_void {
+    if kind == 1 {
+        return ::std::ptr::null_mut();
+    }
+    panic!("{}", match kind {
+        0 => "The operation resulted in an overflow exception",
+        -1 => "The operation resulted in an arithmetic exception",
+        -2 => "The operation resulted in a division by zero exception",
+        -3 => "An error occurred when attempting to dynamically compile a function",
+        -4 => "The system ran out of memory while performing an operation",
+        -5 => "An attempt was made to dereference a NULL pointer",
+        -6 => "An attempt was made to call a function with a NULL function pointer",
+        -7 => "An attempt was made to call a nested function from a non-nested context",
+        _ => "Unknown exception"
+    });
 }
 #[macro_escape]
 mod macros;
