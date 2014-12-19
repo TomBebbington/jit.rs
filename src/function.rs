@@ -11,6 +11,7 @@ use libc::{
     c_void
 };
 use std::c_str::ToCStr;
+use std::default::Default;
 #[cfg(not(ndebug))]
 use std::fmt::{Formatter, Show, Result};
 use std::ops::Index;
@@ -29,6 +30,11 @@ pub enum ABI {
     STDCALL,
     /// A Windows application binary interface
     FASTCALL
+}
+impl Default for ABI {
+    fn default() -> ABI {
+        ABI::CDECL
+    }
 }
 /// Call flags to a function
 pub mod flags {
