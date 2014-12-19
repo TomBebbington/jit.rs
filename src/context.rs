@@ -1,6 +1,6 @@
 use raw::*;
 use std::mem;
-use std::kinds::marker::{NoSync, NoSend};
+use std::kinds::marker::{NoCopy, NoSync, NoSend};
 use util::NativeRef;
 use {CompiledFunction, Type, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
@@ -14,7 +14,8 @@ native_ref!(Context, _context, jit_context_t);
 pub struct Builder {
     _context: jit_context_t,
     no_sync: NoSync,
-    no_send: NoSend
+    no_send: NoSend,
+    no_copy: NoCopy
 }
 impl NativeRef for Builder {
     #[inline(always)]
@@ -26,7 +27,8 @@ impl NativeRef for Builder {
         Builder {
             _context: ptr,
             no_sync: NoSync,
-            no_send: NoSend
+            no_send: NoSend,
+            no_copy: NoCopy
         }
     }
 }
@@ -36,7 +38,8 @@ impl Context {
         Builder{
             _context: self._context,
             no_sync: NoSync,
-            no_send: NoSend
+            no_send: NoSend,
+            no_copy: NoCopy
         }
     }
     #[inline(always)]
