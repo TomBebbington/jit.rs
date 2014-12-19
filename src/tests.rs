@@ -9,26 +9,25 @@ macro_rules! test_compile(
         #[test]
         fn $test_name() {
             let default_value:$ty = Default::default();
-            Context::new().build_func(get::<fn() -> $ty>(), |func| {
+            let mut ctx = Context::new();
+            jit_func!(ctx, func, fn gen_value() -> $ty {
                 let ref val = func.insn_of(&default_value);
                 assert_eq!(val.get_type().get_kind(), $kind);
                 func.insn_return(val);
-            }).with(|func: extern fn(()) -> $ty| {
+            }, |func| {
                 assert_eq!(func(()), default_value);
-            });
+            })
         }
     );
 );
-type SQRT = extern fn(uint) -> uint;
 #[test]
 fn test_sqrt() {
-    Context::new().build_func(get::<SQRT>(), |func| {
-        let ref arg = func[0];
-        assert_eq!(arg.get_type(), get::<uint>());
-        let sqrt_arg = func.insn_sqrt(arg);
-        let sqrt_arg_ui = func.insn_convert(&sqrt_arg, get::<uint>(), false);
+    let mut ctx = Context::new();
+    jit_func!(ctx, func, fn sqrt(num: uint) -> uint {
+        let sqrt = func.insn_sqrt(num);
+        let sqrt_arg_ui = func.insn_convert(&sqrt, get::<uint>(), false);
         func.insn_return(&sqrt_arg_ui);
-    }).with(|sqrt: SQRT| {
+    }, |sqrt| {
         assert_eq!(sqrt(64), 8);
         assert_eq!(sqrt(16), 4);
         assert_eq!(sqrt(9), 3);

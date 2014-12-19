@@ -197,3 +197,25 @@ macro_rules! jit(
         $func.insn_of(&$value)
     );
 );
+#[macro_export]
+macro_rules! jit_func(
+    ($ctx:expr, $func:ident, fn $name:ident($($arg:ident:$ty:ty),*) -> $ret:ty $value:expr) => ({
+        use std::default::Default;
+        let sig = Type::create_signature(Default::default(), get::<$ret>(), [$(get::<$ty>()),*].as_mut_slice());
+        $ctx.build_func(sig, |$func| {
+            let mut i = 0u;
+            $(let ref $arg = $func[{i += 1; i - 1}];)+
+            $value
+        })
+    });
+    ($ctx:expr, $func:ident, fn $name:ident($($arg:ident:$arg_ty:ty),*) -> $ret:ty $value:expr, |$comp_func:ident| $comp:expr) => ({
+        use std::default::Default;
+        let sig = Type::create_signature(Default::default(), get::<$ret>(), [$(get::<$arg_ty>()),*].as_mut_slice());
+        $ctx.build_func(sig, |$func| {
+            let mut i = 0u;
+            $(let ref $arg = $func[{i += 1; i - 1}];)*
+            $value
+        }).with::<($($arg_ty),*), $ret, _>(|$comp_func|
+            $comp)
+    });
+);

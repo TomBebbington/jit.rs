@@ -32,22 +32,17 @@
 //! For example, here's a quick example which makes a multiply function using LibJIT:
 //! 
 //! ```rust
+//! #![feature(phase)]
+//! #[phase(link, plugin)]
 //! extern crate jit;
-//! use jit::{Context, get};
+//! use jit::{Context, get, Type};
 //! fn main() {
 //!     // make a new context to make functions on
 //!     let mut ctx = Context::new();
-//!     // get the type of the function
-//!     let sig = get::<fn(int, int) -> int>();
-//!     // make the function
-//!     let mut func = ctx.build_func(sig, |func| {
-//!         let ref x = func[0];
-//!         let ref y = func[1];
-//!         let ref result = func.insn_mul(x, y);
-//!         func.insn_return(result);
-//!     });
-//!     // compile the IR and get the machine code as a function
-//!     func.with(move |mul: extern fn((int, int)) -> int| {
+//!     jit_func!(ctx, func, fn mul(x: int, y: int) -> int {
+//!         let result = func.insn_mul(x, y);
+//!         func.insn_return(&result);
+//!     }, |mul| {
 //!         assert_eq!(mul((4, 5)), 20);
 //!     });
 //! }
