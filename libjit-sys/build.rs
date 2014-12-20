@@ -13,11 +13,10 @@ static FINAL_LIB:&'static str = "libjit.a";
 static MINGW:&'static str = "c:/mingw";
 
 fn main() {
-	if pkg_config::find_library("jit").is_ok() {
-		return;
-	}
 	if cfg!(windows) && !Path::new(MINGW).exists() {
 		panic!("LibJIT build requires MinGW and MSYS to be installed");
+	} else if pkg_config::find_library("jit").is_ok() {
+		return;
 	}
 	let ref submod_path = Path::new("libjit");
 	let ref final_lib_dir = submod_path.join("jit/.libs");
