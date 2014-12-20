@@ -9,12 +9,13 @@ license = "MIT"
 name = "jit"
 readme = "README.md"
 repository = "https://github.com/TomBebbington/jit.rs"
-version = "0.1.5"
+version = "0.1.6"
 
 [lib]
 
 name = "jit"
 path = "src/jit.rs"
+crate-type = ["dylib"]
 
 [dependencies]
 libjit-sys = "*"
