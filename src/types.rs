@@ -2,17 +2,14 @@ use raw::*;
 use compile::Compile;
 use function::ABI;
 use libc::c_uint;
-#[cfg(not(ndebug))]
 use std::fmt::{Show, Formatter, Result};
 use std::kinds::marker::{ContravariantLifetime, NoCopy};
-use std::mem::transmute;
+use std::mem;
 use std::c_str::ToCStr;
-use util::NativeRef;
+use util::{NativeRef, mod};
 /// The integer representation of a type
 pub mod kind {
     use libc::c_int;
-    #[cfg(not(ndebug))]
-    use std::fmt::{Show, Formatter, Result};
     bitflags!(
         flags TypeKind: c_int {
             const Void = 0,
@@ -38,69 +35,12 @@ pub mod kind {
             const SysChar = 10010
         }
     );
-    #[cfg(not(ndebug))]
-    impl Show for TypeKind {
-        fn fmt(&self, fmt:&mut Formatter) -> Result {
-            write!(fmt, "{}",
-                if self.contains(Union) { "union" }
-                else if self.contains(Signature) { "signature" }
-                else if self.contains(Pointer) { "pointer" }
-                else if self.contains(Struct) { "struct" }
-                else if self.contains(SysBool) { "bool" }
-                else if self.contains(SysChar) { "char" }
-                else if self.contains(SByte) { "i8" }
-                else if self.contains(UByte) { "u8" }
-                else if self.contains(Short) { "i16" }
-                else if self.contains(UShort) { "u16" }
-                else if self.contains(Int) { "i32" }
-                else if self.contains(UInt) { "u32" }
-                else if self.contains(NInt) { "int" }
-                else if self.contains(NUInt) { "uint" }
-                else if self.contains(Long) { "i64" }
-                else if self.contains(ULong) { "u64" }
-                else if self.contains(Float32) { "f32" }
-                else if self.contains(Float64) { "f64" }
-                else if self.contains(NFloat) { "float" }
-                else { "()" }
-            )
-        }
-    }
 }
-#[cfg(not(ndebug))]
 impl Show for Type {
-    fn fmt(&self, fmt:&mut Formatter) -> Result {
-        let kind = self.get_kind();
-        if kind.contains(kind::Signature) {
-            try!("fn(".fmt(fmt));
-            for param in self.params() {
-                try!(param.fmt(fmt));
-            }
-            write!(fmt, ") -> ({})", self.get_return())
-        } else if kind.contains(kind::Pointer) {
-            write!(fmt, "&mut {}", self.get_ref())
-        } else if kind.contains(kind::Struct) {
-            try!("struct {".fmt(fmt));
-            for field in self.fields() {
-                try!("\n\t".fmt(fmt));
-                if let Some(name) = field.get_name() {
-                    try!(write!(fmt, "{}: ", name));
-                }
-                try!(write!(fmt, "{},", field.get_type()));
-            }
-            "\n}".fmt(fmt)
-        } else if kind.contains(kind::Union) {
-            try!("union {".fmt(fmt));
-            for field in self.fields() {
-                try!("\n\t".fmt(fmt));
-                if let Some(name) = field.get_name() {
-                    try!(write!(fmt, "{}: ", name));
-                }
-                try!(write!(fmt, "{},", field.get_type()));
-            }
-            "\n}".fmt(fmt)
-        } else {
-            kind.fmt(fmt)
-        }
+    fn fmt(&self, fmt: &mut Formatter) -> Result {
+        util::dump(|fd| {
+            unsafe { jit_dump_type(mem::transmute(fd), self.as_ptr()) };
+        }).fmt(fmt)
     }
 }
 /// A single field of a struct
@@ -124,7 +64,7 @@ impl<'a> Field<'a> {
             if c_name.is_null() {
                 None
             } else {
-                Some(String::from_raw_buf(transmute(c_name)))
+                Some(String::from_raw_buf(mem::transmute(c_name)))
             }
         }
     }
@@ -309,7 +249,7 @@ impl Type {
     /// quickly classify a type to determine how it should be handled further.
     pub fn get_kind(&self) -> kind::TypeKind {
         unsafe {
-            transmute(jit_type_get_kind(self.as_ptr()))
+            mem::transmute(jit_type_get_kind(self.as_ptr()))
         }
     }
     #[inline(always)]

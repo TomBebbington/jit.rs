@@ -1,8 +1,10 @@
 use raw::*;
 use function::UncompiledFunction;
 use std::kinds::marker::ContravariantLifetime;
+use std::fmt::{Formatter, Result, Show};
+use std::ptr;
 use types::Type;
-use util::NativeRef;
+use util::{mod, NativeRef};
 /// Values form the backbone of the storage system in `libjit`.
 /// Every value in the system, be it a constant, a local variable, or a
 /// temporary result, is represented by an object of type `Value`. The JIT then
@@ -25,6 +27,16 @@ impl<'a> NativeRef for Value<'a> {
             _value: ptr,
             marker: ContravariantLifetime::<'a>
         }
+    }
+}
+impl<'a> Show for Value<'a> {
+    fn fmt(&self, fmt: &mut Formatter) -> Result {
+        util::dump(|fd| {
+            unsafe {
+                let ptr = self.as_ptr();
+                jit_dump_insn(fd, jit_value_get_function(ptr), ptr);
+            }
+        }).fmt(fmt)
     }
 }
 impl<'a> Clone for Value<'a> {

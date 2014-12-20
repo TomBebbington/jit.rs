@@ -200,7 +200,6 @@ macro_rules! jit(
 #[macro_export]
 macro_rules! jit_func(
     ($ctx:expr, $func:ident, fn $name:ident($($arg:ident:$ty:ty),*) -> $ret:ty $value:expr) => ({
-        #[allow(unused_mut)]
         use std::default::Default;
         let sig = Type::create_signature(Default::default(), get::<$ret>(), [$(get::<$ty>()),*].as_mut_slice());
         $ctx.build_func(sig, |$func| {
@@ -210,7 +209,6 @@ macro_rules! jit_func(
         })
     });
     ($ctx:expr, $func:ident, fn $name:ident($($arg:ident:$arg_ty:ty),*) -> $ret:ty $value:expr, |$comp_func:ident| $comp:expr) => ({
-        #[allow(unused_mut)]
         use std::default::Default;
         let sig = Type::create_signature(Default::default(), get::<$ret>(), [$(get::<$arg_ty>()),*].as_mut_slice());
         $ctx.build_func(sig, |$func| {

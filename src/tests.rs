@@ -12,7 +12,7 @@ macro_rules! test_compile(
             let mut ctx = Context::new();
             jit_func!(ctx, func, fn gen_value() -> $ty {
                 let ref val = func.insn_of(&default_value);
-                assert_eq!(val.get_type().get_kind(), $kind);
+                assert!(val.get_type().get_kind() == $kind);
                 func.insn_return(val);
             }, |func| {
                 assert_eq!(func(()), default_value);
@@ -25,8 +25,9 @@ fn test_sqrt() {
     let mut ctx = Context::new();
     jit_func!(ctx, func, fn sqrt(num: uint) -> uint {
         let sqrt = func.insn_sqrt(num);
+        panic!("{}", sqrt); /*
         let sqrt_arg_ui = func.insn_convert(&sqrt, get::<uint>(), false);
-        func.insn_return(&sqrt_arg_ui);
+        func.insn_return(&sqrt_arg_ui);*/
     }, |sqrt| {
         assert_eq!(sqrt(64), 8);
         assert_eq!(sqrt(16), 4);

@@ -3,7 +3,7 @@ use context::Builder;
 use compile::Compile;
 use label::Label;
 use types::Type;
-use util::NativeRef;
+use util::{mod, NativeRef};
 use value::Value;
 use libc::{
     c_int,
@@ -76,10 +76,11 @@ impl<'a> Function for CompiledFunction<'a> {
         true
     }
 }
-#[cfg(not(ndebug))]
 impl<'a> Show for CompiledFunction<'a> {
-    fn fmt(&self, fmt:&mut Formatter) -> Result {
-        write!(fmt, "compiled {}", self.get_signature())
+    fn fmt(&self, fmt: &mut Formatter) -> Result {
+        util::dump(|fd| {
+            unsafe { jit_dump_function(mem::transmute(fd), self.as_ptr(), ptr::null()) };
+        }).fmt(fmt)
     }
 }
 impl<'a> CompiledFunction<'a> {
@@ -127,10 +128,11 @@ impl<'a> Function for UncompiledFunction<'a> {
         false
     }
 }
-#[cfg(not(ndebug))]
 impl<'a> Show for UncompiledFunction<'a> {
-    fn fmt(&self, fmt:&mut Formatter) -> Result {
-        write!(fmt, "uncompiled {}", self.get_signature())
+    fn fmt(&self, fmt: &mut Formatter) -> Result {
+        util::dump(|fd| {
+            unsafe { jit_dump_function(mem::transmute(fd), self.as_ptr(), ptr::null()) };
+        }).fmt(fmt)
     }
 }
 #[unsafe_destructor]

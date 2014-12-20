@@ -1,6 +1,6 @@
-use libc::c_void;
+use libc::{c_void, FILE};
 use std::c_str::CString;
-use std::mem::transmute;
+use std::mem;
 use std::ptr::RawPtr;
 /// A structure that wraps a native object
 pub trait NativeRef {
@@ -42,10 +42,23 @@ impl<T:NativeRef> NativeRef for Option<T> {
 impl NativeRef for CString {
     #[inline(always)]
     unsafe fn as_ptr(&self) -> *mut c_void {
-        transmute(self.as_ptr())
+        mem::transmute(self.as_ptr())
     }
     #[inline(always)]
     unsafe fn from_ptr(ptr:*mut c_void) -> CString {
-        CString::new(transmute(ptr), true)
+        CString::new(mem::transmute(ptr), true)
+    }
+}
+
+pub fn dump<F:FnOnce(*mut FILE)>(cb: F) -> String {
+    use std::io::pipe::PipeStream;
+    use std::os;
+    use libc::{fdopen, fclose};
+    unsafe {
+        let pair = os::pipe().unwrap();
+        let file = fdopen(pair.writer, b"w".as_ptr() as *const i8);
+        cb(file);
+        fclose(file);
+        PipeStream::open(pair.reader).read_to_string().unwrap()
     }
 }

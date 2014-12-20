@@ -1562,4 +1562,8 @@ extern "C" {
     pub fn jit_frame_contains_crawl_mark(frame: *mut c_void,
                                          mark: *mut jit_crawl_mark_t) ->
      c_int;
+    pub fn jit_dump_type(stream: *mut FILE, _type: jit_type_t);
+    pub fn jit_dump_value(stream: *mut FILE, func: jit_function_t, value: jit_value_t, prefix: *const c_char);
+    pub fn jit_dump_insn(stream: *mut FILE, func: jit_function_t, value: jit_value_t);
+    pub fn jit_dump_function(stream: *mut FILE, func: jit_function_t, name: *const c_char);
 }
