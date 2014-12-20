@@ -25,9 +25,8 @@ fn test_sqrt() {
     let mut ctx = Context::new();
     jit_func!(ctx, func, fn sqrt(num: uint) -> uint {
         let sqrt = func.insn_sqrt(num);
-        panic!("{}", sqrt); /*
         let sqrt_arg_ui = func.insn_convert(&sqrt, get::<uint>(), false);
-        func.insn_return(&sqrt_arg_ui);*/
+        func.insn_return(&sqrt_arg_ui);
     }, |sqrt| {
         assert_eq!(sqrt(64), 8);
         assert_eq!(sqrt(16), 4);
