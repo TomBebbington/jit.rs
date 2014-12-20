@@ -16,6 +16,5 @@ version = "0.1.5"
 name = "jit"
 path = "src/jit.rs"
 
-[dependencies.libjit-sys]
-path = "libjit-sys"
-version = "*"
+[dependencies]
+libjit-sys = "*"
