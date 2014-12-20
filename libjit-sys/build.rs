@@ -1,15 +1,27 @@
+#[cfg(not(windows))]
 extern crate "pkg-config" as pkg_config;
 use std::io::fs::PathExtensions;
 use std::io::process::Command;
 use std::path::Path;
 
+#[cfg(windows)]
+static FINAL_LIB:&'static str = "libjit.dll";
+
+#[cfg(not(windows))]
+static FINAL_LIB:&'static str = "libjit.a";
+
+static MINGW:&'static str = "c:/mingw";
+
 fn main() {
 	if pkg_config::find_library("jit").is_ok() {
 		return;
 	}
+	if cfg!(windows) && !Path::new(MINGW).exists() {
+		panic!("LibJIT build requires MinGW and MSYS to be installed");
+	}
 	let ref submod_path = Path::new("libjit");
 	let ref final_lib_dir = submod_path.join("jit/.libs");
-	if !final_lib_dir.join("libjit.a").exists() {
+	if !final_lib_dir.join(FINAL_LIB).exists() {
 		if !submod_path.exists() {
 			run(Command::new("git").arg("submodule").arg("init"));
 		}
