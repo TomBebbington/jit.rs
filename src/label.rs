@@ -4,12 +4,18 @@ use raw::{
 };
 use function::UncompiledFunction;
 use std::kinds::marker::ContravariantLifetime;
+use std::fmt::{Show, Result, Formatter};
 use util::NativeRef;
 #[deriving(PartialEq)]
 /// A label in the code that can be branched to in instructions
 pub struct Label<'a> {
     _label: jit_label_t,
     marker: ContravariantLifetime<'a>
+}
+impl<'a> Show for Label<'a> {
+    fn fmt(&self, fmt:&mut Formatter) -> Result {
+        self._label.fmt(fmt)
+    }
 }
 impl<'a> Label<'a> {
     #[inline(always)]
