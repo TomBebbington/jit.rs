@@ -64,7 +64,7 @@ pub use raw::{
 pub use compile::Compile;
 pub use context::{Builder, Context};
 pub use elf::*;
-pub use function::{flags, UncompiledFunction, Function, CompiledFunction};
+pub use function::{flags, ABI, UncompiledFunction, Function, CompiledFunction};
 pub use function::flags::CallFlags;
 pub use label::Label;
 pub use types::kind::TypeKind;
