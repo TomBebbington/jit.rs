@@ -614,7 +614,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that calls a Rust function that has the signature
     /// given with no arguments and expects a return value
     pub fn insn_call_native0<R, S:ToCStr>(&self, name: Option<S>,
-                            native_func: fn() -> R,
+                            native_func: extern fn() -> R,
                             signature: Type,
                             flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
@@ -624,7 +624,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that calls a Rust function that has the signature
     /// given with a single argument and expects a return value
     pub fn insn_call_native1<A,R, S:ToCStr>(&self, name: Option<S>,
-                                native_func: fn(A) -> R,
+                                native_func: extern fn(A) -> R,
                                 signature: Type,
                                 mut args: [&Value<'a>, ..1],
                                 flags: flags::CallFlags) -> Value<'a> {
@@ -635,7 +635,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that calls a Rust function that has the signature
     /// given with two arguments and expects a return value
     pub fn insn_call_native2<A,B,R, S:ToCStr>(&self, name: Option<S>,
-                                native_func: fn(A, B) -> R,
+                                native_func: extern fn(A, B) -> R,
                                 signature: Type,
                                 mut args: [&Value<'a>, ..2],
                                 flags: flags::CallFlags) -> Value<'a> {
@@ -646,7 +646,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that calls a Rust function that has the signature
     /// given with three arguments and expects a return value
     pub fn insn_call_native3<A,B,C,R, S:ToCStr>(&self, name: Option<S>,
-                                native_func: fn(A, B, C) -> R,
+                                native_func: extern fn(A, B, C) -> R,
                                 signature: Type,
                                 mut args: [&Value<'a>, ..3],
                                 flags: flags::CallFlags) -> Value<'a> {
@@ -657,7 +657,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that calls a Rust function that has the signature
     /// given with four arguments and expects a return value
     pub fn insn_call_native4<A,B,C,D,R, S:ToCStr>(&self, name: Option<S>,
-                                native_func: fn(A, B, C, D) -> R,
+                                native_func: extern fn(A, B, C, D) -> R,
                                 signature: Type,
                                 mut args: [&Value<'a>, ..4],
                                 flags: flags::CallFlags) -> Value<'a> {
