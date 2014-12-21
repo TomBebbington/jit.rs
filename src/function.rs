@@ -78,9 +78,9 @@ impl<'a> Function for CompiledFunction<'a> {
 }
 impl<'a> Show for CompiledFunction<'a> {
     fn fmt(&self, fmt: &mut Formatter) -> Result {
-        util::dump(|fd| {
+        try!(util::dump(|fd| {
             unsafe { jit_dump_function(mem::transmute(fd), self.as_ptr(), ptr::null()) };
-        }).fmt(fmt)
+        })).fmt(fmt)
     }
 }
 impl<'a> CompiledFunction<'a> {
@@ -130,9 +130,9 @@ impl<'a> Function for UncompiledFunction<'a> {
 }
 impl<'a> Show for UncompiledFunction<'a> {
     fn fmt(&self, fmt: &mut Formatter) -> Result {
-        util::dump(|fd| {
+        try!(util::dump(|fd| {
             unsafe { jit_dump_function(mem::transmute(fd), self.as_ptr(), ptr::null()) };
-        }).fmt(fmt)
+        })).fmt(fmt)
     }
 }
 #[unsafe_destructor]

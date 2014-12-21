@@ -1,7 +1,9 @@
 use libc::{c_void, FILE};
 use std::c_str::CString;
+use std::io::IoResult;
 use std::mem;
 use std::ptr::RawPtr;
+use std::fmt::Error;
 /// A structure that wraps a native object
 pub trait NativeRef {
     /// Returns the native reference encapsulated by this object
@@ -50,7 +52,7 @@ impl NativeRef for CString {
     }
 }
 
-pub fn dump<F:FnOnce(*mut FILE)>(cb: F) -> String {
+pub fn dump<F:FnOnce(*mut FILE)>(cb: F) -> Result<String, Error> {
     use std::io::pipe::PipeStream;
     use std::os;
     use libc::{fdopen, fclose};
@@ -59,6 +61,9 @@ pub fn dump<F:FnOnce(*mut FILE)>(cb: F) -> String {
         let file = fdopen(pair.writer, b"w".as_ptr() as *const i8);
         cb(file);
         fclose(file);
-        PipeStream::open(pair.reader).read_to_string().unwrap()
+        match PipeStream::open(pair.reader).read_to_end() {
+            Ok(v) => Ok(String::from_utf8_unchecked(v)),
+            Err(_) => Err(Error)
+        }
     }
 }

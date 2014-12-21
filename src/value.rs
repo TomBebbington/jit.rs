@@ -31,12 +31,12 @@ impl<'a> NativeRef for Value<'a> {
 }
 impl<'a> Show for Value<'a> {
     fn fmt(&self, fmt: &mut Formatter) -> Result {
-        util::dump(|fd| {
+        try!(util::dump(|fd| {
             unsafe {
                 let ptr = self.as_ptr();
                 jit_dump_insn(fd, jit_value_get_function(ptr), ptr);
             }
-        }).fmt(fmt)
+        })).fmt(fmt)
     }
 }
 impl<'a> Clone for Value<'a> {
