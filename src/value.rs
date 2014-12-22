@@ -2,6 +2,7 @@ use raw::*;
 use function::UncompiledFunction;
 use std::kinds::marker::ContravariantLifetime;
 use std::fmt::{Formatter, Result, Show};
+use std::ops::*;
 use types::Type;
 use util::{mod, NativeRef};
 /// Values form the backbone of the storage system in `libjit`.
@@ -98,3 +99,33 @@ impl<'a> Value<'a> {
         }
     }
 }
+macro_rules! bin_op {
+    ($trait_ty:ident, $trait_func:ident, $func:ident) => (
+        impl<'a> $trait_ty<Value<'a>, Value<'a>> for Value<'a> {
+            fn $trait_func(self, other: Value<'a>) -> Value {
+                self.get_function().$func(&self, &other)
+            }
+        }
+    )
+}
+macro_rules! un_op {
+    ($trait_ty:ident, $trait_func:ident, $func:ident) => (
+        impl<'a> $trait_ty<Value<'a>> for Value<'a> {
+            fn $trait_func(&self) -> Value<'a> {
+                self.get_function().$func(self)
+            }
+        }
+    )
+}
+bin_op!{Add, add, insn_add}
+bin_op!{BitAnd, bitand, insn_and}
+bin_op!{BitOr, bitor, insn_or}
+bin_op!{BitXor, bitxor, insn_xor}
+bin_op!{Div, div, insn_div}
+bin_op!{Mul, mul, insn_mul}
+bin_op!{Rem, rem, insn_rem}
+bin_op!{Shl, shl, insn_shl}
+bin_op!{Shr, shr, insn_shr}
+bin_op!{Sub, sub, insn_sub}
+un_op!{Neg, neg, insn_neg}
+un_op!{Not, not, insn_not}
