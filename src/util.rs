@@ -1,6 +1,5 @@
 use libc::{c_void, FILE};
 use std::c_str::CString;
-use std::io::IoResult;
 use std::mem;
 use std::ptr::RawPtr;
 use std::fmt::Error;

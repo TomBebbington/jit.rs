@@ -2,7 +2,6 @@ use raw::*;
 use function::UncompiledFunction;
 use std::kinds::marker::ContravariantLifetime;
 use std::fmt::{Formatter, Result, Show};
-use std::ptr;
 use types::Type;
 use util::{mod, NativeRef};
 /// Values form the backbone of the storage system in `libjit`.

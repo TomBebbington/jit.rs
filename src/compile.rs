@@ -4,8 +4,6 @@ use function::ABI::CDECL;
 use types::get;
 use libc::c_long;
 use value::Value;
-use std::c_str::CString;
-use std::mem::transmute;
 use types::Type;
 use util::NativeRef;
 /// A type that can be compiled into a LibJIT representation

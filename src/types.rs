@@ -290,7 +290,6 @@ impl Type {
     }
     #[inline(always)]
     pub fn set_tagged_data<T:'static>(&self, data: Box<T>) {
-        use libc::c_void;
         unsafe {
             jit_type_set_tagged_data(self.as_ptr(), mem::transmute(&*data), Some(free_data::<T>));
             mem::forget(data);
