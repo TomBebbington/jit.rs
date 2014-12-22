@@ -9,7 +9,7 @@ license = "MIT"
 name = "jit"
 readme = "README.md"
 repository = "https://github.com/TomBebbington/jit.rs"
-version = "0.1.8"
+version = "0.1.9"
 
 [lib]
 
@@ -18,3 +18,4 @@ path = "src/jit.rs"
 
 [dependencies]
 libjit-sys = "*"
+jit_macros = "*"

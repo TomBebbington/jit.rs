@@ -1,6 +1,6 @@
 [package]
 name = "jit_macros"
-version = "0.0.1"
+version = "0.0.2"
 description = "JIT Macros"
 authors = [ "Tom Bebbington <tophattedcoder@gmail.com>" ]
 keywords = [ "compile", "compiler", "jit", "interpreter" ]
@@ -12,6 +12,3 @@ license = "MIT"
 name = "jit_macros"
 path = "src/macros.rs"
 crate-type = ["dylib"]
-
-[dependencies]
-jit = "*"

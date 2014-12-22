@@ -37,10 +37,10 @@ fn test_sqrt() {
 }
 #[test]
 fn test_struct() {
-    let pos_t = jit!(struct {
-        "x": f64,
-        "y": f64
-    });
+    let pos_t = jit_struct!{
+        x: f64,
+        y: f64
+    };
     for (i, field) in pos_t.fields().enumerate() {
         assert_eq!(field.get_type(), get::<f64>());
         assert_eq!(field.get_name().unwrap()[], match i {
@@ -50,16 +50,24 @@ fn test_struct() {
         })
     }
 }
-
+struct PanicDrop {
+    val: i32
+}
+impl Drop for PanicDrop {
+    fn drop(&mut self) {
+        panic!("Dropped {}", self.val)
+    }
+}
 #[test]
+#[should_fail]
 fn test_tags() {
-    let pos_t = jit!(struct {
-        "x": f64,
-        "y": f64
-    });
+    let pos_t = jit_struct!{
+        x: f64,
+        y: f64
+    };
     let kind = pos_t.get_kind();
-    let pos_t = Type::create_tagged(pos_t, kind, box 64u);
-    assert_eq!(pos_t.get_tagged_data::<uint>(), Some(&64u));
+    let pos_t = Type::create_tagged(pos_t, kind, box PanicDrop{val: 323});
+    assert_eq!(pos_t.get_tagged_data::<PanicDrop>().map(|v| v.val), Some(323));
 }
 
 test_compile!((), test_compile_void, Void);

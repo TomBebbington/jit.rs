@@ -33,8 +33,9 @@
 //! 
 //! ```rust
 //! #![feature(phase)]
-//! #[phase(link, plugin)]
 //! extern crate jit;
+//! #[phase(plugin)]
+//! extern crate jit_macros;
 //! use jit::{Context, get, Type};
 //! fn main() {
 //!     // make a new context to make functions on
@@ -51,6 +52,9 @@ extern crate libc;
 #[cfg(test)]
 extern crate test;
 extern crate "libjit-sys" as raw;
+#[cfg(test)]
+#[phase(plugin)]
+extern crate jit_macros;
 use raw::{
     jit_init,
     jit_uses_interpreter,
