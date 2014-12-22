@@ -145,7 +145,7 @@ impl<'a> Iterator<Type> for Params<'a> {
         if self.index < self.length {
             let index = self.index;
             self.index += 1;
-            unsafe { NativeRef::from_opt_ptr(jit_type_get_param(self._type, index)) }
+            unsafe { NativeRef::from_ptr(jit_type_get_param(self._type, index)) }
         } else {
             None
         }
