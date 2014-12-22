@@ -12,7 +12,6 @@ use libc::{
 };
 use std::c_str::ToCStr;
 use std::default::Default;
-#[cfg(not(ndebug))]
 use std::fmt::{Formatter, Show, Result};
 use std::ops::Index;
 use std::kinds::marker::ContravariantLifetime;
