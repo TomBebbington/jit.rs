@@ -244,6 +244,13 @@ impl Type {
             jit_type_get_size(self.as_ptr()) as uint
         }
     }
+    #[inline(always)]
+    /// Get the alignment of this type in bytes.
+    pub fn get_alignment(&self) -> uint {
+        unsafe {
+            jit_type_get_alignment(self.as_ptr()) as uint
+        }
+    }
     #[inline]
     /// Get a value that indicates the kind of this type. This allows callers to
     /// quickly classify a type to determine how it should be handled further.
@@ -254,14 +261,14 @@ impl Type {
     }
     #[inline(always)]
     /// Get the type that is referred to by this pointer type.
-    pub fn get_ref(&self) -> Type {
+    pub fn get_ref(&self) -> Option<Type> {
         unsafe {
             NativeRef::from_ptr(jit_type_get_ref(self.as_ptr()))
         }
     }
     #[inline(always)]
     /// Get the type returned by this function type.
-    pub fn get_return(&self) -> Type {
+    pub fn get_return(&self) -> Option<Type> {
         unsafe {
             NativeRef::from_ptr(jit_type_get_return(self.as_ptr()))
         }
