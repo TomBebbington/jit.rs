@@ -35,6 +35,7 @@ impl<'a> Show for Value<'a> {
             unsafe {
                 let ptr = self.as_ptr();
                 jit_dump_insn(fd, jit_value_get_function(ptr), ptr);
+                jit_dump_value(fd, jit_value_get_function(ptr), ptr, b"val".as_ptr() as *const i8);
             }
         })).fmt(fmt)
     }

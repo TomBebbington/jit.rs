@@ -51,6 +51,17 @@ fn test_struct() {
     }
 }
 
+#[test]
+fn test_tags() {
+    let pos_t = jit!(struct {
+        "x": f64,
+        "y": f64
+    });
+    let kind = pos_t.get_kind();
+    let pos_t = Type::create_tagged(pos_t, kind, box 64u);
+    assert_eq!(pos_t.get_tagged_data::<uint>(), Some(&64u));
+}
+
 test_compile!((), test_compile_void, Void);
 test_compile!(f64, test_compile_f64, Float64);
 test_compile!(f32, test_compile_f32, Float32);

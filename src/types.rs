@@ -1,7 +1,7 @@
 use raw::*;
 use compile::Compile;
 use function::ABI;
-use libc::c_uint;
+use libc::{c_uint, c_void};
 use std::fmt::{Show, Formatter, Result};
 use std::kinds::marker::{ContravariantLifetime, NoCopy};
 use std::mem;
@@ -204,6 +204,12 @@ impl Drop for Type {
         }
     }
 }
+extern fn free_data<T:'static>(data: *mut c_void) {
+    unsafe {
+        let actual_data:Box<T> = mem::transmute(data);
+        mem::drop(actual_data);
+    }
+}
 impl Type {
     /// Create a type descriptor for a function signature.
     pub fn create_signature(abi: ABI, return_type: Type, params: &mut [Type]) -> Type {
@@ -238,6 +244,15 @@ impl Type {
         }
     }
     #[inline(always)]
+    /// Create a new tagged type
+    pub fn create_tagged<T:'static>(ty:Type, kind: kind::TypeKind, data: Box<T>) -> Type {
+        unsafe {
+            let ty = jit_type_create_tagged(ty.as_ptr(), kind.bits(), mem::transmute(&*data), Some(free_data::<T>), 1);
+            mem::forget(data);
+            NativeRef::from_ptr(ty)
+        }
+    }
+    #[inline(always)]
     /// Get the size of this type in bytes.
     pub fn get_size(&self) -> uint {
         unsafe {
@@ -264,6 +279,21 @@ impl Type {
     pub fn get_ref(&self) -> Option<Type> {
         unsafe {
             NativeRef::from_ptr(jit_type_get_ref(self.as_ptr()))
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_tagged_data<T:'static>(&self) -> Option<&T> {
+        unsafe {
+            mem::transmute(jit_type_get_tagged_data(self.as_ptr()))
+        }
+    }
+    #[inline(always)]
+    pub fn set_tagged_data<T:'static>(&self, data: Box<T>) {
+        use libc::c_void;
+        unsafe {
+            jit_type_set_tagged_data(self.as_ptr(), mem::transmute(&*data), Some(free_data::<T>));
+            mem::forget(data);
         }
     }
     #[inline(always)]

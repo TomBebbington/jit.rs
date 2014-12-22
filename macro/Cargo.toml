@@ -1,0 +1,17 @@
+[package]
+name = "jit_macros"
+version = "0.0.1"
+description = "JIT Macros"
+authors = [ "Tom Bebbington <tophattedcoder@gmail.com>" ]
+keywords = [ "compile", "compiler", "jit", "interpreter" ]
+repository = "https://github.com/TomBebbington/jit.rs"
+documentation = "http://tombebbington.github.io/jit.rs/"
+license = "MIT"
+
+[lib]
+name = "jit_macros"
+path = "src/macros.rs"
+crate-type = ["dylib"]
+
+[dependencies]
+jit = "*"

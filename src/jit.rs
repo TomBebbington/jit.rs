@@ -26,7 +26,7 @@
 #![crate_name = "jit"]
 #![allow(raw_pointer_deriving, dead_code, non_camel_case_types, non_upper_case_globals, unknown_features)]
 #![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
-#![feature(globs, macro_rules, slicing_syntax, unboxed_closures, unsafe_destructor, phase)]
+#![feature(default_type_params, globs, macro_rules, slicing_syntax, unboxed_closures, unsafe_destructor, phase)]
 #![stable]
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
