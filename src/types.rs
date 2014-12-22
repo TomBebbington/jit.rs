@@ -38,9 +38,9 @@ pub mod kind {
 }
 impl Show for Type {
     fn fmt(&self, fmt: &mut Formatter) -> Result {
-        util::dump(|fd| {
+        try!(util::dump(|fd| {
             unsafe { jit_dump_type(mem::transmute(fd), self.as_ptr()) };
-        }).fmt(fmt)
+        })).fmt(fmt)
     }
 }
 /// A single field of a struct
