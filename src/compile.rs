@@ -44,25 +44,6 @@ compile_prims!{
     (bool, c_long) => (jit_type_sys_bool, jit_value_create_nint_constant),
     (char, c_long) => (jit_type_sys_char, jit_value_create_nint_constant)
 }
-impl Compile for *const u8 {
-    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
-        let c_str = unsafe { CString::new(transmute(*self), false) };
-        let ty = get::<&u8>();
-        let ptr = Value::new(func, ty);
-        let length = c_str.len() + 1u;
-        func.insn_store(&ptr, &func.insn_alloca(&func.insn_of(&length)));
-        for (pos, ch) in c_str.iter().enumerate() {
-            let char_v = ch.compile(func);
-            func.insn_store_relative(&ptr, pos as int, &char_v);
-        }
-        func.insn_store_relative(&ptr, c_str.len() as int, &func.insn_of(&'\0'));
-        ptr
-    }
-    #[inline(always)]
-    fn jit_type(_:Option<*const u8>) -> Type {
-        get::<&u8>()
-    }
-}
 impl<T:Compile> Compile for *mut T {
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
@@ -78,109 +59,19 @@ impl<T:Compile> Compile for *mut T {
         Type::create_pointer(get::<T>())
     }
 }
-impl<'s> Compile for CString {
+impl<T:Compile> Compile for *const T {
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
-        let ty = get::<CString>();
-        let val = Value::new(func, ty.clone());
-        let string:*const u8 = unsafe { transmute(self.as_ptr()) };
-        func.insn_store_relative(&val, 0, &string.compile(func));
-        func.insn_store_relative(&val, ty.find_name("is_owned").get_offset() as int, &true.compile(func));
-        val
+        unsafe {
+            NativeRef::from_ptr(jit_value_create_nint_constant(
+                func.as_ptr(),
+                get::<*const T>().as_ptr(),
+                self.to_uint() as c_long
+            ))
+        }
     }
-    #[inline]
-    fn jit_type(_:Option<CString>) -> Type {
-        jit!(struct {
-            "ptr": *const u8,
-            "is_owned": bool
-        })
-    }
-}
-impl<'a> Compile for &'a str {
-    fn compile<'b>(&self, func:&UncompiledFunction<'b>) -> Value<'b> {
-        let str_ptr = {
-            let ty = get::<*const u8>();
-            let ptr = Value::new(func, ty);
-            func.insn_store(&ptr, &func.insn_alloca(&func.insn_of(&self.len())));
-            for enum_char in self.bytes().enumerate() {
-                let (pos, ch) = enum_char;
-                let char_v = ch.compile(func);
-                func.insn_store_relative(&ptr, pos as int, &char_v);
-            }
-            ptr
-        };
-        let ty = get::<&'a str>();
-        let val = Value::new(func, ty.clone());
-        func.insn_store_relative(&val, 0, &str_ptr);
-        func.insn_store_relative(&val, ty.find_name("len").get_offset() as int, &self.len().compile(func));
-        val
-    }
-    #[inline]
-    fn jit_type(_:Option<&'a str>) -> Type {
-        jit!(struct {
-            "ptr": *const u8,
-            "len": uint
-        })
-    }
-}
-impl<'a> Compile for String {
-    fn compile<'b>(&self, func:&UncompiledFunction<'b>) -> Value<'b> {
-        let str_ptr = {
-            let ty = get::<*const u8>();
-            let ptr = Value::new(func, ty);
-            func.insn_store(&ptr, &func.insn_alloca(&func.insn_of(&self.len())));
-            for (pos, ch) in self.as_slice().bytes().enumerate() {
-                let char_v = ch.compile(func);
-                func.insn_store_relative(&ptr, pos as int, &char_v);
-            }
-            ptr
-        };
-        let ty = get::<String>();
-        let val = Value::new(func, ty.clone());
-        let length = self.len().compile(func);
-        func.insn_store_relative(&val, 0, &length);
-        func.insn_store_relative(&val, ty.clone().find_name("cap").get_offset() as int, &length);
-        func.insn_store_relative(&val, ty.find_name("ptr").get_offset() as int, &str_ptr);
-        val
-    }
-    #[inline]
-    fn jit_type(_:Option<String>) -> Type {
-        jit!(struct {
-            "len": uint,
-            "cap": uint,
-            "ptr": &u8
-        })
-    }
-}
-impl<T:Compile> Compile for Vec<T> {
-    fn compile<'b>(&self, func:&UncompiledFunction<'b>) -> Value<'b> {
-        let vec_ptr = {
-            let ty = get::<*mut T>();
-            let inner_ty = get::<T>();
-            let ptr = Value::new(func, ty);
-            let ptr_size = self.len() * inner_ty.get_size();
-            let ptr_size = func.insn_of(&ptr_size);
-            func.insn_store(&ptr, &func.insn_alloca(&ptr_size));
-            for (pos, val) in self.iter().enumerate() {
-                let val_v = val.compile(func);
-                func.insn_store_relative(&ptr, pos as int, &val_v);
-            }
-            ptr
-        };
-        let ty = get::<String>();
-        let val = Value::new(func, ty.clone());
-        let length = func.insn_of(&self.len());
-        func.insn_store_relative(&val, 0, &length);
-        func.insn_store_relative(&val, ty.clone().find_name("cap").get_offset() as int, &length);
-        func.insn_store_relative(&val, ty.find_name("ptr").get_offset() as int, &vec_ptr);
-        val
-    }
-    #[inline]
-    fn jit_type(_:Option<Vec<T>>) -> Type {
-        jit!(struct {
-            "len": uint,
-            "cap": uint,
-            "ptr": *mut T
-        })
+    #[inline(always)]
+    fn jit_type(_:Option<*const T>) -> Type {
+        Type::create_pointer(get::<T>())
     }
 }
 impl<T:Compile> Compile for &'static T {
