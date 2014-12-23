@@ -1,9 +1,12 @@
+extern crate test;
 use context::Context;
 use get;
 use std::default::Default;
 use types::Type;
 use types::kind::*;
-use Function;
+use function::{Function, flags};
+use label::Label;
+use test::Bencher;
 macro_rules! test_compile(
     ($ty:ty, $test_name:ident, $kind:expr) => (
         #[test]
@@ -20,6 +23,44 @@ macro_rules! test_compile(
         }
     );
 );
+
+#[bench]
+fn bench_raw_gcd(b: &mut Bencher) {
+    fn gcd(x: uint, y: uint) -> uint {
+        if x == y {
+            x
+        } else if x < y {
+            gcd(x, y - x)
+        } else {
+            gcd(x - y, y)
+        }
+    }
+    b.iter(|| gcd(70, 81));
+}
+
+#[bench]
+fn bench_gcd(b: &mut Bencher) {
+    let mut ctx = Context::new();
+    jit_func!(ctx, func, fn gcd(x: uint, y:uint) -> uint {
+        let temp1 = func.insn_eq(x, y);
+        let mut label1 = Label::new(func);
+        func.insn_branch_if_not(&temp1, &mut label1);
+        func.insn_return(x);
+        func.insn_label(&mut label1);
+        let mut label2 = Label::new(func);
+        let temp2 = func.insn_lt(x, y);
+        func.insn_branch_if_not(&temp2, &mut label2);
+        let mut args = [x, &func.insn_sub(y, x)];
+        let temp3 = func.insn_call(Some("gcd"), func, None, args.as_mut_slice(), flags::JIT_CALL_NO_THROW);
+        func.insn_return(&temp3);
+        func.insn_label(&mut label2);
+        let mut args = [&func.insn_sub(x, y), y];
+        let temp4 = func.insn_call(Some("gcd"), func, None, args.as_mut_slice(), flags::JIT_CALL_NO_THROW);
+        func.insn_return(&temp4);
+    }, |gcd| {
+        b.iter(|| gcd((70, 81)));
+    });
+}
 #[test]
 fn test_sqrt() {
     let mut ctx = Context::new();

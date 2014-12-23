@@ -166,6 +166,10 @@ impl<'a> UncompiledFunction<'a> {
                 signature.as_ptr()
             ));
             me.owned = true;
+            if cfg!(bench) {
+                me.set_recompilable();
+                me.set_optimization_level(UncompiledFunction::get_max_optimization_level());
+            }
             me
         }
     }
@@ -188,6 +192,10 @@ impl<'a> UncompiledFunction<'a> {
                 parent.as_ptr()
             ));
             me.owned = true;
+            if cfg!(bench) {
+                me.set_recompilable();
+                me.set_optimization_level(UncompiledFunction::get_max_optimization_level());
+            }
             me
         }
     }
@@ -699,6 +707,13 @@ impl<'a> UncompiledFunction<'a> {
     pub fn set_optimization_level(&self, level: c_uint) {
         unsafe {
             jit_function_set_optimization_level(self.as_ptr(), level);
+        }
+    }
+    #[inline(always)]
+    /// Get the max optimization level
+    pub fn get_max_optimization_level() -> c_uint {
+        unsafe {
+            jit_function_get_max_optimization_level()
         }
     }
     #[inline(always)]
