@@ -1,5 +1,5 @@
 use raw::*;
-use function::UncompiledFunction;
+use function::{Function, UncompiledFunction};
 use std::kinds::marker::ContravariantLifetime;
 use std::fmt::{Formatter, Result, Show};
 use std::ops::*;
@@ -31,13 +31,7 @@ impl<'a> NativeRef for Value<'a> {
 }
 impl<'a> Show for Value<'a> {
     fn fmt(&self, fmt: &mut Formatter) -> Result {
-        try!(util::dump(|fd| {
-            unsafe {
-                let ptr = self.as_ptr();
-                jit_dump_insn(fd, jit_value_get_function(ptr), ptr);
-                jit_dump_value(fd, jit_value_get_function(ptr), ptr, b"val".as_ptr() as *const i8);
-            }
-        })).fmt(fmt)
+        write!(fmt, "v({})", self.get_type())
     }
 }
 impl<'a> Clone for Value<'a> {

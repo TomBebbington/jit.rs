@@ -2,7 +2,7 @@ use raw::*;
 use compile::Compile;
 use function::ABI;
 use libc::{c_uint, c_void};
-use std::fmt::{Show, Formatter, Result};
+use std::fmt;
 use std::kinds::marker::{ContravariantLifetime, NoCopy};
 use std::mem;
 use std::c_str::ToCStr;
@@ -36,11 +36,22 @@ pub mod kind {
         }
     );
 }
-impl Show for Type {
-    fn fmt(&self, fmt: &mut Formatter) -> Result {
-        try!(util::dump(|fd| {
-            unsafe { jit_dump_type(mem::transmute(fd), self.as_ptr()) };
-        })).fmt(fmt)
+impl fmt::Show for Type {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        let kind = self.get_kind();
+        if kind.contains(kind::Pointer) {
+            write!(fmt, "*mut {}", self.get_ref().unwrap())
+        } else if kind.contains(kind::Signature) {
+            try!("fn(".fmt(fmt));
+            for arg in self.params() {
+                try!(arg.fmt(fmt));
+            }
+            write!(fmt, ") -> {}", self.get_return().map(|x| x.to_string()).unwrap_or("()".into_string()))
+        } else {
+            write!(fmt, "{}", try!(util::dump(|fd| {
+                unsafe { jit_dump_type(mem::transmute(fd), self.as_ptr()) };
+            })))
+        }
     }
 }
 /// A single field of a struct
