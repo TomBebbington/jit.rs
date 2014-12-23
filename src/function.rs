@@ -571,7 +571,6 @@ impl<'a> UncompiledFunction<'a> {
         self.insn_unop(v, jit_insn_sign)
     }
 
-
     /// Call the function, which may or may not be translated yet
     pub fn insn_call<S:ToCStr, F:Function>(&self, name:Option<S>, func:&F,
                             sig:Option<Type>, args: &mut [&Value<'a>], flags: flags::CallFlags) -> Value<'a> {
@@ -700,6 +699,48 @@ impl<'a> UncompiledFunction<'a> {
         unsafe {
             NativeRef::from_ptr(f(self.as_ptr(), value.as_ptr()))
         }
+    }
+    #[inline(always)]
+    /// Make instructions to run the block if the condition is met
+    pub fn insn_if<B: FnOnce()>(&self, cond: &Value<'a>, block: B) {
+        let mut after = Label::new(self);
+        self.insn_branch_if_not(cond, &mut after);
+        block();
+        self.insn_label(&mut after);
+    }
+    #[inline(always)]
+    /// Make instructions to run the block if the condition is not met
+    pub fn insn_if_not<B: FnOnce()>(&self, cond: &Value<'a>, block: B) {
+        let mut after = Label::new(self);
+        self.insn_branch_if(cond, &mut after);
+        block();
+        self.insn_label(&mut after);
+    }
+    /// Make instructions to run the block forever
+    pub fn insn_loop<B: FnOnce()>(&self, block: B) {
+        let mut start = Label::new(self);
+        self.insn_label(&mut start);
+        block();
+        self.insn_branch(&mut start);
+    }
+    /// Make instructions to run the block and continue running it so long
+    /// as the condition is met
+    pub fn insn_loop_while<B: FnOnce()>(&self, cond: &Value<'a>, block: B) {
+        let mut start = Label::new(self);
+        self.insn_label(&mut start);
+        block();
+        self.insn_branch_if(cond, &mut start);
+    }
+    /// Make instructions to run the block and continue running it so long
+    /// as the condition is met
+    pub fn insn_while<B: FnOnce()>(&self, cond: &Value<'a>, block: B) {
+        let mut start = Label::new(self);
+        self.insn_label(&mut start);
+        let mut after = Label::new(self);
+        self.insn_branch_if_not(cond, &mut after);
+        block();
+        self.insn_branch(&mut start);
+        self.insn_label(&mut after);
     }
     #[inline(always)]
     /// Set the optimization level of the function, where the bigger the level,
