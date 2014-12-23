@@ -10,6 +10,7 @@ install:
 script:
   - cargo build --verbose
   - cargo test --verbose
+  - cargo bench --verbose
 notifications:
   email:
     - tophattedcoder@gmail.com
