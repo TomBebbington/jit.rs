@@ -678,6 +678,13 @@ impl<'a> UncompiledFunction<'a> {
         }
     }
     #[inline(always)]
+    /// Make an instruction that gets the address of a value
+    pub fn insn_address_of(&self, value: &Value<'a>) -> Value<'a> {
+        unsafe {
+            NativeRef::from_ptr(jit_insn_address_of(self.as_ptr(), value.as_ptr()))
+        }
+    }
+    #[inline(always)]
     fn insn_binop(&self,
                     v1: &Value<'a>, v2: &Value<'a>,
                     f: unsafe extern "C" fn(
@@ -725,19 +732,20 @@ impl<'a> UncompiledFunction<'a> {
     }
     /// Make instructions to run the block and continue running it so long
     /// as the condition is met
-    pub fn insn_loop_while<B: FnOnce()>(&self, cond: &Value<'a>, block: B) {
+    pub fn insn_loop_while<C: FnOnce() -> Value<'a>, B: FnOnce()>(&self, cond: C, block: B) {
         let mut start = Label::new(self);
         self.insn_label(&mut start);
         block();
-        self.insn_branch_if(cond, &mut start);
+        self.insn_branch_if(&cond(), &mut start);
     }
     /// Make instructions to run the block and continue running it so long
     /// as the condition is met
-    pub fn insn_while<B: FnOnce()>(&self, cond: &Value<'a>, block: B) {
+    pub fn insn_while<C: FnOnce() -> Value<'a>, B: FnOnce()>(&self, cond: C, block: B) {
         let mut start = Label::new(self);
         self.insn_label(&mut start);
         let mut after = Label::new(self);
-        self.insn_branch_if_not(cond, &mut after);
+        let cond_v = cond();
+        self.insn_branch_if_not(&cond_v, &mut after);
         block();
         self.insn_branch(&mut start);
         self.insn_label(&mut after);

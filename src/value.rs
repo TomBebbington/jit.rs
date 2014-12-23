@@ -9,7 +9,7 @@ use util::NativeRef;
 /// Every value in the system, be it a constant, a local variable, or a
 /// temporary result, is represented by an object of type `Value`. The JIT then
 /// allocates registers or memory locations to the values as appropriate.
-#[deriving(PartialEq)]
+#[deriving(Copy, PartialEq)]
 pub struct Value<'a> {
     _value: jit_value_t,
     marker: ContravariantLifetime<'a>

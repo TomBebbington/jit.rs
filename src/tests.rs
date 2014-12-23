@@ -23,7 +23,48 @@ macro_rules! test_compile(
         }
     );
 );
-
+#[bench]
+fn bench_raw_pi(b: &mut Bencher) {
+    fn raw_pi() -> f64 {
+        let mut pi = 3.0f64;
+        let mut n = 2.0f64;
+        let four = 4.0f64;
+        while n < 100.0 {
+            pi += four / (n * (n + 1.0) * (n + 2.0)) - four / ((n + 2.0) * (n + 3.0) * (n + 4.0));
+            n += four;
+        }
+        pi
+    }
+    b.iter(|| raw_pi());
+}
+#[bench]
+fn bench_pi(b: &mut Bencher) {
+    let mut ctx = Context::new();
+    jit_func!(ctx, func, fn pi() -> f64 {
+        let f64_size = func.insn_of(&8u);
+        let four = func.insn_of(&4.0f64);
+        let three = func.insn_of(&3.0f64);
+        let two = func.insn_of(&2.0f64);
+        let one = func.insn_of(&1.0f64);
+        let pi = func.insn_alloca(&f64_size);
+        func.insn_store_relative(&pi, 0, &three);
+        let n = func.insn_alloca(&f64_size);
+        func.insn_store(&n, &two);
+        let limit = func.insn_of(&100.0f64);
+        func.insn_while(|| func.insn_lt(&func.insn_load(&n), &limit), || {
+            let ln = func.insn_load(&n);
+            let n_two = ln + two;
+            let first_part = four / (ln * (ln + one) * n_two);
+            let second_part = four / (n_two * (ln + three) * (ln + four));
+            let new_pi = first_part - second_part;
+            func.insn_store_relative(&pi, 0, &(func.insn_load_relative(&pi, 0, get::<f64>()) + new_pi));
+            func.insn_store(&n, &(ln + four));
+        });
+        func.insn_return(&func.insn_load_relative(&pi, 0, get::<f64>()));
+    }, |pi| {
+        b.iter(|| pi(()));
+    });
+}
 #[bench]
 fn bench_raw_gcd(b: &mut Bencher) {
     fn gcd(x: uint, y: uint) -> uint {
@@ -44,11 +85,11 @@ fn bench_gcd(b: &mut Bencher) {
     jit_func!(ctx, func, fn gcd(x: uint, y:uint) -> uint {
         func.insn_if(&func.insn_eq(x, y), || func.insn_return(x));
         func.insn_if(&func.insn_lt(x, y), || {
-            let mut args = [x, &func.insn_sub(y, x)];
+            let mut args = [x, &(*y - *x)];
             let v = func.insn_call(Some("gcd"), func, None, args.as_mut_slice(), flags::JIT_CALL_NO_THROW);
             func.insn_return(&v);
         });
-        let mut args = [&func.insn_sub(x, y), y];
+        let mut args = [&(*x - *y), y];
         let temp4 = func.insn_call(Some("gcd"), func, None, args.as_mut_slice(), flags::JIT_CALL_NO_THROW);
         func.insn_return(&temp4);
     }, |gcd| {
