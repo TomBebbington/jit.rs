@@ -1,10 +1,10 @@
 use raw::*;
-use function::{Function, UncompiledFunction};
+use function::UncompiledFunction;
 use std::kinds::marker::ContravariantLifetime;
 use std::fmt::{Formatter, Result, Show};
 use std::ops::*;
 use types::Type;
-use util::{mod, NativeRef};
+use util::NativeRef;
 /// Values form the backbone of the storage system in `libjit`.
 /// Every value in the system, be it a constant, a local variable, or a
 /// temporary result, is represented by an object of type `Value`. The JIT then
