@@ -166,7 +166,7 @@ impl<'a> UncompiledFunction<'a> {
                 signature.as_ptr()
             ));
             me.owned = true;
-            if cfg!(bench) {
+            if cfg!(test) {
                 me.set_recompilable();
                 me.set_optimization_level(UncompiledFunction::get_max_optimization_level());
             }
