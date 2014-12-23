@@ -581,8 +581,8 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that calls a function that has the signature given
-    /// with some arguments
-    pub fn insn_call_indirect<F:Function>(&self, func:&F, signature: Type,
+    /// with some arguments through a pointer to the fucntion
+    pub fn insn_call_indirect(&self, func:&Value<'a>, signature: Type,
                                args: &mut [&Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
