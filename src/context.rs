@@ -1,9 +1,10 @@
 use raw::*;
 use libc::c_void;
 use std::mem;
-use std::kinds::marker::{NoCopy, NoSync, NoSend};
-use util::NativeRef;
-use {CompiledFunction, Type, UncompiledFunction};
+use std::ptr;
+use std::kinds::marker::{ContravariantLifetime, NoCopy, NoSync, NoSend};
+use util::{from_ptr, NativeRef};
+use {AnyFunction, CompiledFunction, Type, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
 /// multiple, but normally there is only one.
 pub struct Context {
@@ -36,12 +37,7 @@ impl NativeRef for Builder {
 
 impl Context {
     unsafe fn as_builder(&mut self) -> Builder {
-        Builder{
-            _context: self._context,
-            no_sync: NoSync,
-            no_send: NoSend,
-            no_copy: NoCopy
-        }
+        NativeRef::from_ptr(self.as_ptr())
     }
     #[inline(always)]
     /// Create a new JIT Context
@@ -75,6 +71,16 @@ impl Context {
             func.compile()
         }
     }
+    /// Iterate through the functions contained inside this context
+    pub fn functions<'a>(&'a self) -> Functions<'a> {
+        unsafe {
+            Functions {
+                context: self.as_ptr(),
+                last: ptr::null_mut(),
+                lifetime: ContravariantLifetime::<'a>
+            }
+        }
+    }
 }
 #[unsafe_destructor]
 impl Drop for Context {
@@ -82,6 +88,20 @@ impl Drop for Context {
     fn drop(&mut self) {
         unsafe {
             jit_context_destroy(self.as_ptr());
+        }
+    }
+}
+
+pub struct Functions<'a> {
+    context: jit_context_t,
+    last: jit_function_t,
+    lifetime: ContravariantLifetime<'a>
+}
+impl<'a> Iterator<AnyFunction<'a>> for Functions<'a> {
+    fn next(&mut self) -> Option<AnyFunction<'a>> {
+        unsafe {
+            self.last = jit_function_next(self.context, self.last);
+            from_ptr(self.last)
         }
     }
 }

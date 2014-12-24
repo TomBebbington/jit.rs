@@ -59,16 +59,12 @@ impl fmt::Show for Type {
     }
 }
 /// A single field of a struct
+#[deriving(PartialEq)]
 pub struct Field<'a> {
     /// The index of the field
     pub index: c_uint,
     _type: jit_type_t,
     marker: ContravariantLifetime<'a>
-}
-impl<'a> PartialEq for Field<'a> {
-    fn eq(&self, other:&Field<'a>) -> bool {
-        self.index == other.index && self._type == other._type
-    }
 }
 impl<'a> Field<'a> {
     #[inline]
@@ -176,6 +172,7 @@ impl<'a> Iterator<Type> for Params<'a> {
 /// to lay out values in memory.
 /// Types are not attached to a context so they are reference-counted by LibJIT,
 /// so internally they are represented as `Rc<TypeData>`.
+#[deriving(PartialEq)]
 pub struct Type {
     _type: jit_type_t,
     no_copy: NoCopy
@@ -191,11 +188,6 @@ impl NativeRef for Type {
             _type: ptr,
             no_copy: NoCopy
         }
-    }
-}
-impl PartialEq for Type {
-    fn eq(&self, other: &Type) -> bool {
-        self._type == other._type
     }
 }
 impl Clone for Type {

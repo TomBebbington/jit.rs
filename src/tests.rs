@@ -19,7 +19,7 @@ macro_rules! test_compile(
                 func.insn_return(val);
             }, |func| {
                 assert_eq!(func(()), default_value);
-            })
+            });
         }
     );
 );
@@ -99,6 +99,7 @@ fn bench_gcd(b: &mut Bencher) {
 #[test]
 fn test_sqrt() {
     let mut ctx = Context::new();
+    assert_eq!(ctx.functions().count(), 0);
     jit_func!(ctx, func, fn sqrt(num: uint) -> uint {
         let sqrt = func.insn_sqrt(num);
         let sqrt_arg_ui = func.insn_convert(&sqrt, get::<uint>(), false);
@@ -110,6 +111,7 @@ fn test_sqrt() {
         assert_eq!(sqrt(4), 2);
         assert_eq!(sqrt(1), 1);
     });
+    assert_eq!(ctx.functions().count(), 1);
 }
 #[test]
 fn test_struct() {

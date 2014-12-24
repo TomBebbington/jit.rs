@@ -51,12 +51,43 @@ pub mod flags {
     );
 }
 /// A function that can be compiled or not
-pub trait Function : NativeRef {
+pub trait Function<'a> : NativeRef {
     /// Check if this function is compiled
     fn is_compiled(&self) -> bool;
     /// Get the signature of this function
     fn get_signature(&self) -> Type {
         unsafe { NativeRef::from_ptr(jit_function_get_signature(self.as_ptr())) }
+    }
+}
+#[deriving(PartialEq)]
+/// Any kind of function, compiled or not
+pub struct AnyFunction<'a> {
+    _func: jit_function_t,
+    marker: ContravariantLifetime<'a>
+}
+native_ref!(AnyFunction, _func, jit_function_t, ContravariantLifetime);
+impl<'a> AnyFunction<'a> {
+    /// Return the compiled function if there is one
+    pub fn into_compiled(self) -> Option<CompiledFunction<'a>> {
+        if self.is_compiled() {
+            Some(unsafe { NativeRef::from_ptr(self.as_ptr()) })
+        } else {
+            None
+        }
+    }
+    /// Return the uncompiled function if there is one
+    pub fn into_uncompiled(self) -> Option<UncompiledFunction<'a>> {
+        if !self.is_compiled() {
+            Some(unsafe { NativeRef::from_ptr(self.as_ptr()) })
+        } else {
+            None
+        }
+    }
+}
+impl<'a> Function<'a> for AnyFunction<'a> {
+    /// Check if this function is compiled
+    fn is_compiled(&self) -> bool {
+        unsafe { jit_function_is_compiled(self.as_ptr()) != 0 }
     }
 }
 #[deriving(PartialEq)]
@@ -70,7 +101,8 @@ pub struct CompiledFunction<'a> {
     marker: ContravariantLifetime<'a>
 }
 native_ref!(CompiledFunction, _func, jit_function_t, ContravariantLifetime);
-impl<'a> Function for CompiledFunction<'a> {
+impl<'a> Function<'a> for CompiledFunction<'a> {
+    /// 10/10 would compile again
     fn is_compiled(&self) -> bool {
         true
     }
@@ -122,7 +154,7 @@ impl<'a> NativeRef for UncompiledFunction<'a> {
         }
     }
 }
-impl<'a> Function for UncompiledFunction<'a> {
+impl<'a> Function<'a> for UncompiledFunction<'a> {
     fn is_compiled(&self) -> bool {
         false
     }
@@ -572,7 +604,7 @@ impl<'a> UncompiledFunction<'a> {
     }
 
     /// Call the function, which may or may not be translated yet
-    pub fn insn_call<S:ToCStr, F:Function>(&self, name:Option<S>, func:&F,
+    pub fn insn_call<S:ToCStr, F:Function<'a>>(&self, name:Option<S>, func:&F,
                             sig:Option<Type>, args: &mut [&Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();

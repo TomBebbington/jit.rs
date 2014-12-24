@@ -15,6 +15,10 @@ pub trait NativeRef {
         cb(self.as_ptr())
     }
 }
+#[inline(always)]
+pub unsafe fn from_ptr<T:NativeRef>(ptr: *mut c_void) -> T {
+    NativeRef::from_ptr(ptr)
+}
 impl<T:NativeRef> NativeRef for Option<T> {
     #[inline(always)]
     unsafe fn as_ptr(&self) -> *mut c_void {
