@@ -1,4 +1,5 @@
 use raw::*;
+use libc::c_void;
 use std::mem;
 use std::kinds::marker::{NoCopy, NoSync, NoSend};
 use util::NativeRef;
@@ -46,7 +47,8 @@ impl Context {
     /// Create a new JIT Context
     pub fn new() -> Context {
         unsafe {
-            jit_exception_set_handler(Some(::handle_exception));
+            let handle_exception:extern fn(i32) -> *mut c_void = ::handle_exception;
+            jit_exception_set_handler(Some(handle_exception));
             NativeRef::from_ptr(jit_context_create())
         }
     }

@@ -46,7 +46,11 @@ impl fmt::Show for Type {
             for arg in self.params() {
                 try!(arg.fmt(fmt));
             }
-            write!(fmt, ") -> {}", self.get_return().map(|x| x.to_string()).unwrap_or("()".into_string()))
+            try!(") -> ".fmt(fmt));
+            match self.get_return() {
+                Some(x) => x.fmt(fmt),
+                None => "()".fmt(fmt)
+            }
         } else {
             write!(fmt, "{}", try!(util::dump(|fd| {
                 unsafe { jit_dump_type(mem::transmute(fd), self.as_ptr()) };
@@ -258,7 +262,8 @@ impl Type {
     /// Create a new tagged type
     pub fn create_tagged<T:'static>(ty:Type, kind: kind::TypeKind, data: Box<T>) -> Type {
         unsafe {
-            let ty = jit_type_create_tagged(ty.as_ptr(), kind.bits(), mem::transmute(&*data), Some(free_data::<T>), 1);
+            let free_data:extern fn(*mut c_void) = free_data::<T>;
+            let ty = jit_type_create_tagged(ty.as_ptr(), kind.bits(), mem::transmute(&*data), Some(free_data), 1);
             mem::forget(data);
             NativeRef::from_ptr(ty)
         }
@@ -302,7 +307,8 @@ impl Type {
     #[inline(always)]
     pub fn set_tagged_data<T:'static>(&self, data: Box<T>) {
         unsafe {
-            jit_type_set_tagged_data(self.as_ptr(), mem::transmute(&*data), Some(free_data::<T>));
+            let free_data:extern fn(*mut c_void) = free_data::<T>;
+            jit_type_set_tagged_data(self.as_ptr(), mem::transmute(&*data), Some(free_data));
             mem::forget(data);
         }
     }

@@ -105,8 +105,8 @@ macro_rules! bin_op {
 macro_rules! un_op {
     ($trait_ty:ident, $trait_func:ident, $func:ident) => (
         impl<'a> $trait_ty<Value<'a>> for Value<'a> {
-            fn $trait_func(&self) -> Value<'a> {
-                self.get_function().$func(self)
+            fn $trait_func(self) -> Value<'a> {
+                self.get_function().$func(&self)
             }
         }
     )
