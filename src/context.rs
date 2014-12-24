@@ -1,5 +1,4 @@
 use raw::*;
-use libc::c_void;
 use std::mem;
 use std::ptr;
 use std::kinds::marker::{ContravariantLifetime, NoCopy, NoSync, NoSend};
@@ -37,15 +36,15 @@ impl NativeRef for Builder {
 
 impl Context {
     unsafe fn as_builder(&mut self) -> Builder {
-        NativeRef::from_ptr(self.as_ptr())
+        from_ptr(self.as_ptr())
     }
     #[inline(always)]
     /// Create a new JIT Context
     pub fn new() -> Context {
         unsafe {
-            let handle_exception:extern fn(i32) -> *mut c_void = ::handle_exception;
-            jit_exception_set_handler(Some(handle_exception));
-            NativeRef::from_ptr(jit_context_create())
+            //let handle_exception:extern fn(i32) -> *mut c_void = ::handle_exception;
+            //jit_exception_set_handler(Some(handle_exception));
+            from_ptr(jit_context_create())
         }
     }
     #[inline(always)]

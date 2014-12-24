@@ -32,7 +32,7 @@ impl<T:NativeRef> NativeRef for Option<T> {
         if ptr.is_null() {
             None
         } else {
-            Some(NativeRef::from_ptr(ptr))
+            Some(from_ptr(ptr))
         }
     }
 }

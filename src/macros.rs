@@ -4,13 +4,13 @@ impl Compile for $ty {
     #[inline(always)]
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr($make_constant(func.as_ptr(), $type_name, *self) )
+            from_ptr($make_constant(func.as_ptr(), $type_name, *self) )
         }
     }
     #[inline(always)]
     fn jit_type(_:Option<$ty>) -> Type {
         unsafe {
-            NativeRef::from_ptr($type_name)
+            from_ptr($type_name)
         }
     }
 });
@@ -19,13 +19,13 @@ impl Compile for $ty {
     #[inline(always)]
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr($make_constant(func.as_ptr(), $type_name, *self as $cast) )
+            from_ptr($make_constant(func.as_ptr(), $type_name, *self as $cast) )
         }
     }
     #[inline(always)]
     fn jit_type(_:Option<$ty>) -> Type {
         unsafe {
-            NativeRef::from_ptr($type_name)
+            from_ptr($type_name)
         }
     }
 });

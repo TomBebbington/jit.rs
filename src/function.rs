@@ -3,7 +3,7 @@ use context::Builder;
 use compile::Compile;
 use label::Label;
 use types::Type;
-use util::{mod, NativeRef};
+use util::{mod, from_ptr, NativeRef};
 use value::Value;
 use libc::{
     c_int,
@@ -56,7 +56,7 @@ pub trait Function<'a> : NativeRef {
     fn is_compiled(&self) -> bool;
     /// Get the signature of this function
     fn get_signature(&self) -> Type {
-        unsafe { NativeRef::from_ptr(jit_function_get_signature(self.as_ptr())) }
+        unsafe { from_ptr(jit_function_get_signature(self.as_ptr())) }
     }
 }
 #[deriving(PartialEq)]
@@ -70,7 +70,7 @@ impl<'a> AnyFunction<'a> {
     /// Return the compiled function if there is one
     pub fn into_compiled(self) -> Option<CompiledFunction<'a>> {
         if self.is_compiled() {
-            Some(unsafe { NativeRef::from_ptr(self.as_ptr()) })
+            Some(unsafe { from_ptr(self.as_ptr()) })
         } else {
             None
         }
@@ -78,7 +78,7 @@ impl<'a> AnyFunction<'a> {
     /// Return the uncompiled function if there is one
     pub fn into_uncompiled(self) -> Option<UncompiledFunction<'a>> {
         if !self.is_compiled() {
-            Some(unsafe { NativeRef::from_ptr(self.as_ptr()) })
+            Some(unsafe { from_ptr(self.as_ptr()) })
         } else {
             None
         }
@@ -148,7 +148,7 @@ impl<'a> NativeRef for UncompiledFunction<'a> {
         let sig = jit_function_get_signature(ptr);
         UncompiledFunction {
             _func: ptr,
-            args: Vec::from_fn(jit_type_num_params(sig) as uint, |i| NativeRef::from_ptr(jit_value_get_param(ptr, i as c_uint))),
+            args: Vec::from_fn(jit_type_num_params(sig) as uint, |i| from_ptr(jit_value_get_param(ptr, i as c_uint))),
             marker: ContravariantLifetime::<'a>,
             owned: false
         }
@@ -193,7 +193,7 @@ impl<'a> UncompiledFunction<'a> {
     /// multi-threaded environment.
     pub fn new(context:&'a Builder, signature:Type) -> UncompiledFunction<'a> {
         unsafe {
-            let mut me:UncompiledFunction = NativeRef::from_ptr(jit_function_create(
+            let mut me:UncompiledFunction = from_ptr(jit_function_create(
                 context.as_ptr(),
                 signature.as_ptr()
             ));
@@ -218,7 +218,7 @@ impl<'a> UncompiledFunction<'a> {
     pub fn new_nested(context:&'a Builder, signature: Type,
                         parent: &'a UncompiledFunction<'a>) -> UncompiledFunction<'a> {
         unsafe {
-            let mut me:UncompiledFunction = NativeRef::from_ptr(jit_function_create_nested(
+            let mut me:UncompiledFunction = from_ptr(jit_function_create_nested(
                 context.as_ptr(),
                 signature.as_ptr(),
                 parent.as_ptr()
@@ -236,7 +236,7 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_convert(&self, v: &Value<'a>,
                             t:Type, overflow_check:bool) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_insn_convert(
+            from_ptr(jit_insn_convert(
                 self.as_ptr(),
                 v.as_ptr(),
                 t.as_ptr(),
@@ -284,14 +284,29 @@ impl<'a> UncompiledFunction<'a> {
         self.insn_binop(v1, v2, jit_insn_mul)
     }
     #[inline(always)]
+    /// Make an instruction that multiplies the values and throws upon overflow
+    pub fn insn_mul_ovf(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
+        self.insn_binop(v1, v2, jit_insn_mul_ovf)
+    }
+    #[inline(always)]
     /// Make an instruction that adds the values
     pub fn insn_add(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
         self.insn_binop(v1, v2, jit_insn_add)
     }
     #[inline(always)]
+    /// Make an instruction that adds the values and throws upon overflow
+    pub fn insn_add_ovf(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
+        self.insn_binop(v1, v2, jit_insn_add_ovf)
+    }
+    #[inline(always)]
     /// Make an instruction that subtracts the second value from the first
     pub fn insn_sub(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
         self.insn_binop(v1, v2, jit_insn_sub)
+    }
+    #[inline(always)]
+    /// Make an instruction that subtracts the second value from the first and throws upon overflow
+    pub fn insn_sub_ovf(&self, v1: &Value<'a>, v2: &Value<'a>) -> Value<'a> {
+        self.insn_binop(v1, v2, jit_insn_sub_ovf)
     }
     #[inline(always)]
     /// Make an instruction that divides the first number by the second
@@ -383,7 +398,7 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_dup(&self, value: &Value<'a>) -> Value<'a> {
         unsafe {
             let dup_value = jit_insn_load(self.as_ptr(), value.as_ptr());
-            NativeRef::from_ptr(dup_value)
+            from_ptr(dup_value)
         }
     }
     #[inline(always)]
@@ -395,7 +410,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that loads a value from a src value
     pub fn insn_load_relative(&self, src: &Value<'a>, offset: int, ty:Type) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_insn_load_relative(
+            from_ptr(jit_insn_load_relative(
                 self.as_ptr(),
                 src.as_ptr(),
                 offset as jit_nint,
@@ -609,7 +624,7 @@ impl<'a> UncompiledFunction<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
             let cname = name.map(|name| name.to_c_str().as_ptr()).unwrap_or(ptr::null());
-            NativeRef::from_ptr(jit_insn_call(
+            from_ptr(jit_insn_call(
                 self.as_ptr(),
                 cname,
                 func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(),
@@ -625,7 +640,7 @@ impl<'a> UncompiledFunction<'a> {
                                args: &mut [&Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
-            NativeRef::from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, flags.bits() as c_int))
+            from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, flags.bits() as c_int))
         }
     }
     /// Make an instruction that calls a native function that has the signature
@@ -637,7 +652,7 @@ impl<'a> UncompiledFunction<'a> {
             let mut native_args:Vec<_> = args.iter()
                 .map(|arg| arg.as_ptr()).collect();
             let cname = name.map(|name| name.to_c_str().as_ptr()).unwrap_or(ptr::null());
-            NativeRef::from_ptr(jit_insn_call_native(
+            from_ptr(jit_insn_call_native(
                 self.as_ptr(),
                 cname,
                 native_func,
@@ -706,14 +721,14 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that allocates some space
     pub fn insn_alloca(&self, size: &Value<'a>) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_insn_alloca(self.as_ptr(), size.as_ptr()))
+            from_ptr(jit_insn_alloca(self.as_ptr(), size.as_ptr()))
         }
     }
     #[inline(always)]
     /// Make an instruction that gets the address of a value
     pub fn insn_address_of(&self, value: &Value<'a>) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_insn_address_of(self.as_ptr(), value.as_ptr()))
+            from_ptr(jit_insn_address_of(self.as_ptr(), value.as_ptr()))
         }
     }
     #[inline(always)]
@@ -725,7 +740,7 @@ impl<'a> UncompiledFunction<'a> {
                         jit_value_t) -> jit_value_t)
                     -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(f(self.as_ptr(), v1.as_ptr(), v2.as_ptr()))
+            from_ptr(f(self.as_ptr(), v1.as_ptr(), v2.as_ptr()))
         }
     }
     #[inline(always)]
@@ -736,7 +751,7 @@ impl<'a> UncompiledFunction<'a> {
                         jit_value_t) -> jit_value_t)
                     -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(f(self.as_ptr(), value.as_ptr()))
+            from_ptr(f(self.as_ptr(), value.as_ptr()))
         }
     }
     #[inline(always)]
@@ -814,7 +829,7 @@ impl<'a> UncompiledFunction<'a> {
             let ptr = self.as_ptr();
             mem::forget(self);
             jit_function_compile(ptr);
-            NativeRef::from_ptr(ptr)
+            from_ptr(ptr)
         }
     }
     #[inline(always)]

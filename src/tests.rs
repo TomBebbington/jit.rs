@@ -113,6 +113,17 @@ fn test_sqrt() {
     });
     assert_eq!(ctx.functions().count(), 1);
 }
+
+#[test]
+fn test_overflow() {
+    let mut ctx = Context::new();
+    jit_func!(ctx, func, fn add_500(num: uint) -> uint {
+        let ret = func.insn_sub_ovf(num, &func.insn_of(&500u));
+        func.insn_return(&ret);
+    }, |add_500| {
+        assert_eq!(add_500(4), 0)
+    });
+}
 #[test]
 fn test_struct() {
     let pos_t = jit_struct!{

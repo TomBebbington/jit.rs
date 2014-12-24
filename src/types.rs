@@ -6,7 +6,7 @@ use std::fmt;
 use std::kinds::marker::{ContravariantLifetime, NoCopy};
 use std::mem;
 use std::c_str::ToCStr;
-use util::{NativeRef, mod};
+use util::{mod, from_ptr, NativeRef};
 /// The integer representation of a type
 pub mod kind {
     use libc::c_int;
@@ -83,7 +83,7 @@ impl<'a> Field<'a> {
     /// Get the type of the field
     pub fn get_type(&self) -> Type {
         unsafe {
-            NativeRef::from_ptr(jit_type_get_field(self._type, self.index))
+            from_ptr(jit_type_get_field(self._type, self.index))
         }
     }
     #[inline(always)]
@@ -156,7 +156,7 @@ impl<'a> Iterator<Type> for Params<'a> {
         if self.index < self.length {
             let index = self.index;
             self.index += 1;
-            unsafe { NativeRef::from_ptr(jit_type_get_param(self._type, index)) }
+            unsafe { from_ptr(jit_type_get_param(self._type, index)) }
         } else {
             None
         }
@@ -195,7 +195,7 @@ impl Clone for Type {
     /// Make a copy of the type descriptor by increasing its reference count.
     fn clone(&self) -> Type {
         unsafe {
-            NativeRef::from_ptr(jit_type_copy(self.as_ptr()))
+            from_ptr(jit_type_copy(self.as_ptr()))
         }
     }
 }
@@ -223,7 +223,7 @@ impl Type {
         unsafe {
             let mut native_params:Vec<jit_type_t> = params.iter().map(|param| param.as_ptr()).collect();
             let signature = jit_type_create_signature(abi as jit_abi_t, return_type.as_ptr(), native_params.as_mut_ptr(), params.len() as c_uint, 1);
-            NativeRef::from_ptr(signature)
+            from_ptr(signature)
         }
     }
     #[inline(always)]
@@ -231,7 +231,7 @@ impl Type {
     pub fn create_struct(fields: &mut [Type]) -> Type {
         unsafe {
             let mut native_fields:Vec<_> = fields.iter().map(|field| field.as_ptr()).collect();
-            NativeRef::from_ptr(jit_type_create_struct(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
+            from_ptr(jit_type_create_struct(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
         }
     }
     #[inline(always)]
@@ -239,7 +239,7 @@ impl Type {
     pub fn create_union(fields: &mut [Type]) -> Type {
         unsafe {
             let mut native_fields:Vec<_> = fields.iter().map(|field| field.as_ptr()).collect();
-            NativeRef::from_ptr(jit_type_create_union(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
+            from_ptr(jit_type_create_union(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
         }
     }
     #[inline(always)]
@@ -247,7 +247,7 @@ impl Type {
     pub fn create_pointer(pointee: Type) -> Type {
         unsafe {
             let ptr = jit_type_create_pointer(pointee.as_ptr(), 1);
-            NativeRef::from_ptr(ptr)
+            from_ptr(ptr)
         }
     }
     #[inline(always)]
@@ -257,7 +257,7 @@ impl Type {
             let free_data:extern fn(*mut c_void) = free_data::<T>;
             let ty = jit_type_create_tagged(ty.as_ptr(), kind.bits(), mem::transmute(&*data), Some(free_data), 1);
             mem::forget(data);
-            NativeRef::from_ptr(ty)
+            from_ptr(ty)
         }
     }
     #[inline(always)]
@@ -286,7 +286,7 @@ impl Type {
     /// Get the type that is referred to by this pointer type.
     pub fn get_ref(&self) -> Option<Type> {
         unsafe {
-            NativeRef::from_ptr(jit_type_get_ref(self.as_ptr()))
+            from_ptr(jit_type_get_ref(self.as_ptr()))
         }
     }
 
@@ -308,7 +308,7 @@ impl Type {
     /// Get the type returned by this function type.
     pub fn get_return(&self) -> Option<Type> {
         unsafe {
-            NativeRef::from_ptr(jit_type_get_return(self.as_ptr()))
+            from_ptr(jit_type_get_return(self.as_ptr()))
         }
     }
     /// Set the field or parameter names of this type.

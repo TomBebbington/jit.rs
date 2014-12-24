@@ -5,7 +5,7 @@ use types::get;
 use libc::c_long;
 use value::Value;
 use types::Type;
-use util::NativeRef;
+use util::{from_ptr, NativeRef};
 /// A type that can be compiled into a LibJIT representation
 pub trait Compile for Sized? {
     /// Get a JIT representation of this value
@@ -22,7 +22,7 @@ impl Compile for () {
     #[inline(always)]
     fn jit_type(_:Option<()>) -> Type {
         unsafe {
-            NativeRef::from_ptr(jit_type_void)
+            from_ptr(jit_type_void)
         }
     }
 }
@@ -45,7 +45,7 @@ compile_prims!{
 impl<T:Compile> Compile for *mut T {
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(
+            from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
                 get::<*mut T>().as_ptr(),
                 self.to_uint() as c_long
@@ -60,7 +60,7 @@ impl<T:Compile> Compile for *mut T {
 impl<T:Compile> Compile for *const T {
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(
+            from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
                 get::<*const T>().as_ptr(),
                 self.to_uint() as c_long
@@ -76,7 +76,7 @@ impl<T:Compile> Compile for &'static T {
     #[inline(always)]
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_value_create_nint_constant(
+            from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
                 get::<&'static T>().as_ptr(),
                 (*self as *const T).to_uint() as c_long
