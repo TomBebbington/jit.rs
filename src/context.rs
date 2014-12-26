@@ -42,8 +42,6 @@ impl Context {
     /// Create a new JIT Context
     pub fn new() -> Context {
         unsafe {
-            //let handle_exception:extern fn(i32) -> *mut c_void = ::handle_exception;
-            //jit_exception_set_handler(Some(handle_exception));
             from_ptr(jit_context_create())
         }
     }
