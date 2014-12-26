@@ -341,9 +341,44 @@ impl Type {
     }
     #[inline(always)]
     /// Check if this is a pointer
+    pub fn is_primitive(&self) -> bool {
+        unsafe {
+            jit_type_is_primitive(self.as_ptr()) != 0
+        }
+    }
+    #[inline(always)]
+    /// Check if this is a struct
+    pub fn is_struct(&self) -> bool {
+        unsafe {
+            jit_type_is_struct(self.as_ptr()) != 0
+        }
+    }
+    #[inline(always)]
+    /// Check if this is a union
+    pub fn is_union(&self) -> bool {
+        unsafe {
+            jit_type_is_union(self.as_ptr()) != 0
+        }
+    }
+    #[inline(always)]
+    /// Check if this is a signature
+    pub fn is_signature(&self) -> bool {
+        unsafe {
+            jit_type_is_signature(self.as_ptr()) != 0
+        }
+    }
+    #[inline(always)]
+    /// Check if this is a pointer
     pub fn is_pointer(&self) -> bool {
         unsafe {
             jit_type_is_pointer(self.as_ptr()) != 0
+        }
+    }
+    #[inline(always)]
+    /// Check if this is tagged
+    pub fn is_tagged(&self) -> bool {
+        unsafe {
+            jit_type_is_tagged(self.as_ptr()) != 0
         }
     }
 }
