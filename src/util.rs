@@ -1,7 +1,7 @@
 use libc::{c_void, FILE};
 use std::c_str::CString;
 use std::mem;
-use std::ptr::RawPtr;
+use std::ptr;
 use std::fmt::Error;
 /// A structure that wraps a native object
 pub trait NativeRef {
@@ -24,7 +24,7 @@ impl<T:NativeRef> NativeRef for Option<T> {
     unsafe fn as_ptr(&self) -> *mut c_void {
         match *self {
             Some(ref v) => v.as_ptr(),
-            None => RawPtr::null()
+            None => ptr::null_mut()
         }
     }
     #[inline(always)]

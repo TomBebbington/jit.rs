@@ -10,6 +10,7 @@ use std::mem;
 use std::iter::Iterator;
 use std::c_str::ToCStr;
 use std::error::Error;
+use std::ptr;
 /// An ELF dependency iterator
 pub struct Needed<'a> {
     _reader: jit_readelf_t,
@@ -108,7 +109,7 @@ impl ReadElf {
     /// Open a new ELF binary
     pub fn new<S:ToCStr>(filename:S) -> Result<ReadElf, ReadElfError<S>> {
         unsafe {
-            let mut this = RawPtr::null();
+            let mut this = ptr::null_mut();
             let code = filename.with_c_str(|c_name|
                 jit_readelf_open(&mut this, c_name, 0)
             );
