@@ -48,7 +48,7 @@ impl<T:Compile> Compile for *mut T {
             from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
                 get::<*mut T>().as_ptr(),
-                self.to_uint() as c_long
+                *self as c_long
             ))
         }
     }
@@ -63,7 +63,7 @@ impl<T:Compile> Compile for *const T {
             from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
                 get::<*const T>().as_ptr(),
-                self.to_uint() as c_long
+                *self as c_long
             ))
         }
     }
@@ -79,7 +79,7 @@ impl<T:Compile> Compile for &'static T {
             from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
                 get::<&'static T>().as_ptr(),
-                (*self as *const T).to_uint() as c_long
+                *self as *const T as c_long
             ))
         }
     }
