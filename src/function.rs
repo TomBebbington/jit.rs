@@ -146,9 +146,10 @@ impl<'a> NativeRef for UncompiledFunction<'a> {
     /// Convert from a native pointer
     unsafe fn from_ptr(ptr:jit_function_t) -> UncompiledFunction<'a> {
         let sig = jit_function_get_signature(ptr);
+        let args = range(0, jit_type_num_params(sig)).map(|i| from_ptr(jit_value_get_param(ptr, i as c_uint))).collect::<Vec<_>>();
         UncompiledFunction {
             _func: ptr,
-            args: Vec::from_fn(jit_type_num_params(sig) as uint, |i| from_ptr(jit_value_get_param(ptr, i as c_uint))),
+            args: args,
             marker: ContravariantLifetime::<'a>,
             owned: false
         }
@@ -715,7 +716,8 @@ impl<'a> UncompiledFunction<'a> {
                                 mut args: [&Value<'a>, ..4],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice(), flags)
+        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice()
+            , flags)
     }
     #[inline(always)]
     /// Make an instruction that allocates some space
