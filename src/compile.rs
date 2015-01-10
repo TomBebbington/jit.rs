@@ -7,7 +7,7 @@ use value::Value;
 use types::Type;
 use util::{from_ptr, NativeRef};
 /// A type that can be compiled into a LibJIT representation
-pub trait Compile for Sized? {
+pub trait Compile {
     /// Get a JIT representation of this value
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a>;
     /// Get the JIT type repr of the value
@@ -29,8 +29,8 @@ impl Compile for () {
 compile_prims!{
     (f64, f64) => (jit_type_float64, jit_value_create_float64_constant),
     (f32, f32) => (jit_type_float32, jit_value_create_float32_constant),
-    (int, c_long) => (jit_type_nint, jit_value_create_nint_constant),
-    (uint, c_long) => (jit_type_nuint, jit_value_create_nint_constant),
+    (isize, c_long) => (jit_type_nint, jit_value_create_nint_constant),
+    (usize, c_long) => (jit_type_nuint, jit_value_create_nint_constant),
     (i64, c_long) => (jit_type_long, jit_value_create_long_constant),
     (u64, c_long) => (jit_type_ulong, jit_value_create_long_constant),
     (i32, c_long) => (jit_type_int, jit_value_create_nint_constant),

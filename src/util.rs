@@ -1,6 +1,4 @@
 use libc::{c_void, FILE};
-use std::c_str::CString;
-use std::mem;
 use std::ptr;
 use std::fmt::Error;
 /// A structure that wraps a native object
@@ -34,16 +32,6 @@ impl<T:NativeRef> NativeRef for Option<T> {
         } else {
             Some(from_ptr(ptr))
         }
-    }
-}
-impl NativeRef for CString {
-    #[inline(always)]
-    unsafe fn as_ptr(&self) -> *mut c_void {
-        mem::transmute(self.as_ptr())
-    }
-    #[inline(always)]
-    unsafe fn from_ptr(ptr:*mut c_void) -> CString {
-        CString::new(mem::transmute(ptr), true)
     }
 }
 

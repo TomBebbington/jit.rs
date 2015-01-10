@@ -1,6 +1,6 @@
 use raw::*;
 use function::UncompiledFunction;
-use std::kinds::marker::ContravariantLifetime;
+use std::marker::ContravariantLifetime;
 use std::fmt::{Formatter, Result, Show};
 use std::ops::*;
 use types::Type;
@@ -14,6 +14,7 @@ pub struct Value<'a> {
     _value: jit_value_t,
     marker: ContravariantLifetime<'a>
 }
+impl<'a> Copy for Value<'a> {}
 impl<'a> NativeRef for Value<'a> {
     #[inline(always)]
     /// Convert to a native pointer
@@ -31,7 +32,9 @@ impl<'a> NativeRef for Value<'a> {
 }
 impl<'a> Show for Value<'a> {
     fn fmt(&self, fmt: &mut Formatter) -> Result {
-        write!(fmt, "v({})", self.get_type())
+        try!(fmt.write_str("v("));
+        try!(self.get_type().fmt(fmt));
+        fmt.write_str(")")
     }
 }
 impl<'a> Clone for Value<'a> {
@@ -95,7 +98,8 @@ impl<'a> Value<'a> {
 }
 macro_rules! bin_op {
     ($trait_ty:ident, $trait_func:ident, $func:ident) => (
-        impl<'a> $trait_ty<Value<'a>, Value<'a>> for Value<'a> {
+        impl<'a> $trait_ty<Value<'a>> for Value<'a> {
+            type Output = Value<'a>;
             fn $trait_func(self, other: Value<'a>) -> Value {
                 self.get_function().$func(&self, &other)
             }
@@ -104,7 +108,8 @@ macro_rules! bin_op {
 }
 macro_rules! un_op {
     ($trait_ty:ident, $trait_func:ident, $func:ident) => (
-        impl<'a> $trait_ty<Value<'a>> for Value<'a> {
+        impl<'a> $trait_ty for Value<'a> {
+            type Output = Value<'a>;
             fn $trait_func(self) -> Value<'a> {
                 self.get_function().$func(&self)
             }

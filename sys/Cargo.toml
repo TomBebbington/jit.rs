@@ -1,6 +1,6 @@
 [package]
 name = "libjit-sys"
-version = "0.1.4"
+version = "0.1.5"
 description = "Just-In-Time Compilation in Rust using LibJIT bindings"
 authors = ["Tom Bebbington <tophattedcoder@gmail.com>"]
 keywords = [ "compile", "compiler", "jit", "interpreter" ]
@@ -14,5 +14,5 @@ build = "build.rs"
 name = "libjit-sys"
 path = "lib.rs"
 
-[build-dependencies]
-pkg-config = "*"
+[build-dependencies.pkg-config]
+git = "https://github.com/alexcrichton/pkg-config-rs"

@@ -30,14 +30,19 @@ impl Compile for $ty {
     }
 });
 );
-
+macro_rules! compile_ptr(
+    ($func:expr, $ptr:expr) => (unsafe {
+        use std::mem;
+        let ptr = mem::transmute::<_, usize>($ptr);
+        ptr.compile($func)
+    })
+);
 macro_rules! compile_func(
     (fn($($arg:ident),*) -> $ret:ty, $sig:ty, $ext_sig:ty) => (
         impl<$($arg:Compile,)* R:Compile> Compile for $sig {
             #[inline(always)]
             fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
-                let ptr = (self as *const $sig).to_uint().compile(func);
-                func.insn_convert(&ptr, get::<$sig>(), false)
+                compile_ptr!(func, self)
             }
             #[inline(always)]
             fn jit_type(_:Option<$sig>) -> Type {
@@ -47,8 +52,7 @@ macro_rules! compile_func(
         impl<$($arg:Compile,)* R:Compile> Compile for $ext_sig {
             #[inline(always)]
             fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
-                let ptr = (self as *const $ext_sig).to_uint().compile(func);
-                func.insn_convert(&ptr, get::<$ext_sig>(), false)
+                compile_ptr!(func, self)
             }
             #[inline(always)]
             fn jit_type(_:Option<$ext_sig>) -> Type {
@@ -67,7 +71,7 @@ macro_rules! compile_tuple(
                 let tuple = Value::new(func, ty.clone());
                 let ($(ref $name),+) = ($(func.insn_of($name)),+);
                 let mut fields = ty.fields();
-                $(func.insn_store_relative(&tuple, fields.next().unwrap().get_offset() as int, $name);)+
+                $(func.insn_store_relative(&tuple, fields.next().unwrap().get_offset() as isize, $name);)+
                 tuple
             }
             #[inline(always)]

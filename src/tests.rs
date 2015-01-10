@@ -3,19 +3,17 @@ use context::Context;
 use get;
 use std::default::Default;
 use types::Type;
-use types::kind::*;
-use function::{Function, flags};
-use label::Label;
+use function::flags;
 use test::Bencher;
+use std::num::Float;
 macro_rules! test_compile(
     ($ty:ty, $test_name:ident, $kind:expr) => (
         #[test]
         fn $test_name() {
             let default_value:$ty = Default::default();
             let mut ctx = Context::new();
-            jit_func!(ctx, func, fn gen_value() -> $ty {
+            jit_func!(ctx, func, gen_value() -> $ty, {
                 let ref val = func.insn_of(&default_value);
-                assert!(val.get_type().get_kind() == $kind);
                 func.insn_return(val);
             }, |func| {
                 assert_eq!(func(()), default_value);
@@ -35,13 +33,16 @@ fn bench_raw_pi(b: &mut Bencher) {
         }
         pi
     }
-    b.iter(|| raw_pi());
+    b.iter(|| {
+        let pi = raw_pi();
+        assert!((pi - 3.1415).abs() < 0.01);
+    });
 }
 #[bench]
 fn bench_pi(b: &mut Bencher) {
     let mut ctx = Context::new();
-    jit_func!(ctx, func, fn pi() -> f64 {
-        let f64_size = func.insn_of(&8u);
+    jit_func!(ctx, func, pi() -> f64, {
+        let f64_size = func.insn_of(&8us);
         let four = func.insn_of(&4.0f64);
         let three = func.insn_of(&3.0f64);
         let two = func.insn_of(&2.0f64);
@@ -62,12 +63,15 @@ fn bench_pi(b: &mut Bencher) {
         });
         func.insn_return(&func.insn_load_relative(&pi, 0, get::<f64>()));
     }, |pi| {
-        b.iter(|| pi(()));
+        b.iter(||{
+            let pi = pi(());
+            assert!((pi - 3.1415).abs() < 0.01);
+        });
     });
 }
 #[bench]
 fn bench_raw_gcd(b: &mut Bencher) {
-    fn gcd(x: uint, y: uint) -> uint {
+    fn gcd(x: usize, y: usize) -> usize {
         if x == y {
             x
         } else if x < y {
@@ -82,7 +86,7 @@ fn bench_raw_gcd(b: &mut Bencher) {
 #[bench]
 fn bench_gcd(b: &mut Bencher) {
     let mut ctx = Context::new();
-    jit_func!(ctx, func, fn gcd(x: uint, y:uint) -> uint {
+    jit_func!(ctx, func, gcd(x: usize, y:usize) -> usize, {
         func.insn_if(&func.insn_eq(x, y), || func.insn_return(x));
         func.insn_if(&func.insn_lt(x, y), || {
             let mut args = [x, &(*y - *x)];
@@ -100,9 +104,9 @@ fn bench_gcd(b: &mut Bencher) {
 fn test_sqrt() {
     let mut ctx = Context::new();
     assert_eq!(ctx.functions().count(), 0);
-    jit_func!(ctx, func, fn sqrt(num: uint) -> uint {
+    jit_func!(ctx, func, sqrt(num: usize) -> usize, {
         let sqrt = func.insn_sqrt(num);
-        let sqrt_arg_ui = func.insn_convert(&sqrt, get::<uint>(), false);
+        let sqrt_arg_ui = func.insn_convert(&sqrt, get::<usize>(), false);
         func.insn_return(&sqrt_arg_ui);
     }, |sqrt| {
         assert_eq!(sqrt(64), 8);
@@ -121,8 +125,7 @@ fn test_struct() {
         y: f64
     };
     for (i, field) in pos_t.fields().enumerate() {
-        assert_eq!(field.get_type(), get::<f64>());
-        assert_eq!(field.get_name().unwrap()[], match i {
+        assert_eq!(field.get_name().unwrap(), match i {
             0 => "x",
             1 => "y",
             _ => unimplemented!()
@@ -145,15 +148,15 @@ fn test_tags() {
         y: f64
     };
     let kind = pos_t.get_kind();
-    let pos_t = Type::create_tagged(pos_t, kind, box PanicDrop{val: 323});
+    let pos_t = Type::create_tagged(pos_t, kind, Box::new(PanicDrop{val: 323}));
     assert_eq!(pos_t.get_tagged_data::<PanicDrop>().map(|v| v.val), Some(323));
 }
 
 test_compile!((), test_compile_void, Void);
 test_compile!(f64, test_compile_f64, Float64);
 test_compile!(f32, test_compile_f32, Float32);
-test_compile!(int, test_compile_int, NInt);
-test_compile!(uint, test_compile_uint, NUInt);
+test_compile!(isize, test_compile_isize, NInt);
+test_compile!(usize, test_compile_usize, NUInt);
 test_compile!(i32, test_compile_i32, Int);
 test_compile!(u32, test_compile_u32, UInt);
 test_compile!(i16, test_compile_i16, Short);

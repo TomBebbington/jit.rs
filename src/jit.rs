@@ -24,37 +24,38 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #![crate_name = "jit"]
-#![allow(raw_pointer_deriving, dead_code, non_camel_case_types, non_upper_case_globals, unknown_features)]
+#![allow(raw_pointer_derive, dead_code, non_camel_case_types, non_upper_case_globals, unused_attributes, unstable)]
 #![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
-#![feature(default_type_params, globs, macro_rules, slicing_syntax, unboxed_closures, unsafe_destructor, phase)]
+#![feature(plugin, slicing_syntax, unboxed_closures, unsafe_destructor)]
 #![stable]
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
 //! 
 //! ```rust
-//! #![feature(phase)]
+//! #![feature(plugin)]
 //! extern crate jit;
-//! #[phase(plugin)]
+//! #[no_link] #[plugin] #[macro_use]
 //! extern crate jit_macros;
 //! use jit::{Context, get, Type};
 //! fn main() {
 //!     // make a new context to make functions on
 //!     let mut ctx = Context::new();
-//!     jit_func!(ctx, func, fn mul(x: int, y: int) -> int {
-//!         let result = func.insn_mul(x, y);
+//!     jit_func!(ctx, func, mul(x: isize, y: isize) -> isize, {
+//!         let mut result = func.insn_mul(x, y);
 //!         func.insn_return(&result);
 //!     }, |mul| {
 //!         assert_eq!(mul((4, 5)), 20);
 //!     });
 //! }
 //! ```
+#[no_link]
+#[plugin]
+#[macro_use]
+extern crate jit_macros;
 extern crate libc;
 #[cfg(test)]
 extern crate test;
 extern crate "libjit-sys" as raw;
-#[cfg(test)]
-#[phase(plugin)]
-extern crate jit_macros;
 use raw::*;
 pub use compile::Compile;
 pub use context::{Builder, Context};
@@ -95,7 +96,7 @@ pub fn supports_virtual_memory() -> bool {
         jit_supports_virtual_memory() != 0
     }
 }
-#[macro_escape]
+#[macro_use]
 mod macros;
 mod context;
 mod compile;

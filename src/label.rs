@@ -3,7 +3,7 @@ use raw::{
     jit_function_reserve_label
 };
 use function::UncompiledFunction;
-use std::kinds::marker::ContravariantLifetime;
+use std::marker::ContravariantLifetime;
 use std::fmt::{Show, Result, Formatter};
 use util::NativeRef;
 #[deriving(PartialEq)]
@@ -30,7 +30,7 @@ impl<'a> Label<'a> {
     }
     /// Get the value of this label
     #[inline(always)]
-    pub fn get_value(&self) -> uint {
-        self._label as uint
+    pub fn get_value(&self) -> usize {
+        self._label as usize
     }
 }

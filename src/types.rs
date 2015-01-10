@@ -2,11 +2,10 @@ use raw::*;
 use compile::Compile;
 use function::ABI;
 use libc::{c_uint, c_void};
-use std::fmt;
-use std::kinds::marker::{ContravariantLifetime, NoCopy};
-use std::mem;
-use std::c_str::ToCStr;
-use util::{mod, from_ptr, NativeRef};
+use std::marker::{ContravariantLifetime, NoCopy};
+use std::{fmt, mem};
+use std::ffi::{self, CString};
+use util::{self, from_ptr, NativeRef};
 /// The integer representation of a type
 pub mod kind {
     use libc::c_int;
@@ -40,7 +39,8 @@ impl fmt::Show for Type {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let kind = self.get_kind();
         if kind.contains(kind::Pointer) {
-            write!(fmt, "*mut {}", self.get_ref().unwrap())
+            try!(fmt.write_str("*mut "));
+            self.get_ref().unwrap().fmt(fmt)
         } else if kind.contains(kind::Signature) {
             try!("fn(".fmt(fmt));
             for arg in self.params() {
@@ -75,7 +75,8 @@ impl<'a> Field<'a> {
             if c_name.is_null() {
                 None
             } else {
-                Some(String::from_raw_buf(mem::transmute(c_name)))
+                let bytes = ffi::c_str_to_bytes(&c_name);
+                Some(String::from_utf8_lossy(bytes).into_owned())
             }
         }
     }
@@ -88,9 +89,9 @@ impl<'a> Field<'a> {
     }
     #[inline(always)]
     /// Get the offset of the field
-    pub fn get_offset(&self) -> uint {
+    pub fn get_offset(&self) -> usize {
         unsafe {
-            jit_type_get_offset(self._type, self.index) as uint
+            jit_type_get_offset(self._type, self.index) as usize
         }
     }
 }
@@ -114,7 +115,8 @@ impl<'a> Fields<'a> {
         }
     }
 }
-impl<'a> Iterator<Field<'a>> for Fields<'a> {
+impl<'a> Iterator for Fields<'a> {
+    type Item = Field<'a>;
     fn next(&mut self) -> Option<Field<'a>> {
         if self.index < self.length {
             let index = self.index;
@@ -128,8 +130,8 @@ impl<'a> Iterator<Field<'a>> for Fields<'a> {
             None
         }
     }
-    fn size_hint(&self) -> (uint, Option<uint>) {
-        ((self.length - self.index) as uint, None)
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        ((self.length - self.index) as usize, None)
     }
 }
 /// Iterator through all the arguments a function takes
@@ -151,7 +153,8 @@ impl<'a> Params<'a> {
         }
     }
 }
-impl<'a> Iterator<Type> for Params<'a> {
+impl<'a> Iterator for Params<'a> {
+    type Item = Type;
     fn next(&mut self) -> Option<Type> {
         if self.index < self.length {
             let index = self.index;
@@ -162,8 +165,8 @@ impl<'a> Iterator<Type> for Params<'a> {
         }
     }
     #[inline]
-    fn size_hint(&self) -> (uint, Option<uint>) {
-        ((self.length - self.index) as uint, None)
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        ((self.length - self.index) as usize, None)
     }
 }
 /// An object that represents a native system type.
@@ -262,16 +265,16 @@ impl Type {
     }
     #[inline(always)]
     /// Get the size of this type in bytes.
-    pub fn get_size(&self) -> uint {
+    pub fn get_size(&self) -> usize {
         unsafe {
-            jit_type_get_size(self.as_ptr()) as uint
+            jit_type_get_size(self.as_ptr()) as usize
         }
     }
     #[inline(always)]
     /// Get the alignment of this type in bytes.
-    pub fn get_alignment(&self) -> uint {
+    pub fn get_alignment(&self) -> usize {
         unsafe {
-            jit_type_get_alignment(self.as_ptr()) as uint
+            jit_type_get_alignment(self.as_ptr()) as usize
         }
     }
     #[inline]
@@ -312,10 +315,11 @@ impl Type {
         }
     }
     /// Set the field or parameter names of this type.
-    pub fn set_names<T:ToCStr>(&self, names:&[T]) -> bool {
+    pub fn set_names(&self, names:&[&str]) -> bool {
         unsafe {
-            let native_names : Vec<*const i8> = names.iter().map(|name| name.to_c_str().into_inner()).collect();
-            jit_type_set_names(self.as_ptr(), native_names.as_ptr() as *mut *mut i8, names.len() as u32) != 0
+            let names = names.iter().map(|name| CString::from_slice(name.as_bytes())).collect::<Vec<_>>();
+            let mut c_names = names.iter().map(|name| mem::transmute(name.as_ptr())).collect::<Vec<_>>();
+            jit_type_set_names(self.as_ptr(), c_names.as_mut_ptr(), names.len() as u32) != 0
         }
     }
     #[inline(always)]
@@ -330,14 +334,15 @@ impl Type {
     }
     #[inline]
     /// Find the field/parameter index for a particular name.
-    pub fn find_name<'b, T:ToCStr>(&'b self, name:T) -> Field<'b> {
-        name.with_c_str(|c_name| unsafe {
+    pub fn find_name<'a>(&'a self, name:&str) -> Field<'a> {
+        unsafe {
+            let c_name = CString::from_slice(name.as_bytes());
             Field {
-                index: jit_type_find_name(self.as_ptr(), c_name),
+                index: jit_type_find_name(self.as_ptr(), mem::transmute(c_name.as_ptr())),
                 _type: self.as_ptr(),
-                marker: ContravariantLifetime::<'b>
+                marker: ContravariantLifetime::<'a>
             }
-        })
+        }
     }
     #[inline(always)]
     /// Check if this is a pointer

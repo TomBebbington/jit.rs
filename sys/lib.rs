@@ -1,5 +1,4 @@
-#![allow(bad_style, missing_copy_implementations)]
-#![feature(globs)]
+#![allow(bad_style, missing_copy_implementations, unstable)]
 
 extern crate libc;
 use libc::*;
@@ -212,7 +211,7 @@ pub struct jit_unwind_context_t {
 }
 #[repr(C)]
 pub struct Union_Unnamed1 {
-    pub data: [u8, ..16u],
+    pub data: [u8; 16us],
 }
 impl Union_Unnamed1 {
     pub fn ptr_value(&mut self) -> *mut *mut c_void {
@@ -292,7 +291,7 @@ extern "C" {
     pub static jit_type_sys_float: jit_type_t;
     pub static jit_type_sys_double: jit_type_t;
     pub static jit_type_sys_long_double: jit_type_t;
-    pub static mut jit_opcodes: [jit_opcode_info_t, ..439u];
+    pub static mut jit_opcodes: [jit_opcode_info_t; 439us];
     pub fn jit_default_memory_manager() -> jit_memory_manager_t;
     pub fn jit_context_create() -> jit_context_t;
     pub fn jit_context_destroy(context: jit_context_t);
@@ -1480,10 +1479,6 @@ extern "C" {
      *mut c_char;
     pub fn jit_strrchr(str: *const c_char, ch: c_int) ->
      *mut c_char;
-    pub fn jit_sprintf(str: *mut c_char, format: *const c_char, ...)
-     -> c_int;
-    pub fn jit_snprintf(str: *mut c_char, len: c_uint,
-                        format: *const c_char, ...) -> c_int;
     pub fn jit_value_create(func: jit_function_t, _type: jit_type_t) ->
      jit_value_t;
     pub fn jit_value_create_nint_constant(func: jit_function_t,

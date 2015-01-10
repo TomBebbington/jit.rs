@@ -1,7 +1,7 @@
 use raw::*;
 use std::mem;
 use std::ptr;
-use std::kinds::marker::{ContravariantLifetime, NoCopy, NoSync, NoSend};
+use std::marker::{ContravariantLifetime, NoCopy, NoSync, NoSend};
 use util::{from_ptr, NativeRef};
 use {AnyFunction, CompiledFunction, Type, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
@@ -94,7 +94,8 @@ pub struct Functions<'a> {
     last: jit_function_t,
     lifetime: ContravariantLifetime<'a>
 }
-impl<'a> Iterator<AnyFunction<'a>> for Functions<'a> {
+impl<'a> Iterator for Functions<'a> {
+    type Item = AnyFunction<'a>;
     fn next(&mut self) -> Option<AnyFunction<'a>> {
         unsafe {
             self.last = jit_function_next(self.context, self.last);

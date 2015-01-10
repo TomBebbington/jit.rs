@@ -1,3 +1,4 @@
+#![allow(unstable)]
 #[cfg(not(windows))]
 extern crate "pkg-config" as pkg_config;
 use std::io::fs::PathExtensions;
@@ -39,7 +40,7 @@ fn run(command: &mut Command) {
 	println!("{}" , command);
 	match command.output() {
 		Ok(ref process) if !process.status.success() => {
-			panic!("failed with output: \n{}\n{}", String::from_utf8_lossy(process.output[]), String::from_utf8_lossy(process.error[]));
+			panic!("failed with output: \n{}\n{}", String::from_utf8_lossy(&*process.output), String::from_utf8_lossy(&*process.error));
 		},
 		Ok(_) => (),
 		Err(err) => panic!("failed due to {}", err)

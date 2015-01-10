@@ -3,22 +3,20 @@ use context::Builder;
 use compile::Compile;
 use label::Label;
 use types::Type;
-use util::{mod, from_ptr, NativeRef};
+use util::{self, from_ptr, NativeRef};
 use value::Value;
 use libc::{
     c_int,
     c_uint,
     c_void
 };
-use std::c_str::ToCStr;
 use std::default::Default;
 use std::fmt::{Formatter, Show, Result};
 use std::ops::Index;
-use std::kinds::marker::ContravariantLifetime;
-use std::mem;
-use std::ptr;
+use std::marker::ContravariantLifetime;
+use std::{mem, ptr};
+use std::ffi::CString;
 /// A platform's application binary interface
-#[deriving(Copy)]
 #[repr(C)]
 pub enum ABI {
     /// The C application binary interface
@@ -30,6 +28,7 @@ pub enum ABI {
     /// A Windows application binary interface
     FASTCALL
 }
+impl Copy for ABI {}
 impl Default for ABI {
     fn default() -> ABI {
         ABI::CDECL
@@ -178,9 +177,10 @@ impl<'a> Drop for UncompiledFunction<'a> {
         }
     }
 }
-impl<'a> Index<uint, Value<'a>> for UncompiledFunction<'a> {
+impl<'a> Index<usize> for UncompiledFunction<'a> {
+    type Output = Value<'a>;
     /// Get the value that corresponds to a specified function parameter.
-    fn index(&self, param: &uint) -> &Value<'a> {
+    fn index(&self, param: &usize) -> &Value<'a> {
         &self.args[*param]
     }
 }
@@ -409,7 +409,7 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that loads a value from a src value
-    pub fn insn_load_relative(&self, src: &Value<'a>, offset: int, ty:Type) -> Value<'a> {
+    pub fn insn_load_relative(&self, src: &Value<'a>, offset: isize, ty:Type) -> Value<'a> {
         unsafe {
             from_ptr(jit_insn_load_relative(
                 self.as_ptr(),
@@ -429,7 +429,7 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that stores a value a certain offset away from a
     /// destination value
-    pub fn insn_store_relative(&self, dest: &Value<'a>, offset: int, 
+    pub fn insn_store_relative(&self, dest: &Value<'a>, offset: isize, 
                                src: &Value<'a>) {
         unsafe {
             jit_insn_store_relative(self.as_ptr(), dest.as_ptr(), offset as jit_nint, src.as_ptr());
@@ -620,14 +620,14 @@ impl<'a> UncompiledFunction<'a> {
     }
 
     /// Call the function, which may or may not be translated yet
-    pub fn insn_call<S:ToCStr, F:Function<'a>>(&self, name:Option<S>, func:&F,
+    pub fn insn_call<F:Function<'a>>(&self, name:Option<&str>, func:&F,
                             sig:Option<Type>, args: &mut [&Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
-            let cname = name.map(|name| name.to_c_str().as_ptr()).unwrap_or(ptr::null());
+            let c_name = name.map(|name| CString::from_slice(name.as_bytes()));
             from_ptr(jit_insn_call(
                 self.as_ptr(),
-                cname,
+                c_name.map(|name| mem::transmute(name.as_ptr())).unwrap_or(ptr::null_mut()),
                 func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(),
                 args.len() as c_uint,
                 flags.bits()
@@ -646,16 +646,16 @@ impl<'a> UncompiledFunction<'a> {
     }
     /// Make an instruction that calls a native function that has the signature
     /// given with some arguments
-    fn insn_call_native<S:ToCStr>(&self, name: Option<S>,
+    fn insn_call_native(&self, name: Option<&str>,
                         native_func: *mut c_void, signature: Type,
                         args: &mut [&Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter()
                 .map(|arg| arg.as_ptr()).collect();
-            let cname = name.map(|name| name.to_c_str().as_ptr()).unwrap_or(ptr::null());
+            let c_name = name.map(|name| CString::from_slice(name.as_bytes()));
             from_ptr(jit_insn_call_native(
                 self.as_ptr(),
-                cname,
+                c_name.map(|name| mem::transmute(name.as_ptr())).unwrap_or(ptr::null_mut()),
                 native_func,
                 signature.as_ptr(),
                 native_args.as_mut_ptr(),
@@ -667,7 +667,7 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that calls a Rust function that has the signature
     /// given with no arguments and expects a return value
-    pub fn insn_call_native0<R, S:ToCStr>(&self, name: Option<S>,
+    pub fn insn_call_native0<R>(&self, name: Option<&str>,
                             native_func: extern fn() -> R,
                             signature: Type,
                             flags: flags::CallFlags) -> Value<'a> {
@@ -677,10 +677,10 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that calls a Rust function that has the signature
     /// given with a single argument and expects a return value
-    pub fn insn_call_native1<A,R, S:ToCStr>(&self, name: Option<S>,
+    pub fn insn_call_native1<A,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A) -> R,
                                 signature: Type,
-                                mut args: [&Value<'a>, ..1],
+                                mut args: [&Value<'a>; 1],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, args.as_mut_slice(), flags)
@@ -688,10 +688,10 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that calls a Rust function that has the signature
     /// given with two arguments and expects a return value
-    pub fn insn_call_native2<A,B,R, S:ToCStr>(&self, name: Option<S>,
+    pub fn insn_call_native2<A,B,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A, B) -> R,
                                 signature: Type,
-                                mut args: [&Value<'a>, ..2],
+                                mut args: [&Value<'a>; 2],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, args.as_mut_slice(), flags)
@@ -699,10 +699,10 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that calls a Rust function that has the signature
     /// given with three arguments and expects a return value
-    pub fn insn_call_native3<A,B,C,R, S:ToCStr>(&self, name: Option<S>,
+    pub fn insn_call_native3<A,B,C,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A, B, C) -> R,
                                 signature: Type,
-                                mut args: [&Value<'a>, ..3],
+                                mut args: [&Value<'a>; 3],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, args.as_mut_slice(), flags)
@@ -710,10 +710,10 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that calls a Rust function that has the signature
     /// given with four arguments and expects a return value
-    pub fn insn_call_native4<A,B,C,D,R, S:ToCStr>(&self, name: Option<S>,
+    pub fn insn_call_native4<A,B,C,D,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A, B, C, D) -> R,
                                 signature: Type,
-                                mut args: [&Value<'a>, ..4],
+                                mut args: [&Value<'a>; 4],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, args.as_mut_slice()

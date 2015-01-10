@@ -1,4 +1,5 @@
-#![feature(macro_rules, slicing_syntax)]
+#![feature(slicing_syntax)]
+#![allow(unstable)]
 extern crate jit;
 
 use jit::{Context, UncompiledFunction, Label, flags, get};
@@ -12,7 +13,7 @@ use std::rc::Rc;
 
 macro_rules! count(
     ($func:ident, $code:ident, $curr:ident) => ({
-        let mut amount = 1u;
+        let mut amount = 1us;
         while $code.peek() == Some(&$curr) {
             amount += 1;
             $code.next();
@@ -47,13 +48,13 @@ impl<'a> Loop<'a> {
     }
 }
 
-fn compile<'a, T:Iterator<char>>(func: &UncompiledFunction<'a>, code: T) {
+fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
     let ubyte = get::<u8>();
     let putchar_sig = get::<fn(u8)>();
     let readchar_sig = get::<fn() -> u8>();
     let ref data = func[0];
     let mut current_loop = None;
-    let mut code = code.peekable();
+    let mut code = code.chars().peekable();
     while let Some(c) = code.next() {
         match c {
             '>' => {
@@ -118,9 +119,9 @@ fn compile<'a, T:Iterator<char>>(func: &UncompiledFunction<'a>, code: T) {
 }
 fn run(ctx: &mut Context, code: &str) {
     let sig = get::<fn(*mut u8)>();
-    let func = ctx.build_func(sig, |func| compile(func, code.chars()));
+    let func = ctx.build_func(sig, |func| compile(func, code));
     func.with(|func:extern fn(*mut u8)| {
-        let mut data: [u8, ..3000] = unsafe { mem::zeroed() };
+        let mut data: [u8; 3000] = unsafe { mem::zeroed() };
         func(data.as_mut_ptr());
     });
 }
@@ -128,14 +129,14 @@ fn main() {
     let mut ctx = Context::new();
     match os::args().tail() {
         [ref script] => {
-            let ref script = Path::new(script[]);
+            let ref script = Path::new(script.as_slice());
             let contents = File::open(script).unwrap().read_to_string().unwrap();
-            run(&mut ctx, contents[]);
+            run(&mut ctx, contents.as_slice());
         },
         [] => {
             io::print(PROMPT);
             for line in io::stdin().lock().lines() {
-                run(&mut ctx, line.unwrap()[]);
+                run(&mut ctx, line.unwrap().as_slice());
                 io::print(PROMPT);
             }
         },
