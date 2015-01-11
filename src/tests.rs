@@ -13,7 +13,7 @@ macro_rules! test_compile(
             let default_value:$ty = Default::default();
             let mut ctx = Context::new();
             jit_func!(ctx, func, gen_value() -> $ty, {
-                let ref val = func.insn_of(&default_value);
+                let val = func.insn_of(&default_value);
                 func.insn_return(val);
             }, |func| {
                 assert_eq!(func(()), default_value);
@@ -47,21 +47,21 @@ fn bench_pi(b: &mut Bencher) {
         let three = func.insn_of(&3.0f64);
         let two = func.insn_of(&2.0f64);
         let one = func.insn_of(&1.0f64);
-        let pi = func.insn_alloca(&f64_size);
-        func.insn_store_relative(&pi, 0, &three);
-        let n = func.insn_alloca(&f64_size);
-        func.insn_store(&n, &two);
+        let pi = func.insn_alloca(f64_size);
+        func.insn_store_relative(pi, 0, three);
+        let n = func.insn_alloca(f64_size);
+        func.insn_store(n, two);
         let limit = func.insn_of(&100.0f64);
-        func.insn_while(|| func.insn_lt(&func.insn_load(&n), &limit), || {
-            let ln = func.insn_load(&n);
+        func.insn_while(|| func.insn_lt(func.insn_load(n), limit), || {
+            let ln = func.insn_load(n);
             let n_two = ln + two;
             let first_part = four / (ln * (ln + one) * n_two);
             let second_part = four / (n_two * (ln + three) * (ln + four));
             let new_pi = first_part - second_part;
-            func.insn_store_relative(&pi, 0, &(func.insn_load_relative(&pi, 0, get::<f64>()) + new_pi));
-            func.insn_store(&n, &(ln + four));
+            func.insn_store_relative(pi, 0, func.insn_load_relative(pi, 0, get::<f64>()) + new_pi);
+            func.insn_store(n, ln + four);
         });
-        func.insn_return(&func.insn_load_relative(&pi, 0, get::<f64>()));
+        func.insn_return(func.insn_load_relative(pi, 0, get::<f64>()));
     }, |pi| {
         b.iter(||{
             let pi = pi(());
@@ -87,15 +87,15 @@ fn bench_raw_gcd(b: &mut Bencher) {
 fn bench_gcd(b: &mut Bencher) {
     let mut ctx = Context::new();
     jit_func!(ctx, func, gcd(x: usize, y:usize) -> usize, {
-        func.insn_if(&func.insn_eq(x, y), || func.insn_return(x));
-        func.insn_if(&func.insn_lt(x, y), || {
-            let mut args = [x, &(*y - *x)];
+        func.insn_if(func.insn_eq(x, y), || func.insn_return(x));
+        func.insn_if(func.insn_lt(x, y), || {
+            let mut args = [x, y - x];
             let v = func.insn_call(Some("gcd"), func, None, args.as_mut_slice(), flags::JIT_CALL_NO_THROW);
-            func.insn_return(&v);
+            func.insn_return(v);
         });
-        let mut args = [&(*x - *y), y];
+        let mut args = [x - y, y];
         let temp4 = func.insn_call(Some("gcd"), func, None, args.as_mut_slice(), flags::JIT_CALL_NO_THROW);
-        func.insn_return(&temp4);
+        func.insn_return(temp4);
     }, |gcd| {
         b.iter(|| gcd((70, 81)));
     });
@@ -106,8 +106,8 @@ fn test_sqrt() {
     assert_eq!(ctx.functions().count(), 0);
     jit_func!(ctx, func, sqrt(num: usize) -> usize, {
         let sqrt = func.insn_sqrt(num);
-        let sqrt_arg_ui = func.insn_convert(&sqrt, get::<usize>(), false);
-        func.insn_return(&sqrt_arg_ui);
+        let sqrt_arg_ui = func.insn_convert(sqrt, get::<usize>(), false);
+        func.insn_return(sqrt_arg_ui);
     }, |sqrt| {
         assert_eq!(sqrt(64), 8);
         assert_eq!(sqrt(16), 4);

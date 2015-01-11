@@ -69,9 +69,9 @@ macro_rules! compile_tuple(
                 let ($(ref $name),+) = *self;
                 let ty = get::<($($ty),+)>();
                 let tuple = Value::new(func, ty.clone());
-                let ($(ref $name),+) = ($(func.insn_of($name)),+);
+                let ($($name),+) = ($(func.insn_of($name)),+);
                 let mut fields = ty.fields();
-                $(func.insn_store_relative(&tuple, fields.next().unwrap().get_offset() as isize, $name);)+
+                $(func.insn_store_relative(tuple, fields.next().unwrap().get_offset() as isize, $name);)+
                 tuple
             }
             #[inline(always)]

@@ -101,7 +101,7 @@ macro_rules! bin_op {
         impl<'a> $trait_ty<Value<'a>> for Value<'a> {
             type Output = Value<'a>;
             fn $trait_func(self, other: Value<'a>) -> Value {
-                self.get_function().$func(&self, &other)
+                self.get_function().$func(self, other)
             }
         }
     )
@@ -111,7 +111,7 @@ macro_rules! un_op {
         impl<'a> $trait_ty for Value<'a> {
             type Output = Value<'a>;
             fn $trait_func(self) -> Value<'a> {
-                self.get_function().$func(&self)
+                self.get_function().$func(self)
             }
         }
     )

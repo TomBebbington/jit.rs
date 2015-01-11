@@ -122,7 +122,7 @@ macro_rules! jit_func(
             let mut i = 0u;
             $(let $arg = {
                 i += 1;
-                &$func[i - 1]
+                $func[i - 1]
             };)*
             $value
         })
@@ -140,7 +140,7 @@ macro_rules! jit_func(
             let mut i = 0us;
             $(let $arg = {
                 i += 1;
-                &$func[i - 1]
+                $func[i - 1]
             };)*
             $value
         }).with::<($($arg_ty),*), $ret, _>(|$comp_func|

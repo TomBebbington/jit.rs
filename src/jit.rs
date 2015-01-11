@@ -41,8 +41,8 @@
 //!     // make a new context to make functions on
 //!     let mut ctx = Context::new();
 //!     jit_func!(ctx, func, mul(x: isize, y: isize) -> isize, {
-//!         let mut result = func.insn_mul(x, y);
-//!         func.insn_return(&result);
+//!         let result = x * y;
+//!         func.insn_return(result);
 //!     }, |mul| {
 //!         assert_eq!(mul((4, 5)), 20);
 //!     });
