@@ -91,6 +91,12 @@ macro_rules! compile_prims(
 
 macro_rules! native_ref(
     ($name:ident, $field:ident, $pointer_ty:ty) => (
+        impl PartialEq for $name {
+            fn eq(&self, other: &$name) -> bool {
+                self.$field == other.$field
+            }
+        }
+        impl Eq for $name {}
         impl NativeRef for $name {
             #[inline(always)]
             /// Convert to a native pointer
@@ -107,6 +113,12 @@ macro_rules! native_ref(
         }
     );
     ($name:ident, $field:ident, $pointer_ty:ty, $lifetime:ident) => (
+        impl<'a> PartialEq for $name<'a> {
+            fn eq(&self, other: &$name<'a>) -> bool {
+                self.$field == other.$field
+            }
+        }
+        impl<'a> Eq for $name<'a> {}
         impl<'a> NativeRef for $name<'a> {
             #[inline]
             /// Convert to a native pointer
