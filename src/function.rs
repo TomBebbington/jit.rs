@@ -439,30 +439,28 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that sets a label
     pub fn insn_label(&self, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_label(self.as_ptr(), &mut (label.get_value() as jit_label_t));
+            jit_insn_label(self.as_ptr(), &mut **label);
         }
     }
     #[inline(always)]
     /// Make an instruction that branches to a certain label
     pub fn insn_branch(&self, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_branch(self.as_ptr(), &mut (label.get_value() as jit_label_t));
+            jit_insn_branch(self.as_ptr(), &mut **label);
         }
     }
     #[inline(always)]
     /// Make an instruction that branches to a certain label if the value is true
     pub fn insn_branch_if(&self, value: Value<'a>, label: &mut Label<'a>) {
         unsafe {
-            let mut native_label = label.get_value() as jit_label_t;
-            jit_insn_branch_if(self.as_ptr(), value.as_ptr(), &mut native_label);
+            jit_insn_branch_if(self.as_ptr(), value.as_ptr(), &mut **label);
         }
     }
     #[inline(always)]
     /// Make an instruction that branches to a certain label if the value is false
     pub fn insn_branch_if_not(&self, value: Value<'a>, label: &mut Label<'a>) {
         unsafe {
-            let mut native_label = label.get_value() as jit_label_t;
-            jit_insn_branch_if_not(self.as_ptr(), value.as_ptr(), &mut native_label);
+            jit_insn_branch_if_not(self.as_ptr(), value.as_ptr(), &mut **label);
         }
     }
     #[inline(always)]
@@ -470,7 +468,7 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_jump_table(&self, value: Value<'a>, labels: &mut [Label<'a>]) {
         unsafe {
             let mut native_labels: Vec<_> = labels.iter()
-                .map(|label|label.get_value() as jit_label_t).collect();
+                .map(|label| **label).collect();
             jit_insn_jump_table(
                 self.as_ptr(),
                 value.as_ptr(),

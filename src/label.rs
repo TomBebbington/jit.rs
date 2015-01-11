@@ -5,6 +5,7 @@ use raw::{
 use function::UncompiledFunction;
 use std::marker::ContravariantLifetime;
 use std::fmt::{Show, Result, Formatter};
+use std::ops::{Deref, DerefMut};
 use util::NativeRef;
 #[deriving(PartialEq)]
 /// A label in the code that can be branched to in instructions
@@ -28,9 +29,15 @@ impl<'a> Label<'a> {
             }
         }
     }
-    /// Get the value of this label
-    #[inline(always)]
-    pub fn get_value(&self) -> usize {
-        self._label as usize
+}
+impl<'a> Deref for Label<'a> {
+    type Target = u64;
+    fn deref(&self) -> &u64 {
+        &self._label
+    }
+}
+impl<'a> DerefMut for Label<'a> {
+    fn deref_mut(&mut self) -> &mut u64 {
+        &mut self._label
     }
 }
