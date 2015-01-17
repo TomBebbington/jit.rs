@@ -1,7 +1,7 @@
 use raw::*;
 use std::mem;
 use std::ptr;
-use std::marker::{ContravariantLifetime, NoCopy, NoSync, NoSend};
+use std::marker::{ContravariantLifetime, NoCopy};
 use util::{from_ptr, NativeRef};
 use {AnyFunction, CompiledFunction, Type, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
@@ -14,8 +14,6 @@ native_ref!(Context, _context, jit_context_t);
 /// A context that is in the build phase while generating IR
 pub struct Builder {
     _context: jit_context_t,
-    no_sync: NoSync,
-    no_send: NoSend,
     no_copy: NoCopy
 }
 impl NativeRef for Builder {
@@ -27,8 +25,6 @@ impl NativeRef for Builder {
     unsafe fn from_ptr(ptr:jit_context_t) -> Builder {
         Builder {
             _context: ptr,
-            no_sync: NoSync,
-            no_send: NoSend,
             no_copy: NoCopy
         }
     }
