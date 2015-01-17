@@ -1,8 +1,9 @@
 #![allow(unstable)]
 #[cfg(not(windows))]
 extern crate "pkg-config" as pkg_config;
-use std::io::fs::PathExtensions;
+use std::io::fs::{self, PathExtensions};
 use std::io::process::Command;
+use std::os;
 use std::path::Path;
 
 #[cfg(windows)]
@@ -19,6 +20,7 @@ fn main() {
 	} else if pkg_config::find_library("jit").is_ok() {
 		return;
 	}
+    let ref out_dir = Path::new(os::getenv("OUT_DIR").unwrap());
 	let ref submod_path = Path::new("libjit");
 	let ref final_lib_dir = submod_path.join("jit/.libs");
 	if !final_lib_dir.join(FINAL_LIB).exists() {
@@ -33,8 +35,8 @@ fn main() {
 		run(Command::new("sh").arg("configure").arg("--enable-static").arg("--disable-shared").arg("CFLAGS=-fPIC").cwd(submod_path));
 		run(Command::new("make").cwd(submod_path));
 	}
-    println!("cargo:rustc-flags=-l jit:static");
-	println!("cargo:rustc-flags=-L {}", final_lib_dir.display());
+	fs::copy(&final_lib_dir.join(FINAL_LIB), &out_dir.join(FINAL_LIB)).unwrap();
+    println!("cargo:rustc-flags=-l jit:static -L {}", out_dir.display());
 }
 fn run(command: &mut Command) {
 	println!("{}" , command);
