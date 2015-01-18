@@ -204,6 +204,11 @@ impl<'a> Iterator for Params<'a> {
         ((self.length - self.index) as usize, None)
     }
 }
+/// A static type that is owned by LibJIT itself
+pub trait StaticType: Copy {
+    /// Get type contained in this static type
+    fn get(self) -> Type;
+}
 /// An object that represents a native system type.
 /// Each `Type` represents a basic system type, be it a primitive, a struct, a
 /// union, a pointer, or a function signature. The library uses this information

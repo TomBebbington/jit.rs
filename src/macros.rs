@@ -142,11 +142,18 @@ macro_rules! builtin_type(
         #[allow(non_camel_case_types)]
         #[allow(dead_code)]
         pub struct $rust_name;
+        impl Copy for $rust_name {}
         impl ::std::ops::Deref for $rust_name {
             type Target = Type;
             fn deref(&self) -> &Type {
                 use std::mem;
                 unsafe { mem::transmute(&$c_name) }
+            }
+        }
+        impl ::types::StaticType for $rust_name {
+            fn get(self) -> Type {
+                use util::from_ptr;
+                unsafe { from_ptr($c_name) }
             }
         }
     )

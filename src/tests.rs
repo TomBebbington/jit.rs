@@ -2,7 +2,8 @@ extern crate test;
 use context::Context;
 use get;
 use std::default::Default;
-use types::Type;
+use types::{StaticType, Type};
+use typecs::*;
 use function::flags;
 use test::Bencher;
 use std::num::Float;
@@ -58,10 +59,10 @@ fn bench_pi(b: &mut Bencher) {
             let first_part = four / (ln * (ln + one) * n_two);
             let second_part = four / (n_two * (ln + three) * (ln + four));
             let new_pi = first_part - second_part;
-            func.insn_store_relative(pi, 0, func.insn_load_relative(pi, 0, get::<f64>()) + new_pi);
+            func.insn_store_relative(pi, 0, func.insn_load_relative(pi, 0, FLOAT64.get()) + new_pi);
             func.insn_store(n, ln + four);
         });
-        func.insn_return(func.insn_load_relative(pi, 0, get::<f64>()));
+        func.insn_return(func.insn_load_relative(pi, 0, FLOAT64.get()));
     }, |pi| {
         b.iter(||{
             let pi = pi(());
@@ -106,7 +107,7 @@ fn test_sqrt() {
     assert_eq!(ctx.functions().count(), 0);
     jit_func!(ctx, func, sqrt(num: usize) -> usize, {
         let sqrt = func.insn_sqrt(num);
-        let sqrt_arg_ui = func.insn_convert(sqrt, get::<usize>(), false);
+        let sqrt_arg_ui = func.insn_convert(sqrt, UINT.get(), false);
         func.insn_return(sqrt_arg_ui);
     }, |sqrt| {
         assert_eq!(sqrt(64), 8);

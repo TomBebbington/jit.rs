@@ -64,7 +64,7 @@ pub use function::{flags, Abi, AnyFunction, UncompiledFunction, Function, Compil
 pub use function::flags::CallFlags;
 pub use label::Label;
 pub use types::kind::TypeKind;
-pub use types::{kind, get, Type, Field, Fields, Params};
+pub use types::{kind, get, Type, Field, Fields, Params, StaticType};
 pub use types::consts as typecs;
 pub use util::NativeRef;
 pub use value::Value;

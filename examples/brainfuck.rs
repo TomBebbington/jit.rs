@@ -2,7 +2,8 @@
 #![allow(unstable)]
 extern crate jit;
 
-use jit::{Context, UncompiledFunction, Label, flags, get};
+use jit::*;
+use jit::typecs::UBYTE;
 use std::cell::RefCell;
 use std::io;
 use std::io::fs::File;
@@ -49,7 +50,7 @@ impl<'a> Loop<'a> {
 }
 
 fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
-    let ubyte = get::<u8>();
+    let ubyte = UBYTE.get();
     let putchar_sig = get::<fn(u8)>();
     let readchar_sig = get::<fn() -> u8>();
     let data = func[0];
