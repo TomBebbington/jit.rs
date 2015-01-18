@@ -151,6 +151,7 @@ macro_rules! builtin_type(
             }
         }
         impl ::types::StaticType for $rust_name {
+            #[inline(always)]
             fn get(self) -> Type {
                 use util::from_ptr;
                 unsafe { from_ptr($c_name) }
