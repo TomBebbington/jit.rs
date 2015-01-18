@@ -86,13 +86,13 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
                     io::stdout().write_u8(c).unwrap();
                 }
                 let value = func.insn_load_relative(data, 0, ubyte.clone());
-                func.insn_call_native1(Some("putchar"), putchar, putchar_sig.clone(), [value], flags::JIT_CALL_NO_THROW);
+                func.insn_call_native1(Some("putchar"), putchar, putchar_sig.clone(), [value], flags::NO_THROW);
             },
             ',' => {
                 extern fn readchar() -> u8 {
                     io::stdin().read_byte().unwrap()
                 }
-                let value = func.insn_call_native0(Some("readchar"), readchar, readchar_sig.clone(), flags::JIT_CALL_NO_THROW);
+                let value = func.insn_call_native0(Some("readchar"), readchar, readchar_sig.clone(), flags::NO_THROW);
                 func.insn_store_relative(data, 0, value);
             },
             '[' => {
