@@ -1,6 +1,6 @@
 use raw::*;
 use compile::Compile;
-use function::ABI;
+use function::Abi;
 use libc::{c_uint, c_void};
 use std::marker::{ContravariantLifetime, NoCopy};
 use std::{fmt, mem};
@@ -257,7 +257,7 @@ extern fn free_data<T:'static>(data: *mut c_void) {
 }
 impl Type {
     /// Create a type descriptor for a function signature.
-    pub fn create_signature(abi: ABI, return_type: Type, params: &mut [Type]) -> Type {
+    pub fn create_signature(abi: Abi, return_type: Type, params: &mut [Type]) -> Type {
         unsafe {
             let mut native_params:Vec<jit_type_t> = params.iter().map(|param| param.as_ptr()).collect();
             let signature = jit_type_create_signature(abi as jit_abi_t, return_type.as_ptr(), native_params.as_mut_ptr(), params.len() as c_uint, 1);

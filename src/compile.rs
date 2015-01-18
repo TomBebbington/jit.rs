@@ -1,10 +1,10 @@
 use raw::*;
 use function::UncompiledFunction;
-use function::ABI::CDECL;
+use function::Abi::CDecl;
 use types::get;
 use libc::c_long;
 use value::Value;
-use types::{self, Type};
+use types::Type;
 use util::{from_ptr, NativeRef};
 /// A type that can be compiled into a LibJIT representation
 pub trait Compile {

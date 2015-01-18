@@ -46,7 +46,7 @@ macro_rules! compile_func(
             }
             #[inline(always)]
             fn jit_type(_:Option<$sig>) -> Type {
-                Type::create_signature(CDECL, get::<R>(), [$(get::<$arg>()),*].as_mut_slice())
+                Type::create_signature(CDecl, get::<R>(), [$(get::<$arg>()),*].as_mut_slice())
             }
         }
         impl<$($arg:Compile,)* R:Compile> Compile for $ext_sig {

@@ -18,20 +18,20 @@ use std::{mem, ptr};
 use std::ffi::CString;
 /// A platform's application binary interface
 #[repr(C)]
-pub enum ABI {
+pub enum Abi {
     /// The C application binary interface
-    CDECL,
+    CDecl,
     /// The C application binary interface with variable arguments
-    VARARG,
+    VarArg,
+    /// A Windows application binary interface*-+
+    StdCall,
     /// A Windows application binary interface
-    STDCALL,
-    /// A Windows application binary interface
-    FASTCALL
+    FastCall
 }
-impl Copy for ABI {}
-impl Default for ABI {
-    fn default() -> ABI {
-        ABI::CDECL
+impl Copy for Abi {}
+impl Default for Abi {
+    fn default() -> Abi {
+        Abi::CDecl
     }
 }
 /// Call flags to a function
@@ -41,11 +41,11 @@ pub mod flags {
     bitflags!(
         flags CallFlags: c_int {
             /// When the function won't throw a value
-            const JIT_CALL_NO_THROW = 1,
+            const NO_THROW = 1,
             /// When the function won't return a value
-            const JIT_CALL_NO_RETURN = 2,
+            const NO_RETURN = 2,
             /// When the function is tail-recursive
-            const JIT_CALL_TAIL = 4
+            const TAIL = 4
         }
     );
 }
