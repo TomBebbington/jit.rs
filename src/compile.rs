@@ -4,7 +4,7 @@ use function::ABI::CDECL;
 use types::get;
 use libc::c_long;
 use value::Value;
-use types::Type;
+use types::{self, Type};
 use util::{from_ptr, NativeRef};
 /// A type that can be compiled into a LibJIT representation
 pub trait Compile {
@@ -27,20 +27,20 @@ impl Compile for () {
     }
 }
 compile_prims!{
-    (f64, f64) => (jit_type_float64, jit_value_create_float64_constant),
-    (f32, f32) => (jit_type_float32, jit_value_create_float32_constant),
-    (isize, c_long) => (jit_type_nint, jit_value_create_nint_constant),
-    (usize, c_long) => (jit_type_nuint, jit_value_create_nint_constant),
-    (i64, c_long) => (jit_type_long, jit_value_create_long_constant),
-    (u64, c_long) => (jit_type_ulong, jit_value_create_long_constant),
-    (i32, c_long) => (jit_type_int, jit_value_create_nint_constant),
-    (u32, c_long) => (jit_type_uint, jit_value_create_nint_constant),
-    (i16, c_long) => (jit_type_short, jit_value_create_nint_constant),
-    (u16, c_long) => (jit_type_ushort, jit_value_create_nint_constant),
-    (i8, c_long) => (jit_type_sbyte, jit_value_create_nint_constant),
-    (u8, c_long) => (jit_type_ubyte, jit_value_create_nint_constant),
-    (bool, c_long) => (jit_type_sys_bool, jit_value_create_nint_constant),
-    (char, c_long) => (jit_type_sys_char, jit_value_create_nint_constant)
+    (f64, f64) => (FLOAT64, jit_value_create_float64_constant),
+    (f32, f32) => (FLOAT32, jit_value_create_float32_constant),
+    (isize, c_long) => (NINT, jit_value_create_nint_constant),
+    (usize, c_long) => (NUINT, jit_value_create_nint_constant),
+    (i64, c_long) => (LONG, jit_value_create_long_constant),
+    (u64, c_long) => (ULONG, jit_value_create_long_constant),
+    (i32, c_long) => (INT, jit_value_create_nint_constant),
+    (u32, c_long) => (UINT, jit_value_create_nint_constant),
+    (i16, c_long) => (SHORT, jit_value_create_nint_constant),
+    (u16, c_long) => (USHORT, jit_value_create_nint_constant),
+    (i8, c_long) => (SBYTE, jit_value_create_nint_constant),
+    (u8, c_long) => (UBYTE, jit_value_create_nint_constant),
+    (bool, c_long) => (SYS_BOOL, jit_value_create_nint_constant),
+    (char, c_long) => (SYS_CHAR, jit_value_create_nint_constant)
 }
 impl<T:Compile> Compile for *mut T {
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {

@@ -58,6 +58,41 @@ impl fmt::Show for Type {
         }
     }
 }
+pub mod consts {
+    use raw::*;
+    use types::Type;
+    builtin_types!{
+        jit_type_void -> VOID;
+        jit_type_sbyte -> SBYTE;
+        jit_type_ubyte -> UBYTE;
+        jit_type_short -> SHORT;
+        jit_type_ushort -> USHORT;
+        jit_type_int -> INT;
+        jit_type_uint -> UINT;
+        jit_type_nint -> NINT;
+        jit_type_nuint -> NUINT;
+        jit_type_long -> LONG;
+        jit_type_ulong -> ULONG;
+        jit_type_float32 -> FLOAT32;
+        jit_type_float64 -> FLOAT64;
+        jit_type_nfloat -> NFLOAT;
+        jit_type_void_ptr -> VOID_PTR;
+        jit_type_sys_bool -> SYS_BOOL;
+        jit_type_sys_char -> SYS_CHAR;
+        jit_type_sys_uchar -> SYS_UCHAR;
+        jit_type_sys_short -> SYS_SHORT;
+        jit_type_sys_ushort -> SYS_USHORT;
+        jit_type_sys_int -> SYS_INT;
+        jit_type_sys_uint -> SYS_UINT;
+        jit_type_sys_long -> SYS_LONG;
+        jit_type_sys_ulong -> SYS_ULONG;
+        jit_type_sys_longlong -> SYS_LONGLONG;
+        jit_type_sys_ulonglong -> SYS_ULONGLONG;
+        jit_type_sys_float -> SYS_FLOAT;
+        jit_type_sys_double -> SYS_DOUBLE;
+        jit_type_sys_long_double -> SYS_LONG_DOUBLE
+    }
+}
 /// A single field of a struct
 #[deriving(PartialEq)]
 pub struct Field<'a> {

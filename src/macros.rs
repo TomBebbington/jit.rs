@@ -3,30 +3,30 @@ macro_rules! compile_prim(
 impl Compile for $ty {
     #[inline(always)]
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
+        use types::consts;
         unsafe {
-            from_ptr($make_constant(func.as_ptr(), $type_name, *self) )
+            from_ptr($make_constant(func.as_ptr(), consts::$type_name.as_ptr(), *self) )
         }
     }
     #[inline(always)]
     fn jit_type(_:Option<$ty>) -> Type {
-        unsafe {
-            from_ptr($type_name)
-        }
+        use types::consts;
+        consts::$type_name.clone()
     }
 });
     ($ty:ty, $type_name:ident, $make_constant:ident, $cast:ty) => (
 impl Compile for $ty {
     #[inline(always)]
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
+        use types::consts;
         unsafe {
-            from_ptr($make_constant(func.as_ptr(), $type_name, *self as $cast) )
+            from_ptr($make_constant(func.as_ptr(), consts::$type_name.as_ptr(), *self as $cast) )
         }
     }
     #[inline(always)]
     fn jit_type(_:Option<$ty>) -> Type {
-        unsafe {
-            from_ptr($type_name)
-        }
+        use types::consts;
+        consts::$type_name.clone()
     }
 });
 );
@@ -134,5 +134,25 @@ macro_rules! native_ref(
                 }
             }
         }
+    )
+);
+macro_rules! builtin_type(
+    ($c_name:ident -> $rust_name:ident) => (
+        #[allow(missing_copy_implementations)]
+        #[allow(non_camel_case_types)]
+        #[allow(dead_code)]
+        pub struct $rust_name;
+        impl ::std::ops::Deref for $rust_name {
+            type Target = Type;
+            fn deref(&self) -> &Type {
+                use std::mem;
+                unsafe { mem::transmute(&$c_name) }
+            }
+        }
+    )
+);
+macro_rules! builtin_types(
+    ($($c_name:ident -> $rust_name:ident);+) => (
+        $(builtin_type!($c_name -> $rust_name);)+
     )
 );
