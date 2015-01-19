@@ -48,13 +48,9 @@
 //!     });
 //! }
 //! ```
-#[no_link]
-#[plugin]
-#[macro_use]
-extern crate jit_macros;
+#[no_link] #[plugin] #[macro_use]
+extern crate rustc_bitflags;
 extern crate libc;
-#[cfg(test)]
-extern crate test;
 extern crate "libjit-sys" as raw;
 use raw::*;
 pub use compile::Compile;
@@ -104,8 +100,6 @@ mod compile;
 mod elf;
 mod function;
 mod label;
-#[cfg(test)]
-mod tests;
 mod types;
 mod util;
 mod value;

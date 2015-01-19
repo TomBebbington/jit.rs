@@ -1,12 +1,14 @@
+#![feature(plugin)]
+#![allow(unstable)]
+#[no_link] #[plugin] #[macro_use]
+extern crate jit_macros;
+extern crate jit;
 extern crate test;
-use context::Context;
-use get;
+use jit::*;
+use jit::typecs::*;
 use std::default::Default;
-use types::{StaticType, Type};
-use typecs::*;
-use function::flags;
-use test::Bencher;
 use std::num::Float;
+use test::Bencher;
 macro_rules! test_compile(
     ($ty:ty, $test_name:ident, $kind:expr) => (
         #[test]
