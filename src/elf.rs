@@ -51,10 +51,9 @@ impl<'a> Iterator for Needed<'a> {
     }
 }
 /// An ELF binary reader
-pub struct ReadElf {
+native_ref!(ReadElf {
     _reader: jit_readelf_t
-}
-native_ref!(ReadElf, _reader, jit_readelf_t);
+});
 #[repr(i32)]
 /// An error from trying to open the ELF
 pub enum ReadElfErrorCode {
@@ -152,10 +151,9 @@ impl Drop for ReadElf {
 }
 
 /// An ELF binary reader
-pub struct WriteElf {
+native_ref!(WriteElf {
     _writer: jit_writeelf_t
-}
-native_ref!(WriteElf, _writer, jit_writeelf_t);
+});
 impl WriteElf {
     #[inline]
     /// Create a new ELF binary reader

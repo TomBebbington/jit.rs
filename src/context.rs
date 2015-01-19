@@ -6,10 +6,9 @@ use util::{from_ptr, NativeRef};
 use {AnyFunction, CompiledFunction, Type, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
 /// multiple, but normally there is only one.
-pub struct Context {
+native_ref!(Context {
     _context: jit_context_t
-}
-native_ref!(Context, _context, jit_context_t);
+});
 
 /// A context that is in the build phase while generating IR
 pub struct Builder {

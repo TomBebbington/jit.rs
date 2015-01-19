@@ -58,13 +58,10 @@ pub trait Function<'a> : NativeRef {
         unsafe { from_ptr(jit_function_get_signature(self.as_ptr())) }
     }
 }
-#[deriving(PartialEq)]
 /// Any kind of function, compiled or not
-pub struct AnyFunction<'a> {
-    _func: jit_function_t,
-    marker: ContravariantLifetime<'a>
-}
-native_ref!(AnyFunction, _func, jit_function_t, ContravariantLifetime);
+native_ref!(AnyFunction ContravariantLifetime {
+    _func: jit_function_t
+});
 impl<'a> AnyFunction<'a> {
     /// Return the compiled function if there is one
     pub fn into_compiled(self) -> Option<CompiledFunction<'a>> {
@@ -95,11 +92,9 @@ impl<'a> Function<'a> for AnyFunction<'a> {
 ///
 /// A function persists for the lifetime of its containing context. This is
 /// a function which has already been compiled and is now in executable form.
-pub struct CompiledFunction<'a> {
-    _func: jit_function_t,
-    marker: ContravariantLifetime<'a>
-}
-native_ref!(CompiledFunction, _func, jit_function_t, ContravariantLifetime);
+native_ref!(CompiledFunction ContravariantLifetime {
+    _func: jit_function_t
+});
 impl<'a> Function<'a> for CompiledFunction<'a> {
     /// 10/10 would compile again
     fn is_compiled(&self) -> bool {

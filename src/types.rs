@@ -6,6 +6,7 @@ use std::marker::{ContravariantLifetime, NoCopy};
 use std::{fmt, mem};
 use std::ffi::{self, CString};
 use util::{self, from_ptr, NativeRef};
+pub use kind::TypeKind;
 /// The integer representation of a type
 pub mod kind {
     use libc::c_int;
@@ -215,7 +216,7 @@ pub trait StaticType: Copy {
 /// to lay out values in memory.
 /// Types are not attached to a context so they are reference-counted by LibJIT,
 /// so internally they are represented as `Rc<TypeData>`.
-#[deriving(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub struct Type {
     _type: jit_type_t,
     no_copy: NoCopy
