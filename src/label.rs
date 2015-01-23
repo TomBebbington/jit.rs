@@ -4,7 +4,7 @@ use raw::{
 };
 use function::UncompiledFunction;
 use std::marker::ContravariantLifetime;
-use std::fmt::{Show, Result, Formatter};
+use std::fmt;
 use std::ops::{Deref, DerefMut};
 use util::NativeRef;
 #[deriving(PartialEq)]
@@ -13,9 +13,9 @@ pub struct Label<'a> {
     _label: jit_label_t,
     marker: ContravariantLifetime<'a>
 }
-impl<'a> Show for Label<'a> {
-    fn fmt(&self, fmt:&mut Formatter) -> Result {
-        self._label.fmt(fmt)
+impl<'a> fmt::Display for Label<'a> {
+    fn fmt(&self, fmt:&mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", self._label)
     }
 }
 impl<'a> Label<'a> {

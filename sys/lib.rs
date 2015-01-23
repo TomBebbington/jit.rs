@@ -177,6 +177,7 @@ pub struct jit_intrinsic_descr_t {
     pub arg2_type: jit_type_t,
 }
 #[repr(C)]
+#[derive(Eq, PartialEq)]
 pub struct jit_insn_iter_t {
     pub block: jit_block_t,
     pub posn: c_int,

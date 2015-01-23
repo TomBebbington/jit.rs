@@ -39,7 +39,7 @@ fn main() {
     println!("cargo:rustc-flags=-l jit:static -L {}", out_dir.display());
 }
 fn run(command: &mut Command) {
-	println!("{}" , command);
+	println!("{:?}" , command);
 	match command.output() {
 		Ok(ref process) if !process.status.success() => {
 			panic!("failed with output: \n{}\n{}", String::from_utf8_lossy(&*process.output), String::from_utf8_lossy(&*process.error));

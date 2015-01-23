@@ -4,8 +4,7 @@ use function::CompiledFunction;
 use libc::c_uint;
 use util::NativeRef;
 use std::ffi::{self, CString};
-use std::fmt::{Show, Formatter};
-use std::fmt::Result as FResult;
+use std::fmt;
 use std::marker::ContravariantLifetime;
 use std::{mem, ptr};
 use std::iter::Iterator;
@@ -69,8 +68,8 @@ pub enum ReadElfErrorCode {
     Memory
 }
 impl Copy for ReadElfErrorCode {}
-impl Show for ReadElfErrorCode {
-    fn fmt(&self, fmt: &mut Formatter) -> FResult {
+impl fmt::Display for ReadElfErrorCode {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", self.description())
     }
 }
@@ -91,8 +90,8 @@ pub struct ReadElfError<'a> {
     filename: &'a str,
     error: ReadElfErrorCode
 }
-impl<'a> Show for ReadElfError<'a> {
-    fn fmt(&self, fmt: &mut Formatter) -> FResult {
+impl<'a> fmt::Display for ReadElfError<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "'{}': {}", self.filename, self.error.description())
     }
 }

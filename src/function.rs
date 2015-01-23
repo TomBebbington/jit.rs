@@ -3,6 +3,7 @@ use context::Builder;
 use compile::Compile;
 use label::Label;
 use types::Type;
+use insn::Block;
 use util::{self, from_ptr, NativeRef};
 use value::Value;
 use libc::{
@@ -11,7 +12,7 @@ use libc::{
     c_void
 };
 use std::default::Default;
-use std::fmt::{Formatter, Show, Result};
+use std::fmt;
 use std::ops::Index;
 use std::marker::ContravariantLifetime;
 use std::{mem, ptr};
@@ -101,11 +102,11 @@ impl<'a> Function<'a> for CompiledFunction<'a> {
         true
     }
 }
-impl<'a> Show for CompiledFunction<'a> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result {
-        try!(util::dump(|fd| {
-            unsafe { jit_dump_function(mem::transmute(fd), self.as_ptr(), ptr::null()) };
-        })).fmt(fmt)
+impl<'a> fmt::Display for CompiledFunction<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", try!(util::dump(|fd| unsafe {
+            jit_dump_function(mem::transmute(fd), self.as_ptr(), ptr::null());
+        })))
     }
 }
 impl<'a> CompiledFunction<'a> {
@@ -154,11 +155,11 @@ impl<'a> Function<'a> for UncompiledFunction<'a> {
         false
     }
 }
-impl<'a> Show for UncompiledFunction<'a> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result {
-        try!(util::dump(|fd| {
-            unsafe { jit_dump_function(mem::transmute(fd), self.as_ptr(), ptr::null()) };
-        })).fmt(fmt)
+impl<'a> fmt::Display for UncompiledFunction<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", try!(util::dump(|fd| unsafe {
+            jit_dump_function(mem::transmute(fd), self.as_ptr(), ptr::null());
+        })))
     }
 }
 #[unsafe_destructor]
@@ -812,6 +813,18 @@ impl<'a> UncompiledFunction<'a> {
     pub fn set_recompilable(&self) {
         unsafe {
             jit_function_set_recompilable(self.as_ptr());
+        }
+    }
+    /// Get the entry block of this function
+    pub fn get_entry(&self) -> Option<Block<'a>> {
+        unsafe {
+            from_ptr(jit_function_get_entry(self.as_ptr()))
+        }
+    }
+    /// Get the current block of this function
+    pub fn get_current(&self) -> Option<Block<'a>> {
+        unsafe {
+            from_ptr(jit_function_get_current(self.as_ptr()))
         }
     }
     #[inline(always)]

@@ -4,6 +4,7 @@ use function::Abi;
 use libc::{c_uint, c_void};
 use std::marker::{ContravariantLifetime, NoCopy};
 use std::{fmt, mem};
+use std::fmt::Display;
 use std::ffi::{self, CString};
 use util::{self, from_ptr, NativeRef};
 pub use kind::TypeKind;
@@ -36,7 +37,7 @@ pub mod kind {
         }
     );
 }
-impl fmt::Show for Type {
+impl fmt::Display for Type {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let kind = self.get_kind();
         if kind.contains(kind::Pointer) {

@@ -1,7 +1,7 @@
 use raw::*;
 use function::UncompiledFunction;
 use std::marker::ContravariantLifetime;
-use std::fmt::{Formatter, Result, Show};
+use std::fmt;
 use std::ops::*;
 use types::Type;
 use util::NativeRef;
@@ -30,11 +30,9 @@ impl<'a> NativeRef for Value<'a> {
         }
     }
 }
-impl<'a> Show for Value<'a> {
-    fn fmt(&self, fmt: &mut Formatter) -> Result {
-        try!(fmt.write_str("v("));
-        try!(self.get_type().fmt(fmt));
-        fmt.write_str(")")
+impl<'a> fmt::Display for Value<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "v({})", self.get_type())
     }
 }
 impl<'a> Clone for Value<'a> {

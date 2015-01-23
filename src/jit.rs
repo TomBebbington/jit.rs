@@ -99,6 +99,7 @@ mod context;
 mod compile;
 mod elf;
 mod function;
+mod insn;
 mod label;
 mod types;
 mod util;
