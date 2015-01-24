@@ -2,14 +2,14 @@
 /// Construct a JIT struct with the fields given
 macro_rules! jit_struct(
     ($($name:ident: $ty:ty),*) => ({
-        let structure = Type::create_struct([
+        let structure = Type::new_struct([
             $(get::<$ty>()),*
         ].as_mut_slice());
         structure.set_names(&[$(stringify!($name)),*]);
         structure
     });
     ($($ty:ty),+ ) => ({
-        Type::create_struct([
+        Type::new_struct([
             $(get::<$ty>()),+
         ].as_mut_slice())
     })
@@ -19,14 +19,14 @@ macro_rules! jit_struct(
 /// Construct a JIT union with the fields given
 macro_rules! jit_union(
     ($($name:ident: $ty:ty),*) => ({
-        let structure = Type::create_union([
+        let structure = Type::new_union([
             $(get::<$ty>()),*
         ].as_mut_slice());
         structure.set_names(&[$(stringify!($name)),*]);
         structure
     });
     ($($ty:ty),+ ) => ({
-        Type::create_union([
+        Type::new_union([
             $(get::<$ty>()),+
         ].as_mut_slice())
     })
@@ -36,13 +36,13 @@ macro_rules! jit_union(
 macro_rules! jit_fn(
     ($($arg:ty),* -> $ret:ty) => ({
         use std::default::Default;
-        Type::create_signature(Default::default(), get::<$ret>(), [
+        Type::new_signature(Default::default(), get::<$ret>(), [
             $(get::<$arg>()),*
         ].as_mut_slice())
     });
     (raw $($arg:expr),* -> $ret:expr) => ({
         use std::default::Default;
-        Type::create_signature(Default::default(), $ret, [
+        Type::new_signature(Default::default(), $ret, [
             $($arg),*
         ].as_mut_slice())
     });
@@ -112,12 +112,12 @@ macro_rules! jit(
 macro_rules! jit_func(
     ($ctx:expr, $func:ident, $name:ident() -> $ret:ty, $value:expr) => ({
         use std::default::Default;
-        let sig = Type::create_signature(Default::default(), get::<$ret>(), [].as_mut_slice());
+        let sig = Type::new_signature(Default::default(), get::<$ret>(), [].as_mut_slice());
         $ctx.build_func(sig, |$func| $value)
     });
     ($ctx:expr, $func:ident, $name:ident($($arg:ident:$ty:ty),+) -> $ret:ty, $value:expr) => ({
         use std::default::Default;
-        let sig = Type::create_signature(Default::default(), get::<$ret>(), [$(get::<$arg_ty>()),*].as_mut_slice());
+        let sig = Type::new_signature(Default::default(), get::<$ret>(), [$(get::<$arg_ty>()),*].as_mut_slice());
         $ctx.build_func(sig, |$func| {
             let mut i = 0u;
             $(let $arg = {
@@ -129,13 +129,13 @@ macro_rules! jit_func(
     });
     ($ctx:expr, $func:ident, $name:ident() -> $ret:ty, $value:expr, |$comp_func:ident| $comp:expr) => ({
         use std::default::Default;
-        let sig = Type::create_signature(Default::default(), get::<$ret>(), [].as_mut_slice());
+        let sig = Type::new_signature(Default::default(), get::<$ret>(), [].as_mut_slice());
         $ctx.build_func(sig, |$func| $value)
             .with::<(), $ret, _>(|$comp_func| $comp)
     });
     ($ctx:expr, $func:ident, $name:ident($($arg:ident:$arg_ty:ty),+) -> $ret:ty, $value:expr, |$comp_func:ident| $comp:expr) => ({
         use std::default::Default;
-        let sig = Type::create_signature(Default::default(), get::<$ret>(), [$(get::<$arg_ty>()),*].as_mut_slice());
+        let sig = Type::new_signature(Default::default(), get::<$ret>(), [$(get::<$arg_ty>()),*].as_mut_slice());
         $ctx.build_func(sig, |$func| {
             let mut i = 0us;
             $(let $arg = {

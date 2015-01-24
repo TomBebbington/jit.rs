@@ -46,7 +46,7 @@ macro_rules! compile_func(
             }
             #[inline(always)]
             fn get_type() -> Type {
-                Type::create_signature(CDecl, get::<R>(), [$(get::<$arg>()),*].as_mut_slice())
+                Type::new_signature(CDecl, get::<R>(), [$(get::<$arg>()),*].as_mut_slice())
             }
         }
         impl<$($arg:Compile,)* R:Compile> Compile for $ext_sig {
@@ -77,7 +77,7 @@ macro_rules! compile_tuple(
             #[inline(always)]
             fn get_type() -> Type {
                 let mut types = [$(get::<$ty>()),+];
-                Type::create_struct(types.as_mut_slice())
+                Type::new_struct(types.as_mut_slice())
             }
         }
     )

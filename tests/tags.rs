@@ -20,7 +20,7 @@ fn test_panic_tags() {
         y: f64
     };
     let kind = pos_t.get_kind();
-    let pos_t = Type::create_tagged(pos_t, kind, Box::new(PanicDrop(42)));
+    let pos_t = TaggedType::new(pos_t, kind, Box::new(PanicDrop(42)));
     assert_eq!(pos_t.get_tagged_data(), Some(&PanicDrop(42)));
 }
 
@@ -31,8 +31,7 @@ fn test_tags() {
         y: f64
     };
     let kind = pos_t.get_kind();
-    let pos_t = Type::create_tagged(pos_t, kind, Box::new(42us));
-    assert_eq!(pos_t.get_tagged_data(), Some(&42us));
-    pos_t.set_tagged_data(Box::new(-1.0f64));
-    assert_eq!(pos_t.get_tagged_data(), Some(&-1.0f64));
+    let new_pos_t = TaggedType::new(pos_t.clone(), kind, Box::new(42us));
+    assert!(new_pos_t.get_tagged_data() == Some(&42us));
+    assert!(new_pos_t.get_tagged_type() == pos_t);
 }

@@ -55,7 +55,7 @@ impl<T:Compile> Compile for *mut T {
     }
     #[inline(always)]
     fn get_type() -> Type {
-        Type::create_pointer(get::<T>())
+        Type::new_pointer(get::<T>())
     }
 }
 impl<T:Compile> Compile for *const T {
@@ -70,7 +70,7 @@ impl<T:Compile> Compile for *const T {
     }
     #[inline(always)]
     fn get_type() -> Type {
-        Type::create_pointer(get::<T>())
+        Type::new_pointer(get::<T>())
     }
 }
 impl<T:Compile> Compile for &'static T {
@@ -86,7 +86,7 @@ impl<T:Compile> Compile for &'static T {
     }
     #[inline(always)]
     fn get_type() -> Type {
-        Type::create_pointer(get::<T>())
+        Type::new_pointer(get::<T>())
     }
 }
 impl Compile for CString {
@@ -96,7 +96,7 @@ impl Compile for CString {
     }
     #[inline(always)]
     fn get_type() -> Type {
-        Type::create_pointer(consts::SYS_CHAR.get())
+        Type::new_pointer(consts::SYS_CHAR.get())
     }
 }
 compile_tuple!(A, B => a, b);

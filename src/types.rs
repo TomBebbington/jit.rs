@@ -264,7 +264,7 @@ extern fn free_data<T:'static>(data: *mut c_void) {
 }
 impl Type {
     /// Create a type descriptor for a function signature.
-    pub fn create_signature(abi: Abi, return_type: Type, params: &mut [Type]) -> Type {
+    pub fn new_signature(abi: Abi, return_type: Type, params: &mut [Type]) -> Type {
         unsafe {
             let mut native_params:Vec<jit_type_t> = params.iter().map(|param| param.as_ptr()).collect();
             let signature = jit_type_create_signature(abi as jit_abi_t, return_type.as_ptr(), native_params.as_mut_ptr(), params.len() as c_uint, 1);
@@ -273,7 +273,7 @@ impl Type {
     }
     #[inline(always)]
     /// Create a type descriptor for a structure.
-    pub fn create_struct(fields: &mut [Type]) -> Type {
+    pub fn new_struct(fields: &mut [Type]) -> Type {
         unsafe {
             let mut native_fields:Vec<_> = fields.iter().map(|field| field.as_ptr()).collect();
             from_ptr(jit_type_create_struct(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
@@ -281,7 +281,7 @@ impl Type {
     }
     #[inline(always)]
     /// Create a type descriptor for a union.
-    pub fn create_union(fields: &mut [Type]) -> Type {
+    pub fn new_union(fields: &mut [Type]) -> Type {
         unsafe {
             let mut native_fields:Vec<_> = fields.iter().map(|field| field.as_ptr()).collect();
             from_ptr(jit_type_create_union(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
@@ -289,20 +289,10 @@ impl Type {
     }
     #[inline(always)]
     /// Create a type descriptor for a pointer to another type.
-    pub fn create_pointer(pointee: Type) -> Type {
+    pub fn new_pointer(pointee: Type) -> Type {
         unsafe {
             let ptr = jit_type_create_pointer(pointee.as_ptr(), 1);
             from_ptr(ptr)
-        }
-    }
-    #[inline(always)]
-    /// Create a new tagged type
-    pub fn create_tagged<T:'static>(ty:Type, kind: kind::TypeKind, data: Box<T>) -> Type {
-        unsafe {
-            let free_data:extern fn(*mut c_void) = free_data::<T>;
-            let ty = jit_type_create_tagged(ty.as_ptr(), kind.bits(), mem::transmute(&*data), Some(free_data), 1);
-            mem::forget(data);
-            from_ptr(ty)
         }
     }
     #[inline(always)]
@@ -334,21 +324,6 @@ impl Type {
             from_ptr(jit_type_get_ref(self.as_ptr()))
         }
     }
-
-    #[inline(always)]
-    pub fn get_tagged_data<T:'static>(&self) -> Option<&T> {
-        unsafe {
-            mem::transmute(jit_type_get_tagged_data(self.as_ptr()))
-        }
-    }
-    #[inline(always)]
-    pub fn set_tagged_data<T:'static>(&self, data: Box<T>) {
-        unsafe {
-            let free_data:extern fn(*mut c_void) = free_data::<T>;
-            jit_type_set_tagged_data(self.as_ptr(), mem::transmute(&*data), Some(free_data));
-            mem::forget(data);
-        }
-    }
     #[inline(always)]
     /// Get the type returned by this function type.
     pub fn get_return(&self) -> Option<Type> {
@@ -376,7 +351,7 @@ impl Type {
     }
     #[inline]
     /// Find the field/parameter index for a particular name.
-    pub fn find_name<'a>(&'a self, name:&str) -> Field<'a> {
+    pub fn get_field<'a>(&'a self, name:&str) -> Field<'a> {
         unsafe {
             let c_name = CString::from_slice(name.as_bytes());
             Field {
@@ -426,6 +401,76 @@ impl Type {
     pub fn is_tagged(&self) -> bool {
         unsafe {
             jit_type_is_tagged(self.as_ptr()) != 0
+        }
+    }
+}
+
+#[derive(PartialEq, Eq)]
+pub struct TaggedType<T> {
+    _type: jit_type_t,
+    no_copy: NoCopy
+}
+impl<T> NativeRef for TaggedType<T> {
+    #[inline(always)]
+    unsafe fn as_ptr(&self) -> jit_type_t {
+        self._type
+    }
+    #[inline(always)]
+    unsafe fn from_ptr(ptr:jit_type_t) -> TaggedType<T> {
+        TaggedType {
+            _type: ptr,
+            no_copy: NoCopy
+        }
+    }
+}
+impl<T> TaggedType<T> where T:'static {
+    /// Create a new tagged type
+    pub fn new(ty:Type, kind: kind::TypeKind, data: Box<T>) -> TaggedType<T> {
+        unsafe {
+            let free_data:extern fn(*mut c_void) = free_data::<T>;
+            let ty = jit_type_create_tagged(ty.as_ptr(), kind.bits(), mem::transmute(&*data), Some(free_data), 1);
+            mem::forget(data);
+            from_ptr(ty)
+        }
+    }
+    /// Get the data this is tagged to
+    pub fn get_tagged_data(&self) -> Option<&T> {
+        unsafe {
+            mem::transmute(jit_type_get_tagged_data(self.as_ptr()))
+        }
+    }
+    /// Get the type this is tagged to
+    pub fn get_tagged_type(&self) -> Type {
+        unsafe {
+            from_ptr(jit_type_get_tagged_type(self.as_ptr()))
+        }
+    }
+    /// Change the data this is tagged to
+    pub fn set_tagged_data(&self, data: Box<T>) {
+        unsafe {
+            let free_data:extern fn(*mut c_void) = free_data::<T>;
+            jit_type_set_tagged_data(self.as_ptr(), mem::transmute(&*data), Some(free_data));
+            mem::forget(data);
+        }
+    }
+}
+#[unsafe_destructor]
+impl<T> Drop for TaggedType<T> {
+    #[inline(always)]
+    /// Free a type descriptor by decreasing its reference count.
+    /// This function is safe to use on pre-defined types, which are never
+    /// actually freed.
+    fn drop(&mut self) {
+        unsafe {
+            jit_type_free(self._type);
+        }
+    }
+}
+impl<T> ::std::ops::Deref for TaggedType<T> {
+    type Target = Type;
+    fn deref(&self) -> &Type {
+        unsafe {
+            mem::transmute(self)
         }
     }
 }
