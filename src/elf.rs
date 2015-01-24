@@ -4,7 +4,7 @@ use function::CompiledFunction;
 use libc::c_uint;
 use util::NativeRef;
 use std::ffi::{self, CString};
-use std::fmt;
+use std::{fmt, str};
 use std::marker::ContravariantLifetime;
 use std::{mem, ptr};
 use std::iter::Iterator;
@@ -30,15 +30,15 @@ impl<'a> Needed<'a> {
     }
 }
 impl<'a> Iterator for Needed<'a> {
-    type Item = String;
-    fn next(&mut self) -> Option<String> {
+    type Item = &'a str;
+    fn next(&mut self) -> Option<&'a str> {
         let index = self.index;
         self.index += 1;
         unsafe {
             if index < self.length {
                 let c_name = jit_readelf_get_needed(self._reader, index);
-                let bytes = ffi::c_str_to_bytes(&c_name);
-                Some(String::from_utf8_lossy(bytes).into_owned())
+                let name: &*const i8 = mem::transmute(&c_name);
+                Some(str::from_utf8(ffi::c_str_to_bytes(name)).unwrap())
             } else {
                 None
             }
@@ -99,8 +99,8 @@ impl ReadElf {
     /// Open a new ELF binary
     pub fn new(filename:&str) -> Result<ReadElf, ReadElfError> {
         unsafe {
-            let c_name = CString::from_slice(filename.as_bytes());
             let mut this = ptr::null_mut();
+            let c_name = CString::from_slice(filename.as_bytes());
             let code = jit_readelf_open(&mut this, mem::transmute(c_name.as_ptr()), 0);
             if code == 0 {
                 Ok(NativeRef::from_ptr(this))
@@ -114,11 +114,11 @@ impl ReadElf {
     }
     #[inline]
     /// Get the name of this ELF binary
-    pub fn get_name(&self) -> String {
+    pub fn get_name(&self) -> &str {
         unsafe {
             let c_name = jit_readelf_get_name(self.as_ptr());
-            let bytes = ffi::c_str_to_bytes(&c_name);
-            String::from_utf8_lossy(bytes).into_owned()
+            let name: &*const i8 = mem::transmute(&c_name);
+            str::from_utf8(ffi::c_str_to_bytes(name)).unwrap()
         }
     }
     #[inline]
