@@ -140,8 +140,8 @@ macro_rules! builtin_type(
         #[allow(missing_copy_implementations)]
         #[allow(non_camel_case_types)]
         #[allow(dead_code)]
+        #[derive(Copy, Eq, PartialEq)]
         pub struct $rust_name;
-        impl Copy for $rust_name {}
         impl ::std::ops::Deref for $rust_name {
             type Target = Type;
             fn deref(&self) -> &Type {

@@ -207,7 +207,7 @@ impl<'a> Iterator for Params<'a> {
     }
 }
 /// A static type that is owned by LibJIT itself
-pub trait StaticType: Copy {
+pub trait StaticType: Copy + Eq + PartialEq {
     /// Get type contained in this static type
     fn get(self) -> Type;
 }
