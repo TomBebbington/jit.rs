@@ -714,6 +714,27 @@ impl<'a> UncompiledFunction<'a> {
             , flags)
     }
     #[inline(always)]
+    /// Make an instruction that copies memory from a source address to a destination address
+    pub fn insn_memcpy(&self, dest: Value<'a>, source: Value<'a>, size: Value<'a>) -> bool {
+        unsafe {
+            jit_insn_memcpy(self.as_ptr(), dest.as_ptr(), source.as_ptr(), size.as_ptr()) != 0
+        }
+    }
+    #[inline(always)]
+    /// Make an instruction that moves memory from a source address to a destination address
+    pub fn insn_memmove(&self, dest: Value<'a>, source: Value<'a>, size: Value<'a>) -> bool {
+        unsafe {
+            jit_insn_memmove(self.as_ptr(), dest.as_ptr(), source.as_ptr(), size.as_ptr()) != 0
+        }
+    }
+    #[inline(always)]
+    /// Make an instruction that sets memory at the destination address
+    pub fn insn_memset(&self, dest: Value<'a>, source: Value<'a>, size: Value<'a>) -> bool {
+        unsafe {
+            jit_insn_memset(self.as_ptr(), dest.as_ptr(), source.as_ptr(), size.as_ptr()) != 0
+        }
+    }
+    #[inline(always)]
     /// Make an instruction that allocates some space
     pub fn insn_alloca(&self, size: Value<'a>) -> Value<'a> {
         unsafe {
