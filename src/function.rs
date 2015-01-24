@@ -19,6 +19,7 @@ use std::{mem, ptr};
 use std::ffi::CString;
 /// A platform's application binary interface
 #[repr(C)]
+#[derive(Copy)]
 pub enum Abi {
     /// The C application binary interface
     CDecl,
@@ -29,7 +30,6 @@ pub enum Abi {
     /// A Windows application binary interface
     FastCall
 }
-impl Copy for Abi {}
 impl Default for Abi {
     fn default() -> Abi {
         Abi::CDecl
