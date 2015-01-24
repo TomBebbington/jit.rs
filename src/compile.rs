@@ -10,8 +10,8 @@ use util::{from_ptr, NativeRef};
 pub trait Compile {
     /// Get a JIT representation of this value
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a>;
-    /// Get the JIT type repr of the value
-    fn jit_type(_:Option<Self>) -> Type;
+    /// Get the type descriptor that represents this type
+    fn get_type() -> Type;
 }
 impl Compile for () {
     #[inline(always)]
@@ -20,7 +20,7 @@ impl Compile for () {
         Value::new(func, ty)
     }
     #[inline(always)]
-    fn jit_type(_:Option<()>) -> Type {
+    fn get_type() -> Type {
         unsafe {
             from_ptr(jit_type_void)
         }
@@ -53,7 +53,7 @@ impl<T:Compile> Compile for *mut T {
         }
     }
     #[inline(always)]
-    fn jit_type(_:Option<*mut T>) -> Type {
+    fn get_type() -> Type {
         Type::create_pointer(get::<T>())
     }
 }
@@ -68,7 +68,7 @@ impl<T:Compile> Compile for *const T {
         }
     }
     #[inline(always)]
-    fn jit_type(_:Option<*const T>) -> Type {
+    fn get_type() -> Type {
         Type::create_pointer(get::<T>())
     }
 }
@@ -84,7 +84,7 @@ impl<T:Compile> Compile for &'static T {
         }
     }
     #[inline(always)]
-    fn jit_type(_:Option<&'static T>) -> Type {
+    fn get_type() -> Type {
         Type::create_pointer(get::<T>())
     }
 }

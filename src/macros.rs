@@ -9,7 +9,7 @@ impl Compile for $ty {
         }
     }
     #[inline(always)]
-    fn jit_type(_:Option<$ty>) -> Type {
+    fn get_type() -> Type {
         use types::consts;
         consts::$type_name.clone()
     }
@@ -24,7 +24,7 @@ impl Compile for $ty {
         }
     }
     #[inline(always)]
-    fn jit_type(_:Option<$ty>) -> Type {
+    fn get_type() -> Type {
         use types::consts;
         consts::$type_name.clone()
     }
@@ -45,7 +45,7 @@ macro_rules! compile_func(
                 compile_ptr!(func, self)
             }
             #[inline(always)]
-            fn jit_type(_:Option<$sig>) -> Type {
+            fn get_type() -> Type {
                 Type::create_signature(CDecl, get::<R>(), [$(get::<$arg>()),*].as_mut_slice())
             }
         }
@@ -55,7 +55,7 @@ macro_rules! compile_func(
                 compile_ptr!(func, self)
             }
             #[inline(always)]
-            fn jit_type(_:Option<$ext_sig>) -> Type {
+            fn get_type() -> Type {
                 get::<$sig>()
             }
         }
@@ -75,7 +75,7 @@ macro_rules! compile_tuple(
                 tuple
             }
             #[inline(always)]
-            fn jit_type(_:Option<($($ty),+)>) -> Type {
+            fn get_type() -> Type {
                 let mut types = [$(get::<$ty>()),+];
                 Type::create_struct(types.as_mut_slice())
             }

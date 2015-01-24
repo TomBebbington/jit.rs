@@ -432,5 +432,5 @@ impl Type {
 #[inline(always)]
 /// Get the Rust type given as a type descriptor
 pub fn get<T: Compile>() -> Type {
-    Compile::jit_type(None::<T>)
+    <T as Compile>::get_type()
 }
