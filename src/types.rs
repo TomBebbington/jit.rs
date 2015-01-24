@@ -3,7 +3,7 @@ use compile::Compile;
 use function::Abi;
 use libc::{c_uint, c_void};
 use std::marker::{ContravariantLifetime, NoCopy};
-use std::{fmt, mem};
+use std::{fmt, mem, str};
 use std::fmt::Display;
 use std::ffi::{self, CString};
 use util::{self, from_ptr, NativeRef};
@@ -106,14 +106,14 @@ pub struct Field<'a> {
 impl<'a> Field<'a> {
     #[inline]
     /// Get the field's name or none if it lacks one
-    pub fn get_name(&self) -> Option<String> {
+    pub fn get_name(&self) -> Option<&'a str> {
         unsafe {
             let c_name = jit_type_get_name(self._type, self.index);
             if c_name.is_null() {
                 None
             } else {
-                let bytes = ffi::c_str_to_bytes(&c_name);
-                Some(String::from_utf8_lossy(bytes).into_owned())
+                let name: &*const i8 = mem::transmute(&c_name);
+                Some(str::from_utf8(ffi::c_str_to_bytes(name)).unwrap())
             }
         }
     }
