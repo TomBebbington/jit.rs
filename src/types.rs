@@ -60,6 +60,7 @@ impl fmt::Display for Type {
         }
     }
 }
+/// Type constants
 pub mod consts {
     use raw::*;
     use types::Type;
