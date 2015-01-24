@@ -7,21 +7,11 @@ use jit::typecs::UBYTE;
 use std::cell::RefCell;
 use std::io;
 use std::io::fs::File;
+use std::iter::Peekable;
 use std::mem;
 use std::os;
 use std::path::Path;
 use std::rc::Rc;
-
-macro_rules! count(
-    ($func:ident, $code:ident, $curr:ident) => ({
-        let mut amount = 1us;
-        while $code.peek() == Some(&$curr) {
-            amount += 1;
-            $code.next();
-        }
-        $func.insn_of(&amount)
-    })
-);
 
 static PROMPT:&'static str = "> ";
 type WrappedLoop<'a> = Rc<RefCell<Loop<'a>>>;
@@ -49,6 +39,15 @@ impl<'a> Loop<'a> {
     }
 }
 
+fn count<'a, I>(func: &UncompiledFunction<'a>, code: &mut Peekable<char, I>, curr:char) -> Value<'a> where I:Iterator<Item=char> {
+    let mut amount = 1us;
+    while code.peek() == Some(&curr) {
+        amount += 1;
+        code.next();
+    }
+    func.insn_of(&amount)
+}
+
 fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
     let ubyte = UBYTE.get();
     let putchar_sig = get::<fn(u8)>();
@@ -59,24 +58,24 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
     while let Some(c) = code.next() {
         match c {
             '>' => {
-                let amount = count!(func, code, c);
+                let amount = count(func, &mut code, c);
                 let new_value = data + amount;
                 func.insn_store(data, new_value);
             },
             '<' => {
-                let amount = count!(func, code, c);
+                let amount = count(func, &mut code, c);
                 let new_value = data - amount;
                 func.insn_store(data, new_value);
             },
             '+' => {
-                let amount = count!(func, code, c);
+                let amount = count(func, &mut code, c);
                 let mut value = func.insn_load_relative(data, 0, ubyte.clone());
                 value = value + amount;
                 value = func.insn_convert(value, ubyte.clone(), false);
                 func.insn_store_relative(data, 0, value)
             },
             '-' => {
-                let amount = count!(func, code, c);
+                let amount = count(func, &mut code, c);
                 let mut value = func.insn_load_relative(data, 0, ubyte.clone());
                 value = value - amount;
                 value = func.insn_convert(value, ubyte.clone(), false);
