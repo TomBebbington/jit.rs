@@ -43,7 +43,7 @@ compile_prims!{
     (bool, c_long) => (SYS_BOOL, jit_value_create_nint_constant),
     (char, c_long) => (SYS_CHAR, jit_value_create_nint_constant)
 }
-impl<T:Compile> Compile for *mut T {
+impl<T> Compile for *mut T where T:Compile {
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
             from_ptr(jit_value_create_nint_constant(
@@ -58,7 +58,7 @@ impl<T:Compile> Compile for *mut T {
         Type::new_pointer(get::<T>())
     }
 }
-impl<T:Compile> Compile for *const T {
+impl<T> Compile for *const T where T:Compile {
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
             from_ptr(jit_value_create_nint_constant(
@@ -73,7 +73,7 @@ impl<T:Compile> Compile for *const T {
         Type::new_pointer(get::<T>())
     }
 }
-impl<T:Compile> Compile for &'static T {
+impl<T> Compile for &'static T where T:Compile {
     #[inline(always)]
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {

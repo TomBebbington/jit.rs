@@ -7,17 +7,12 @@ pub trait NativeRef {
     unsafe fn as_ptr(&self) -> *mut c_void;
     /// Returns a wrapped version of the native reference given, even if the reference is null
     unsafe fn from_ptr(ptr:*mut c_void) -> Self;
-    #[inline(always)]
-    /// Works with the internal pointer in a closure
-    unsafe fn with_ptr<F:Fn(*mut c_void) -> R, R>(&self, cb:F) -> R {
-        cb(self.as_ptr())
-    }
 }
 #[inline(always)]
-pub unsafe fn from_ptr<T:NativeRef>(ptr: *mut c_void) -> T {
+pub unsafe fn from_ptr<T>(ptr: *mut c_void) -> T where T:NativeRef {
     NativeRef::from_ptr(ptr)
 }
-impl<T:NativeRef> NativeRef for Option<T> {
+impl<T> NativeRef for Option<T> where T:NativeRef {
     #[inline(always)]
     unsafe fn as_ptr(&self) -> *mut c_void {
         match *self {
@@ -35,7 +30,7 @@ impl<T:NativeRef> NativeRef for Option<T> {
     }
 }
 
-pub fn dump<F:FnOnce(*mut FILE)>(cb: F) -> Result<String, Error> {
+pub fn dump<F>(cb: F) -> Result<String, Error> where F:FnOnce(*mut FILE) {
     use std::io::pipe::PipeStream;
     use std::os;
     use libc::{fdopen, fclose};
