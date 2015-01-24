@@ -4,8 +4,9 @@ use function::Abi::CDecl;
 use types::get;
 use libc::c_long;
 use value::Value;
-use types::Type;
+use types::{consts, StaticType, Type};
 use util::{from_ptr, NativeRef};
+use std::ffi::CString;
 /// A type that can be compiled into a LibJIT representation
 pub trait Compile {
     /// Get a JIT representation of this value
@@ -86,6 +87,16 @@ impl<T:Compile> Compile for &'static T {
     #[inline(always)]
     fn get_type() -> Type {
         Type::create_pointer(get::<T>())
+    }
+}
+impl Compile for CString {
+    #[inline(always)]
+    fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
+        self.as_ptr().compile(func)
+    }
+    #[inline(always)]
+    fn get_type() -> Type {
+        Type::create_pointer(consts::SYS_CHAR.get())
     }
 }
 compile_tuple!(A, B => a, b);
