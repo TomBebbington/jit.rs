@@ -1,7 +1,8 @@
 use raw::*;
-use std::mem;
-use std::ptr;
+use alloc::oom;
 use std::marker::{ContravariantLifetime, NoCopy};
+use std::any::TypeId;
+use std::{hash, mem, ptr};
 use util::{from_ptr, NativeRef};
 use {AnyFunction, CompiledFunction, Type, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
@@ -38,6 +39,23 @@ impl Context {
     pub fn new() -> Context {
         unsafe {
             from_ptr(jit_context_create())
+        }
+    }
+    /// Get the tagged metadata of an object
+    pub fn get_meta<T>(&self) -> Option<&T> where T:'static {
+        unsafe {
+            let id = hash::hash::<TypeId, hash::SipHasher>(&TypeId::of::<T>());
+            mem::transmute(jit_context_get_meta(self.as_ptr(), id as i32))
+        }
+    }
+
+    /// Tag the context with some metadata
+    pub fn set_meta<T>(&self, data: Box<T>) where T:'static {
+        unsafe {
+            let id = hash::hash::<TypeId, hash::SipHasher>(&TypeId::of::<T>());
+            if jit_context_set_meta(self.as_ptr(), id as i32, mem::transmute(data), Some(::free_data::<T>)) == 0 {
+                oom()
+            }
         }
     }
     #[inline(always)]

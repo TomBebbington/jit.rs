@@ -257,12 +257,6 @@ impl Drop for Type {
         }
     }
 }
-extern fn free_data<T:'static>(data: *mut c_void) {
-    unsafe {
-        let actual_data:Box<T> = mem::transmute(data);
-        mem::drop(actual_data);
-    }
-}
 impl Type {
     /// Create a type descriptor for a function signature.
     pub fn new_signature(abi: Abi, return_type: Type, params: &mut [Type]) -> Type {
@@ -428,7 +422,7 @@ impl<T> TaggedType<T> where T:'static {
     /// Create a new tagged type
     pub fn new(ty:Type, kind: kind::TypeKind, data: Box<T>) -> TaggedType<T> {
         unsafe {
-            let free_data:extern fn(*mut c_void) = free_data::<T>;
+            let free_data:extern fn(*mut c_void) = ::free_data::<T>;
             let ty = jit_type_create_tagged(ty.as_ptr(), kind.bits(), mem::transmute(&*data), Some(free_data), 1);
             mem::forget(data);
             from_ptr(ty)
@@ -449,7 +443,7 @@ impl<T> TaggedType<T> where T:'static {
     /// Change the data this is tagged to
     pub fn set_tagged_data(&self, data: Box<T>) {
         unsafe {
-            let free_data:extern fn(*mut c_void) = free_data::<T>;
+            let free_data:extern fn(*mut c_void) = ::free_data::<T>;
             jit_type_set_tagged_data(self.as_ptr(), mem::transmute(&*data), Some(free_data));
             mem::forget(data);
         }

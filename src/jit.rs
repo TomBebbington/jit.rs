@@ -50,9 +50,12 @@
 //! ```
 #[no_link] #[plugin] #[macro_use]
 extern crate rustc_bitflags;
+extern crate alloc;
 extern crate libc;
 extern crate "libjit-sys" as raw;
 use raw::*;
+use libc::c_void;
+use std::mem;
 pub use compile::Compile;
 pub use context::{Builder, Context};
 pub use elf::*;
@@ -64,6 +67,14 @@ pub use types::{kind, get, Type, Field, Fields, Params, StaticType, TaggedType};
 pub use types::consts as typecs;
 pub use util::NativeRef;
 pub use value::Value;
+
+
+extern fn free_data<T:'static>(data: *mut c_void) {
+    unsafe {
+        let actual_data:Box<T> = mem::transmute(data);
+        mem::drop(actual_data);
+    }
+}
 
 /// Initialise the library and prepare for operations
 #[inline]

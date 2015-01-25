@@ -1,6 +1,6 @@
 [root]
 name = "jit"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "jit_macros 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libjit-sys 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
