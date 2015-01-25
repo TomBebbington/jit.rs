@@ -1,6 +1,7 @@
 use raw::*;
 use compile::Compile;
 use function::Abi;
+use alloc::oom;
 use libc::{c_uint, c_void};
 use std::marker::{ContravariantLifetime, NoCopy};
 use std::{fmt, mem, str};
@@ -327,11 +328,14 @@ impl Type {
         }
     }
     /// Set the field or parameter names of this type.
-    pub fn set_names(&self, names:&[&str]) -> bool {
+    pub fn with_names(self, names:&[&str]) -> Type {
         unsafe {
             let names = names.iter().map(|name| CString::from_slice(name.as_bytes())).collect::<Vec<_>>();
             let mut c_names = names.iter().map(|name| mem::transmute(name.as_ptr())).collect::<Vec<_>>();
-            jit_type_set_names(self.as_ptr(), c_names.as_mut_ptr(), names.len() as u32) != 0
+            if jit_type_set_names(self.as_ptr(), c_names.as_mut_ptr(), names.len() as u32) == 0 {
+                oom();
+            }
+            self
         }
     }
     #[inline(always)]

@@ -405,7 +405,7 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that loads a value from a src value
-    pub fn insn_load_relative(&self, src: Value<'a>, offset: isize, ty:Type) -> Value<'a> {
+    pub fn insn_load_relative(&self, src: Value<'a>, offset: usize, ty:Type) -> Value<'a> {
         unsafe {
             from_ptr(jit_insn_load_relative(
                 self.as_ptr(),
@@ -425,7 +425,7 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that stores a value a certain offset away from a
     /// destination value
-    pub fn insn_store_relative(&self, dest: Value<'a>, offset: isize, 
+    pub fn insn_store_relative(&self, dest: Value<'a>, offset: usize, 
                                src: Value<'a>) {
         unsafe {
             jit_insn_store_relative(self.as_ptr(), dest.as_ptr(), offset as jit_nint, src.as_ptr());

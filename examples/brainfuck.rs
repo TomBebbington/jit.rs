@@ -1,7 +1,6 @@
-#![feature(slicing_syntax)]
+#![feature(slicing_syntax, plugin)]
 #![allow(unstable)]
 extern crate jit;
-
 use jit::*;
 use jit::typecs::UBYTE;
 use std::cell::RefCell;
@@ -20,6 +19,7 @@ struct Loop<'a> {
     end: Label<'a>,
     parent: Option<WrappedLoop<'a>>
 }
+
 impl<'a> Loop<'a> {
     fn new(func: &UncompiledFunction<'a>, current_loop: Option<WrappedLoop<'a>>) -> Loop<'a> {
         let mut new_loop = Loop {

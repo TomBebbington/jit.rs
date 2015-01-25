@@ -1,6 +1,6 @@
 [package]
 name = "jit_macros"
-version = "0.0.3"
+version = "0.0.4"
 description = "JIT Macros"
 authors = [ "Tom Bebbington <tophattedcoder@gmail.com>" ]
 keywords = [ "compile", "compiler", "jit", "interpreter" ]

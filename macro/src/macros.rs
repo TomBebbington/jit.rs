@@ -1,12 +1,243 @@
+#![feature(plugin_registrar, quote)]
+#![unstable]
+
+extern crate syntax;
+extern crate rustc;
+
+use syntax::codemap::*;
+use syntax::parse::*;
+use syntax::parse::token::{Token, IdentStyle};
+use syntax::abi::Abi;
+use syntax::ast_util::empty_generics;
+use syntax::ast::*;
+use syntax::ext::base::*;
+use syntax::ext::build::*;
+use syntax::ext::quote::rt::ToSource;
+use syntax::ext::source_util::*;
+use syntax::ptr::P;
+use syntax::owned_slice::OwnedSlice;
+use rustc::plugin::Registry;
+
+fn simple_type(cx: &mut ExtCtxt, sp: Span, name: &'static str) -> Option<P<Expr>> {
+    Some(cx.expr_path(cx.path(sp, vec![cx.ident_of("jit"), cx.ident_of("typecs"), cx.ident_of(name)])))
+}
+fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
+    match ty.node {
+        Ty_::TyParen(ref ty) => type_expr(cx, sp, ty.clone()),
+        Ty_::TyPtr(_) | Ty_::TyRptr(_, _) => simple_type(cx, sp, "VOID_PTR"),
+        Ty_::TyPath(ref path, _) => {
+            let path_parts = path.segments.iter().map(|s| s.identifier.as_str()).collect::<Vec<_>>();
+            let jit = cx.ident_of("jit");
+            let types = cx.ident_of("typecs");
+            match &*path_parts {
+                ["i8"] => simple_type(cx, sp, "SBYTE"),
+                ["u8"] => simple_type(cx, sp, "UBYTE"),
+                ["i16"] => simple_type(cx, sp, "SHORT"),
+                ["u16"] => simple_type(cx, sp, "USHORT"),
+                ["i32"] => simple_type(cx, sp, "INT"),
+                ["u32"] => simple_type(cx, sp, "UINT"),
+                ["i64"] => simple_type(cx, sp, "LONG"),
+                ["u64"] => simple_type(cx, sp, "ULONG"),
+                ["isize"] => simple_type(cx, sp, "NINT"),
+                ["usize"] => simple_type(cx, sp, "NUINT"),
+                ["f32"] => simple_type(cx, sp, "FLOAT32"),
+                ["f64"] => simple_type(cx, sp, "FLOAT64"),
+                ["bool"] => simple_type(cx, sp, "SYS_BOOL"),
+                ["char"] => simple_type(cx, sp, "SYS_CHAR"),
+                _ => {
+                    let jit = cx.ident_of("jit");
+                    let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
+                    let qpath = cx.expr(sp, Expr_::ExprQPath(P(QPath {
+                        self_type: ty.clone(),
+                        trait_ref: P(cx.trait_ref(jit_compile)),
+                        item_path: PathSegment {
+                            identifier: cx.ident_of("get_type"),
+                            parameters: PathParameters::AngleBracketedParameters(AngleBracketedParameterData {
+                                lifetimes: vec![],
+                                types: OwnedSlice::empty(),
+                                bindings: OwnedSlice::empty()
+                            })
+                        }
+                    })));
+                    Some(cx.expr_call(sp, qpath, vec![]))
+                }
+            }
+        },
+        _ => {
+            let error = format!("could not resolve type {}", ty.to_source());
+            cx.span_err(sp, error.as_slice());
+            None
+        }
+    }
+}
+
+fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem, item: &Item, mut push: Box<FnMut(P<Item>)>) {
+    let name = item.ident;
+    let jit = cx.ident_of("jit");
+    let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
+    let jit_type = cx.path(sp, vec![jit, cx.ident_of("Type")]);
+   //let jit_static_type = cx.path(sp, vec![jit, cx.ident_of("StaticType")]);
+    let jit_life = cx.lifetime(sp, token::intern("a"));
+    let jit_func = cx.path_all(sp, false, vec![jit, cx.ident_of("UncompiledFunction")], vec![jit_life], vec![], vec![]);
+    let jit_value = cx.path_all(sp, false, vec![jit, cx.ident_of("Value")], vec![jit_life], vec![], vec![]);
+    let jit_value_new = cx.path(sp, vec![jit, cx.ident_of("Value"), cx.ident_of("new")]);
+    let new_struct = cx.path(sp, vec![jit, cx.ident_of("Type"), cx.ident_of("new_struct")]);
+    let func = cx.ident_of("func");
+    let value = cx.ident_of("value");
+    let offset = cx.ident_of("offset");
+    let mut is_packed = false;
+    //push(cx.item_use_simple(sp, Visibility::Inherited, jit_static_type));
+    for attr in item.attrs.iter() {
+        if let MetaItem_::MetaList(ref name, ref items) = attr.node.value.node {
+            if name.get() == "repr" && items.len() == 1 {
+                if let MetaItem_::MetaWord(ref text) = items[0].node {
+                    if text.get() == "packed" {
+                        is_packed = true;
+                    }
+                } 
+            }
+        } 
+    }
+    if !is_packed {
+        cx.span_err(sp, "jit-compatible structs must be packed, mark with #[repr(packed)] to fix");
+        return;
+    }
+    let ty = cx.ident_of("ty");
+    match item.node {
+        Item_::ItemStruct(ref def, ref gen) => {
+            let mut fields = Vec::with_capacity(def.fields.len());
+            let mut names = Some(Vec::with_capacity(fields.len()));
+            let mut compiler = Vec::with_capacity(def.fields.len() + 1);
+            let self_ty = cx.ty_ident(sp, name);
+            let self_type = if let Some(expr) = type_expr(cx, sp, self_ty) {
+                expr
+            } else {
+                return
+            };
+            compiler.push(cx.stmt_let(sp, false, value, cx.expr_call(
+                sp,
+                cx.expr_path(jit_value_new),
+                vec![
+                    cx.expr_ident(sp, func),
+                    self_type
+                ]
+            )));
+            let lit_usize = LitIntType::UnsignedIntLit(UintTy::TyUs(false));
+            if def.fields.len() > 1 {
+                compiler.push(cx.stmt_let(sp, true, offset, cx.expr_lit(sp, Lit_::LitInt(0, lit_usize))));
+            }
+            for (index, field) in def.fields.iter().enumerate() {
+                if let Some(expr) = type_expr(cx, sp, field.node.ty.clone()) {
+                    fields.push(cx.expr_method_call(sp, expr, cx.ident_of("get"), vec![]));
+                    let has_name = field.node.ident().is_some();
+                    if has_name && names.is_some() {
+                        let ident = field.node.ident().unwrap();
+                        let expr = expand_stringify(cx, sp, &[TokenTree::TtToken(sp, Token::Ident(ident, IdentStyle::Plain))]);
+                        names.as_mut().unwrap().push(expr.make_expr().unwrap());
+                    } else {
+                        names = None
+                    }
+                    let current_offset = if index == 0 {
+                        cx.expr_lit(sp, Lit_::LitInt(0, lit_usize))
+                    } else {
+                        cx.expr_ident(sp, offset)
+                    };
+                    let name = field.node.ident().unwrap();
+                    compiler.push(quote_stmt!(cx, func.insn_store_relative(value, $current_offset, self.$name.compile(func))));
+                    let size_of = cx.expr_path(cx.path_all(sp, false, vec![cx.ident_of("mem"), cx.ident_of("size_of")], vec![], vec![field.node.ty.clone()], vec![]));
+                    if def.fields.len() > 1 && index < def.fields.len() - 1 {
+                        compiler.push(quote_stmt!(cx, offset += $size_of()));
+                    }
+                } else {
+                    return;
+                }
+            }
+            let fields = cx.expr_mut_addr_of(sp, cx.expr_vec(sp, fields));
+            let mut type_expr = cx.expr_call(sp, cx.expr_path(new_struct), vec![fields]);
+            if let Some(names) = names {
+                let names = cx.expr_addr_of(sp, cx.expr_vec(sp, names));
+                type_expr = cx.expr_method_call(sp, type_expr, cx.ident_of("with_names"), vec![names]);
+            }
+            push(cx.item(sp, name, vec![], Item_::ItemImpl(
+                Unsafety::Normal,
+                ImplPolarity::Positive,
+                empty_generics(),
+                Some(cx.trait_ref(jit_compile)),
+                cx.ty_ident(sp, name),
+                vec![
+                    ImplItem::MethodImplItem(P(Method {
+                        attrs: vec![],
+                        id: DUMMY_NODE_ID,
+                        span: sp,
+                        node: Method_::MethDecl(
+                            cx.ident_of("get_type"),
+                            empty_generics(),
+                            Abi::Rust,
+                            Spanned {
+                                node: ExplicitSelf_::SelfStatic,
+                                span: sp
+                            },
+                            Unsafety::Normal,
+                            cx.fn_decl(vec![], cx.ty_path(jit_type)),
+                            cx.block_expr(
+                                type_expr
+                            ),
+                            Visibility::Inherited
+                        )
+                    })),
+                    ImplItem::MethodImplItem(P(Method {
+                        attrs: vec![],
+                        id: DUMMY_NODE_ID,
+                        span: sp,
+                        node: Method_::MethDecl(
+                            cx.ident_of("compile"),
+                            Generics {
+                                lifetimes: vec![LifetimeDef {
+                                    lifetime: jit_life,
+                                    bounds: vec![]
+                                }],
+                                ty_params: OwnedSlice::empty(),
+                                where_clause: WhereClause {
+                                    id: DUMMY_NODE_ID,
+                                    predicates: vec![]
+                                }
+                            },
+                            Abi::Rust,
+                            Spanned {
+                                node: ExplicitSelf_::SelfRegion(None, Mutability::MutImmutable, cx.ident_of("b")),
+                                span: sp
+                            },
+                            Unsafety::Normal,
+                            cx.fn_decl(vec![
+                                Arg::new_self(sp, Mutability::MutImmutable, cx.ident_of("self")),
+                                cx.arg(sp, func, cx.ty_rptr(sp, cx.ty_path(jit_func) ,None, Mutability::MutImmutable))
+                            ], cx.ty_path(jit_value)),
+                            cx.block(sp, compiler, Some(cx.expr_ident(sp, value))),
+                            Visibility::Inherited
+                        )
+                    }))
+                ]
+            )))
+        },
+        _ => {
+            cx.span_err(sp, "only structs can be jit-compatible");
+            return;
+        }
+    }
+}
+
+#[plugin_registrar]
+pub fn plugin_registrar(reg: &mut Registry) {
+    reg.register_syntax_extension(token::intern("jit"), SyntaxExtension::Decorator(Box::new(expand_jit) as Box<ItemDecorator>));
+}
+
 #[macro_export]
 /// Construct a JIT struct with the fields given
 macro_rules! jit_struct(
     ($($name:ident: $ty:ty),*) => ({
-        let structure = Type::new_struct([
+        Type::new_struct([
             $(get::<$ty>()),*
-        ].as_mut_slice());
-        structure.set_names(&[$(stringify!($name)),*]);
-        structure
+        ].as_mut_slice()).with_names(&[$(stringify!($name)),*])
     });
     ($($ty:ty),+ ) => ({
         Type::new_struct([
@@ -19,11 +250,9 @@ macro_rules! jit_struct(
 /// Construct a JIT union with the fields given
 macro_rules! jit_union(
     ($($name:ident: $ty:ty),*) => ({
-        let structure = Type::new_union([
+        Type::new_union([
             $(get::<$ty>()),*
-        ].as_mut_slice());
-        structure.set_names(&[$(stringify!($name)),*]);
-        structure
+        ].as_mut_slice()).with_names(&[$(stringify!($name)),*])
     });
     ($($ty:ty),+ ) => ({
         Type::new_union([
