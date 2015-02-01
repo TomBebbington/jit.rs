@@ -1,8 +1,8 @@
-#![allow(unstable)]
+#![feature(collections, io, path, os)]
 #[cfg(not(windows))]
 extern crate "pkg-config" as pkg_config;
-use std::io::fs::{self, PathExtensions};
-use std::io::process::Command;
+use std::old_io::fs::{self, PathExtensions};
+use std::old_io::process::Command;
 use std::os;
 use std::path::Path;
 
@@ -29,7 +29,7 @@ fn main() {
 		}
 		run(Command::new("git").arg("submodule").arg("update"));
 		if !submod_path.exists() {
-			run(Command::new("git").arg("clone").arg("git://git.savannah.gnu.org/libjit.git").arg(submod_path.display().to_string().as_slice()));
+			run(Command::new("git").arg("clone").arg("git://git.savannah.gnu.org/libjit.git").arg(&*submod_path.display().to_string()));
 		}
 		run(Command::new("sh").arg("auto_gen.sh").cwd(submod_path));
 		run(Command::new("sh").arg("configure").arg("--enable-static").arg("--disable-shared").arg("CFLAGS=-fPIC").cwd(submod_path));

@@ -1,5 +1,5 @@
 #![feature(plugin_registrar, quote)]
-#![unstable]
+#[unstable]
 
 extern crate syntax;
 extern crate rustc;
