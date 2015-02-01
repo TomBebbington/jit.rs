@@ -7,7 +7,7 @@ use std::marker::ContravariantLifetime;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use util::NativeRef;
-#[deriving(PartialEq)]
+#[derive(PartialEq)]
 /// A label in the code that can be branched to in instructions
 pub struct Label<'a> {
     _label: jit_label_t,

@@ -9,12 +9,11 @@ use util::NativeRef;
 /// Every value in the system, be it a constant, a local variable, or a
 /// temporary result, is represented by an object of type `Value`. The JIT then
 /// allocates registers or memory locations to the values as appropriate.
-#[deriving(Copy, PartialEq)]
+#[derive(Copy, PartialEq)]
 pub struct Value<'a> {
     _value: jit_value_t,
     marker: ContravariantLifetime<'a>
 }
-impl<'a> Copy for Value<'a> {}
 impl<'a> NativeRef for Value<'a> {
     #[inline(always)]
     /// Convert to a native pointer

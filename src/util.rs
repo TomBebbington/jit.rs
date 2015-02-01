@@ -31,7 +31,7 @@ impl<T> NativeRef for Option<T> where T:NativeRef {
 }
 
 pub fn dump<F>(cb: F) -> Result<String, Error> where F:FnOnce(*mut FILE) {
-    use std::io::pipe::PipeStream;
+    use std::old_io::pipe::PipeStream;
     use std::os;
     use libc::{fdopen, fclose};
     unsafe {

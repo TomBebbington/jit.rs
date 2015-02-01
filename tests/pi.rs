@@ -1,5 +1,4 @@
 #![feature(plugin)]
-#![allow(unstable)]
 #[no_link] #[plugin] #[macro_use]
 extern crate jit_macros;
 extern crate jit;

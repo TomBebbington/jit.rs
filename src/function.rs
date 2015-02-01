@@ -87,7 +87,6 @@ impl<'a> Function<'a> for AnyFunction<'a> {
         unsafe { jit_function_is_compiled(self.as_ptr()) != 0 }
     }
 }
-#[deriving(PartialEq)]
 /// A function which has already been compiled from an `UncompiledFunction`. This can
 /// be called but not added to.
 ///
@@ -118,7 +117,7 @@ impl<'a> CompiledFunction<'a> {
     }
 }
 
-#[deriving(PartialEq)]
+#[derive(PartialEq)]
 /// A function which has not been compiled yet, so it can have instructions added to it.
 ///
 /// A function persists for the lifetime of its containing context. This represents

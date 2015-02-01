@@ -84,7 +84,7 @@ impl Error for ReadElfErrorCode {
         }
     }
 }
-#[deriving(Copy)]
+#[derive(Copy)]
 /// An error from trying to open the ELF, including the filename
 pub struct ReadElfError<'a> {
     filename: &'a str,

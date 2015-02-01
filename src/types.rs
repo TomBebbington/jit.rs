@@ -98,7 +98,7 @@ pub mod consts {
     }
 }
 /// A single field of a struct
-#[deriving(PartialEq)]
+#[derive(PartialEq)]
 pub struct Field<'a> {
     /// The index of the field
     pub index: c_uint,

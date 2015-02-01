@@ -1,11 +1,10 @@
-#![feature(slicing_syntax, plugin)]
-#![allow(unstable)]
+#![feature(core, collections, io, os, path, slicing_syntax, plugin)]
 extern crate jit;
 use jit::*;
 use jit::typecs::UBYTE;
 use std::cell::RefCell;
-use std::io;
-use std::io::fs::File;
+use std::old_io as io;
+use std::old_io::fs::File;
 use std::iter::Peekable;
 use std::mem;
 use std::os;
@@ -129,14 +128,14 @@ fn main() {
     let mut ctx = Context::new();
     match os::args().tail() {
         [ref script] => {
-            let ref script = Path::new(script.as_slice());
+            let ref script = Path::new(&*script);
             let contents = File::open(script).unwrap().read_to_string().unwrap();
-            run(&mut ctx, contents.as_slice());
+            run(&mut ctx, &*contents);
         },
         [] => {
             io::print(PROMPT);
             for line in io::stdin().lock().lines() {
-                run(&mut ctx, line.unwrap().as_slice());
+                run(&mut ctx, &*line.unwrap());
                 io::print(PROMPT);
             }
         },
