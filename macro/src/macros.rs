@@ -1,5 +1,4 @@
-#![feature(plugin_registrar, quote)]
-#[unstable]
+#![feature(rustc_private, plugin_registrar, quote)]
 
 extern crate syntax;
 extern crate rustc;
@@ -27,8 +26,6 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
         Ty_::TyPtr(_) | Ty_::TyRptr(_, _) => simple_type(cx, sp, "VOID_PTR"),
         Ty_::TyPath(ref path, _) => {
             let path_parts = path.segments.iter().map(|s| s.identifier.as_str()).collect::<Vec<_>>();
-            let jit = cx.ident_of("jit");
-            let types = cx.ident_of("typecs");
             match &*path_parts {
                 ["i8"] => simple_type(cx, sp, "SBYTE"),
                 ["u8"] => simple_type(cx, sp, "UBYTE"),
@@ -65,13 +62,13 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
         },
         _ => {
             let error = format!("could not resolve type {}", ty.to_source());
-            cx.span_err(sp, error.as_slice());
+            cx.span_err(sp, &*error);
             None
         }
     }
 }
 
-fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem, item: &Item, mut push: Box<FnMut(P<Item>)>) {
+fn expand_jit(cx: &mut ExtCtxt, sp: Span, _: &MetaItem, item: &Item, mut push: Box<FnMut(P<Item>)>) {
     let name = item.ident;
     let jit = cx.ident_of("jit");
     let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
@@ -102,9 +99,8 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta_item: &MetaItem, item: &Item, mut
         cx.span_err(sp, "jit-compatible structs must be packed, mark with #[repr(packed)] to fix");
         return;
     }
-    let ty = cx.ident_of("ty");
     match item.node {
-        Item_::ItemStruct(ref def, ref gen) => {
+        Item_::ItemStruct(ref def, _) => {
             let mut fields = Vec::with_capacity(def.fields.len());
             let mut names = Some(Vec::with_capacity(fields.len()));
             let mut compiler = Vec::with_capacity(def.fields.len() + 1);
