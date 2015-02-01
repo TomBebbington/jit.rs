@@ -613,8 +613,8 @@ impl<'a> UncompiledFunction<'a> {
     }
 
     /// Call the function, which may or may not be translated yet
-    pub fn insn_call<F:Function<'a>>(&self, name:Option<&str>, func:&F,
-                            sig:Option<Type>, args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> {
+    pub fn insn_call<F>(&self, name:Option<&str>, func:&F, sig:Option<Type>,
+        args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> where F:Function<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
             let c_name = name.map(|name| CString::from_slice(name.as_bytes()));
@@ -772,7 +772,7 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make instructions to run the block if the condition is met
-    pub fn insn_if<B: FnOnce()>(&self, cond: Value<'a>, block: B) {
+    pub fn insn_if<B>(&self, cond: Value<'a>, block: B) where B:FnOnce() {
         let mut after = Label::new(self);
         self.insn_branch_if_not(cond, &mut after);
         block();
@@ -780,14 +780,14 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make instructions to run the block if the condition is not met
-    pub fn insn_if_not<B: FnOnce()>(&self, cond: Value<'a>, block: B) {
+    pub fn insn_if_not<B>(&self, cond: Value<'a>, block: B) where B:FnOnce() {
         let mut after = Label::new(self);
         self.insn_branch_if(cond, &mut after);
         block();
         self.insn_label(&mut after);
     }
     /// Make instructions to run the block forever
-    pub fn insn_loop<B: FnOnce()>(&self, block: B) {
+    pub fn insn_loop<B>(&self, block: B) where B:FnOnce() {
         let mut start = Label::new(self);
         self.insn_label(&mut start);
         block();
@@ -795,7 +795,8 @@ impl<'a> UncompiledFunction<'a> {
     }
     /// Make instructions to run the block and continue running it so long
     /// as the condition is met
-    pub fn insn_loop_while<C: FnOnce() -> Value<'a>, B: FnOnce()>(&self, cond: C, block: B) {
+    pub fn insn_loop_while<C, B>(&self, cond: C, block: B)
+        where C:FnOnce() -> Value<'a>, B:FnOnce()  {
         let mut start = Label::new(self);
         self.insn_label(&mut start);
         block();
@@ -803,7 +804,8 @@ impl<'a> UncompiledFunction<'a> {
     }
     /// Make instructions to run the block and continue running it so long
     /// as the condition is met
-    pub fn insn_while<C: FnOnce() -> Value<'a>, B: FnOnce()>(&self, cond: C, block: B) {
+    pub fn insn_while<C, B>(&self, cond: C, block: B)
+        where C:FnOnce() -> Value<'a>, B:FnOnce() {
         let mut start = Label::new(self);
         self.insn_label(&mut start);
         let mut after = Label::new(self);
@@ -862,7 +864,8 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Compile the function into a closure directly
-    pub fn compile_with<A, R, F:FnOnce(extern "C" fn(A) -> R)>(self, cb: F) -> CompiledFunction<'a> {
+    pub fn compile_with<A, R, F>(self, cb: F) -> CompiledFunction<'a>
+        where F:FnOnce(extern fn(A) -> R) {
         let compiled = self.compile();
         compiled.with(cb);
         compiled

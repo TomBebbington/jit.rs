@@ -475,6 +475,6 @@ impl<T> ::std::ops::Deref for TaggedType<T> {
 }
 #[inline(always)]
 /// Get the Rust type given as a type descriptor
-pub fn get<T: Compile>() -> Type {
+pub fn get<T>() -> Type where T:Compile {
     <T as Compile>::get_type()
 }

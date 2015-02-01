@@ -69,7 +69,7 @@ pub use util::NativeRef;
 pub use value::Value;
 
 
-extern fn free_data<T:'static>(data: *mut c_void) {
+extern fn free_data<T>(data: *mut c_void) where T:'static {
     unsafe {
         let actual_data:Box<T> = mem::transmute(data);
         mem::drop(actual_data);
