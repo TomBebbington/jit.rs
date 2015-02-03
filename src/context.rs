@@ -3,6 +3,7 @@ use alloc::oom;
 use std::marker::{ContravariantLifetime, NoCopy};
 use std::any::TypeId;
 use std::{hash, mem, ptr};
+use std::iter::IntoIterator;
 use util::{from_ptr, NativeRef};
 use {AnyFunction, CompiledFunction, Type, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
@@ -90,6 +91,12 @@ impl Context {
                 lifetime: ContravariantLifetime::<'a>
             }
         }
+    }
+}
+impl<'a> IntoIterator for &'a Context {
+    type Iter = Functions<'a>;
+    fn into_iter(self) -> Functions<'a> {
+        self.functions()   
     }
 }
 #[unsafe_destructor]

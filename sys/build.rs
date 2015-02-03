@@ -1,4 +1,4 @@
-#![feature(collections, io, path, os)]
+#![feature(io, path, os)]
 #[cfg(not(windows))]
 extern crate "pkg-config" as pkg_config;
 use std::old_io::fs::{self, PathExtensions};

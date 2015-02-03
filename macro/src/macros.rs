@@ -1,7 +1,11 @@
-#![feature(rustc_private, plugin_registrar, quote)]
+#![feature(core, rustc_private, plugin_registrar, quote, plugin)]
 
 extern crate syntax;
 extern crate rustc;
+#[no_link]
+#[macro_use]
+#[plugin]
+extern crate matches;
 
 use syntax::codemap::*;
 use syntax::parse::*;
@@ -17,30 +21,37 @@ use syntax::ptr::P;
 use syntax::owned_slice::OwnedSlice;
 use rustc::plugin::Registry;
 
-fn simple_type(cx: &mut ExtCtxt, sp: Span, name: &'static str) -> Option<P<Expr>> {
-    Some(cx.expr_path(cx.path(sp, vec![cx.ident_of("jit"), cx.ident_of("typecs"), cx.ident_of(name)])))
+static BAD_RETURN:&'static str = "bad return type";
+static BAD_ABI:&'static str = "jit-compilable functions must have Rust or C ABI";
+static BAD_EXPR:&'static str = "bad jit expression";
+static BAD_STRUCT:&'static str = "jit-compatible structs must be packed, mark with #[repr(packed)] to fix";
+static BAD_ITEM:&'static str = "only structs can be compatible with LibJIT";
+
+fn simple_type(cx: &mut ExtCtxt, name: &'static str) -> Option<P<Expr>> {
+    let name = cx.ident_of(name);
+    Some(quote_expr!(cx, *jit::typecs::$name))
 }
 fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
     match ty.node {
         Ty_::TyParen(ref ty) => type_expr(cx, sp, ty.clone()),
-        Ty_::TyPtr(_) | Ty_::TyRptr(_, _) => simple_type(cx, sp, "VOID_PTR"),
+        Ty_::TyPtr(_) | Ty_::TyRptr(_, _) => simple_type(cx, "VOID_PTR"),
         Ty_::TyPath(ref path, _) => {
             let path_parts = path.segments.iter().map(|s| s.identifier.as_str()).collect::<Vec<_>>();
             match &*path_parts {
-                ["i8"] => simple_type(cx, sp, "SBYTE"),
-                ["u8"] => simple_type(cx, sp, "UBYTE"),
-                ["i16"] => simple_type(cx, sp, "SHORT"),
-                ["u16"] => simple_type(cx, sp, "USHORT"),
-                ["i32"] => simple_type(cx, sp, "INT"),
-                ["u32"] => simple_type(cx, sp, "UINT"),
-                ["i64"] => simple_type(cx, sp, "LONG"),
-                ["u64"] => simple_type(cx, sp, "ULONG"),
-                ["isize"] => simple_type(cx, sp, "NINT"),
-                ["usize"] => simple_type(cx, sp, "NUINT"),
-                ["f32"] => simple_type(cx, sp, "FLOAT32"),
-                ["f64"] => simple_type(cx, sp, "FLOAT64"),
-                ["bool"] => simple_type(cx, sp, "SYS_BOOL"),
-                ["char"] => simple_type(cx, sp, "SYS_CHAR"),
+                ["i8"] => simple_type(cx, "SBYTE"),
+                ["u8"] => simple_type(cx, "UBYTE"),
+                ["i16"] => simple_type(cx, "SHORT"),
+                ["u16"] => simple_type(cx, "USHORT"),
+                ["i32"] => simple_type(cx, "INT"),
+                ["u32"] => simple_type(cx, "UINT"),
+                ["i64"] => simple_type(cx, "LONG"),
+                ["u64"] => simple_type(cx, "ULONG"),
+                ["isize"] => simple_type(cx, "NINT"),
+                ["usize"] => simple_type(cx, "NUINT"),
+                ["f32"] => simple_type(cx, "FLOAT32"),
+                ["f64"] => simple_type(cx, "FLOAT64"),
+                ["bool"] => simple_type(cx, "SYS_BOOL"),
+                ["char"] => simple_type(cx, "SYS_CHAR"),
                 _ => {
                     let jit = cx.ident_of("jit");
                     let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
@@ -68,7 +79,7 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
     }
 }
 
-fn expand_jit(cx: &mut ExtCtxt, sp: Span, _: &MetaItem, item: &Item, mut push: Box<FnMut(P<Item>)>) {
+fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push: Box<FnMut(P<Item>)>) {
     let name = item.ident;
     let jit = cx.ident_of("jit");
     let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
@@ -95,12 +106,64 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _: &MetaItem, item: &Item, mut push: B
             }
         } 
     }
-    if !is_packed {
-        cx.span_err(sp, "jit-compatible structs must be packed, mark with #[repr(packed)] to fix");
-        return;
-    }
     match item.node {
+        Item_::ItemFn(ref dec, Unsafety::Normal, abi, _, ref block) => {
+            if !matches!(abi, Abi::Rust | Abi::C | Abi::Cdecl) {
+                cx.span_err(sp, BAD_ABI);
+                return;
+            }
+            let ret = match dec.output {
+                FunctionRetTy::NoReturn(_) => {
+                    quote_expr!(cx, jit::typecs::VOID_PTR.get())
+                },
+                FunctionRetTy::Return(ref ty) => {
+                    if let Some(ex) = type_expr(cx, sp, ty.clone()) {
+                        ex
+                    } else {
+                        return;
+                    }
+                },
+                FunctionRetTy::DefaultReturn(sp) => {
+                    cx.span_err(sp, BAD_RETURN);
+                    return;
+                }
+            };
+            let mut should_ret = false;
+            let args = dec.inputs.iter().map(|arg| {
+                if let Some(ex) = type_expr(cx, sp, arg.ty.clone()) {
+                    ex
+                } else {
+                    should_ret = true;
+                    cx.expr_int(sp, 32)
+                }
+            }).collect::<Vec<_>>();
+            if should_ret {
+                return;
+            }
+            let args = cx.expr_vec(sp, args);
+            let sig = quote_expr!(cx, jit::Type::new_signature(jit::Abi::CDecl, $ret, &mut $args));
+            let mut block = vec![];
+            for (index, arg) in dec.inputs.iter().enumerate() {
+                let index = cx.expr_int(sp, index as isize);
+                if let Pat_::PatIdent(BindingMode::BindByValue(_), ident, _) = arg.pat.node {
+                    let name = ident.node;
+                    block.push(quote_stmt!(cx, let $name = func[$index]))
+                }
+            }
+            let block = cx.block(sp, block, None);
+            let block = cx.block_expr(quote_expr!(cx, ctx.build_func($sig, |func| $block)));
+            let args = vec![
+                cx.arg(sp, cx.ident_of("ctx"), quote_ty!(cx, &jit::Context))
+            ];
+            let item = cx.item_fn(sp, cx.ident_of(&*format!("jit_{:?}", name)), args, quote_ty!(cx, jit::CompiledFunction), block);
+            println!("{}", item.to_source());
+            push(item);
+        },
         Item_::ItemStruct(ref def, _) => {
+            if !is_packed {
+                cx.span_err(sp, BAD_STRUCT);
+                return;
+            }
             let mut fields = Vec::with_capacity(def.fields.len());
             let mut names = Some(Vec::with_capacity(fields.len()));
             let mut compiler = Vec::with_capacity(def.fields.len() + 1);
@@ -216,12 +279,11 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _: &MetaItem, item: &Item, mut push: B
             )))
         },
         _ => {
-            cx.span_err(sp, "only structs can be jit-compatible");
+            cx.span_err(sp, BAD_ITEM);
             return;
         }
     }
 }
-
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
     reg.register_syntax_extension(token::intern("jit"), SyntaxExtension::Decorator(Box::new(expand_jit) as Box<ItemDecorator>));

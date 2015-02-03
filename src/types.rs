@@ -5,6 +5,7 @@ use alloc::oom;
 use libc::{c_uint, c_void};
 use std::marker::{ContravariantLifetime, NoCopy};
 use std::{fmt, mem, str};
+use std::iter::IntoIterator;
 use std::fmt::Display;
 use std::ffi::{self, CString};
 use util::{self, from_ptr, NativeRef};
@@ -401,6 +402,12 @@ impl Type {
         unsafe {
             jit_type_is_tagged(self.as_ptr()) != 0
         }
+    }
+}
+impl<'a> IntoIterator for &'a Type {
+    type Iter = Fields<'a>;
+    fn into_iter(self) -> Fields<'a> {
+        self.fields()   
     }
 }
 
