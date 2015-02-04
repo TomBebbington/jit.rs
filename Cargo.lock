@@ -1,23 +1,31 @@
 [root]
 name = "jit"
-version = "0.3.6"
+version = "0.3.8"
 dependencies = [
- "jit_macros 0.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "libjit-sys 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jit_macros 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libjit-sys 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "jit_macros"
-version = "0.0.5"
+version = "0.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "matches 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "libjit-sys"
-version = "0.1.8"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "pkg-config 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
+
+[[package]]
+name = "matches"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "pkg-config"
