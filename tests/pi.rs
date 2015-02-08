@@ -5,6 +5,7 @@ extern crate jit;
 use jit::*;
 use std::num::Float;
 use std::iter::IteratorExt;
+/*
 #[jit]
 fn pi() -> f64 {
     let mut pi = 3.0f64;
@@ -26,3 +27,4 @@ fn test_pi() {
         assert!((pi - 3.1415).abs() < 0.01);
     });
 }
+*/

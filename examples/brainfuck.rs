@@ -1,14 +1,13 @@
-#![feature(core, collections, io, os, path, slicing_syntax, plugin)]
+#![feature(core, env, io, os, path, slicing_syntax, plugin)]
 extern crate jit;
 use jit::*;
-use jit::typecs::UBYTE;
 use std::cell::RefCell;
 use std::old_io as io;
 use std::old_io::fs::File;
 use std::iter::Peekable;
 use std::mem;
-use std::os;
-use std::path::Path;
+use std::env;
+use std::old_path::Path;
 use std::rc::Rc;
 
 static PROMPT:&'static str = "> ";
@@ -38,7 +37,7 @@ impl<'a> Loop<'a> {
     }
 }
 
-fn count<'a, I>(func: &UncompiledFunction<'a>, code: &mut Peekable<char, I>, curr:char) -> Value<'a> where I:Iterator<Item=char> {
+fn count<'a, I>(func: &UncompiledFunction<'a>, code: &mut Peekable<I>, curr:char) -> Value<'a> where I:Iterator<Item=char> {
     let mut amount = 1us;
     while code.peek() == Some(&curr) {
         amount += 1;
@@ -48,7 +47,7 @@ fn count<'a, I>(func: &UncompiledFunction<'a>, code: &mut Peekable<char, I>, cur
 }
 
 fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
-    let ubyte = UBYTE.get();
+    let ubyte = typecs::get_ubyte();;
     let putchar_sig = get::<fn(u8)>();
     let readchar_sig = get::<fn() -> u8>();
     let data = func[0];
@@ -68,35 +67,35 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
             },
             '+' => {
                 let amount = count(func, &mut code, c);
-                let mut value = func.insn_load_relative(data, 0, ubyte.clone());
+                let mut value = func.insn_load_relative(data, 0, ubyte);
                 value = value + amount;
-                value = func.insn_convert(value, ubyte.clone(), false);
+                value = func.insn_convert(value, ubyte, false);
                 func.insn_store_relative(data, 0, value)
             },
             '-' => {
                 let amount = count(func, &mut code, c);
-                let mut value = func.insn_load_relative(data, 0, ubyte.clone());
+                let mut value = func.insn_load_relative(data, 0, ubyte);
                 value = value - amount;
-                value = func.insn_convert(value, ubyte.clone(), false);
+                value = func.insn_convert(value, ubyte, false);
                 func.insn_store_relative(data, 0, value)
             },
             '.' => {
                 extern fn putchar(c: u8) {
                     io::stdout().write_u8(c).unwrap();
                 }
-                let value = func.insn_load_relative(data, 0, ubyte.clone());
-                func.insn_call_native1(Some("putchar"), putchar, putchar_sig.clone(), [value], flags::NO_THROW);
+                let value = func.insn_load_relative(data, 0, ubyte);
+                func.insn_call_native1(Some("putchar"), putchar, putchar_sig.get(), [value], flags::NO_THROW);
             },
             ',' => {
                 extern fn readchar() -> u8 {
                     io::stdin().read_byte().unwrap()
                 }
-                let value = func.insn_call_native0(Some("readchar"), readchar, readchar_sig.clone(), flags::NO_THROW);
+                let value = func.insn_call_native0(Some("readchar"), readchar, readchar_sig.get(), flags::NO_THROW);
                 func.insn_store_relative(data, 0, value);
             },
             '[' => {
                 let wrapped_loop = Rc::new(RefCell::new(Loop::new(func, current_loop)));
-                let tmp = func.insn_load_relative(data, 0, ubyte.clone());
+                let tmp = func.insn_load_relative(data, 0, ubyte);
                 {
                     let mut borrow = wrapped_loop.borrow_mut();
                     func.insn_branch_if_not(tmp, &mut borrow.end);
@@ -118,7 +117,7 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
 }
 fn run(ctx: &mut Context, code: &str) {
     let sig = get::<fn(*mut u8)>();
-    let func = ctx.build_func(sig, |func| compile(func, code));
+    let func = ctx.build_func(sig.get(), |func| compile(func, code));
     func.with(|func:extern fn(*mut u8)| {
         let mut data: [u8; 3000] = unsafe { mem::zeroed() };
         func(data.as_mut_ptr());
@@ -126,19 +125,15 @@ fn run(ctx: &mut Context, code: &str) {
 }
 fn main() {
     let mut ctx = Context::new();
-    match os::args().tail() {
-        [ref script] => {
-            let ref script = Path::new(&*script);
-            let contents = File::open(script).unwrap().read_to_string().unwrap();
-            run(&mut ctx, &*contents);
-        },
-        [] => {
+    if let Some(ref script) = env::args().skip(1).next() {
+        let ref script = Path::new(&*script.to_str().unwrap());
+        let contents = File::open(script).unwrap().read_to_string().unwrap();
+        run(&mut ctx, &*contents);
+    } else {
+        io::print(PROMPT);
+        for line in io::stdin().lock().lines() {
+            run(&mut ctx, &*line.unwrap());
             io::print(PROMPT);
-            for line in io::stdin().lock().lines() {
-                run(&mut ctx, &*line.unwrap());
-                io::print(PROMPT);
-            }
-        },
-        _ => panic!("Invalid args for Brainfuck VM")
+        }
     }
 }

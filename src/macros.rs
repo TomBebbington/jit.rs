@@ -9,7 +9,7 @@ impl Compile for $ty {
         }
     }
     #[inline(always)]
-    fn get_type() -> Type {
+    fn get_type() -> CowType<'static> {
         use types::consts;
         consts::$type_name.clone()
     }
@@ -20,13 +20,13 @@ impl Compile for $ty {
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         use types::consts;
         unsafe {
-            from_ptr($make_constant(func.as_ptr(), consts::$type_name.as_ptr(), *self as $cast) )
+            from_ptr($make_constant(func.as_ptr(), consts::$type_name().as_ptr(), *self as $cast) )
         }
     }
     #[inline(always)]
-    fn get_type() -> Type {
+    fn get_type() -> CowType<'static> {
         use types::consts;
-        consts::$type_name.clone()
+        consts::$type_name().into_cow()
     }
 });
 );
@@ -45,8 +45,8 @@ macro_rules! compile_func(
                 compile_ptr!(func, self)
             }
             #[inline(always)]
-            fn get_type() -> Type {
-                Type::new_signature(CDecl, get::<R>(), [$(get::<$arg>()),*].as_mut_slice())
+            fn get_type() -> CowType<'static> {
+                Type::new_signature(CDecl, get::<R>().get(), [$(get::<$arg>().get()),*].as_mut_slice()).into_cow()
             }
         }
         impl<$($arg:Compile,)* R:Compile> Compile for $ext_sig {
@@ -55,7 +55,7 @@ macro_rules! compile_func(
                 compile_ptr!(func, self)
             }
             #[inline(always)]
-            fn get_type() -> Type {
+            fn get_type() -> CowType<'static> {
                 get::<$sig>()
             }
         }
@@ -67,17 +67,17 @@ macro_rules! compile_tuple(
             #[inline(always)]
             fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
                 let ($(ref $name),+) = *self;
-                let ty = get::<($($ty),+)>();
-                let tuple = Value::new(func, ty.clone());
+                let ty = get::<($($ty),+)>().get();
+                let tuple = Value::new(func, ty);
                 let ($($name),+) = ($(func.insn_of($name)),+);
                 let mut fields = ty.fields();
                 $(func.insn_store_relative(tuple, fields.next().unwrap().get_offset(), $name);)+
                 tuple
             }
             #[inline(always)]
-            fn get_type() -> Type {
-                let mut types = [$(get::<$ty>()),+];
-                Type::new_struct(types.as_mut_slice())
+            fn get_type() -> CowType<'static> {
+                let mut types = [$(get::<$ty>().get()),+];
+                Type::new_struct(types.as_mut_slice()).into_cow()
             }
         }
     )
@@ -137,23 +137,10 @@ macro_rules! native_ref(
 );
 macro_rules! builtin_type(
     ($c_name:ident -> $rust_name:ident) => (
-        #[allow(missing_copy_implementations)]
-        #[allow(non_camel_case_types)]
-        #[allow(dead_code)]
-        #[derive(Copy, Eq, PartialEq)]
-        pub struct $rust_name;
-        impl ::std::ops::Deref for $rust_name {
-            type Target = Type;
-            fn deref(&self) -> &Type {
-                use std::mem;
-                unsafe { mem::transmute(&$c_name) }
-            }
-        }
-        impl ::types::StaticType for $rust_name {
-            #[inline(always)]
-            fn get(self) -> Type {
-                use util::from_ptr;
-                unsafe { from_ptr($c_name) }
+        pub fn $rust_name() -> StaticType {
+            use util::from_ptr;
+            unsafe {
+                from_ptr($c_name)
             }
         }
     )

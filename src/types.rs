@@ -3,11 +3,13 @@ use compile::Compile;
 use function::Abi;
 use alloc::oom;
 use libc::{c_uint, c_void};
+use std::borrow::*;
 use std::marker::{ContravariantLifetime, NoCopy};
 use std::{fmt, mem, str};
 use std::iter::IntoIterator;
 use std::fmt::Display;
 use std::ffi::{self, CString};
+use std::ops::Deref;
 use util::{self, from_ptr, NativeRef};
 pub use kind::TypeKind;
 /// The integer representation of a type
@@ -39,7 +41,7 @@ pub mod kind {
         }
     );
 }
-impl fmt::Display for Type {
+impl<'a> fmt::Display for TypeRef<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let kind = self.get_kind();
         if kind.contains(kind::Pointer) {
@@ -62,40 +64,50 @@ impl fmt::Display for Type {
         }
     }
 }
+impl<'a> fmt::Debug for TypeRef<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(self, fmt)
+    }
+}
+impl<'a> fmt::Display for Type {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        (**self).fmt(fmt)
+    }
+}
 /// Type constants
 pub mod consts {
     use raw::*;
-    use types::Type;
+    use types::StaticType;
     builtin_types!{
-        jit_type_void -> VOID;
-        jit_type_sbyte -> SBYTE;
-        jit_type_ubyte -> UBYTE;
-        jit_type_short -> SHORT;
-        jit_type_ushort -> USHORT;
-        jit_type_int -> INT;
-        jit_type_uint -> UINT;
-        jit_type_nint -> NINT;
-        jit_type_nuint -> NUINT;
-        jit_type_long -> LONG;
-        jit_type_ulong -> ULONG;
-        jit_type_float32 -> FLOAT32;
-        jit_type_float64 -> FLOAT64;
-        jit_type_nfloat -> NFLOAT;
-        jit_type_void_ptr -> VOID_PTR;
-        jit_type_sys_bool -> SYS_BOOL;
-        jit_type_sys_char -> SYS_CHAR;
-        jit_type_sys_uchar -> SYS_UCHAR;
-        jit_type_sys_short -> SYS_SHORT;
-        jit_type_sys_ushort -> SYS_USHORT;
-        jit_type_sys_int -> SYS_INT;
-        jit_type_sys_uint -> SYS_UINT;
-        jit_type_sys_long -> SYS_LONG;
-        jit_type_sys_ulong -> SYS_ULONG;
-        jit_type_sys_longlong -> SYS_LONGLONG;
-        jit_type_sys_ulonglong -> SYS_ULONGLONG;
-        jit_type_sys_float -> SYS_FLOAT;
-        jit_type_sys_double -> SYS_DOUBLE;
-        jit_type_sys_long_double -> SYS_LONG_DOUBLE
+        jit_type_void -> get_void;
+        jit_type_sbyte -> get_sbyte;
+        jit_type_ubyte -> get_ubyte;
+        jit_type_short -> get_short;
+        jit_type_ushort -> get_ushort;
+        jit_type_int -> get_int;
+        jit_type_uint -> get_uint;
+        jit_type_nint -> get_nint;
+        jit_type_nuint -> get_nuint;
+        jit_type_long -> get_long;
+        jit_type_ulong -> get_ulong;
+        jit_type_float32 -> get_float32;
+        jit_type_float64 -> get_float64;
+        jit_type_nfloat -> get_nfloat;
+        jit_type_void_ptr -> get_void_ptr;
+        jit_type_sys_bool -> get_sys_bool;
+        jit_type_sys_char -> get_sys_char;
+        jit_type_sys_uchar -> get_sys_uchar;
+        jit_type_sys_short -> get_sys_short;
+        jit_type_sys_ushort -> get_sys_ushort;
+        jit_type_sys_int -> get_sys_int;
+        jit_type_sys_uint -> get_sys_uint;
+        jit_type_sys_long -> get_sys_long;
+        jit_type_sys_ulong -> get_sys_ulong;
+        jit_type_sys_longlong -> get_sys_longlong;
+        jit_type_sys_ulonglong -> get_sys_ulonglong;
+        jit_type_sys_float -> get_sys_float;
+        jit_type_sys_double -> get_sys_double;
+        jit_type_sys_long_double -> get_sys_long_double
     }
 }
 /// A single field of a struct
@@ -144,7 +156,7 @@ pub struct Fields<'a> {
 }
 impl<'a> Fields<'a> {
     #[inline(always)]
-    fn new(ty:Type) -> Fields<'a> {
+    fn new(ty:TypeRef<'a>) -> Fields<'a> {
         unsafe {
             Fields {
                 _type: ty.as_ptr(),
@@ -174,6 +186,7 @@ impl<'a> Iterator for Fields<'a> {
         ((self.length - self.index) as usize, None)
     }
 }
+//deref owned type into type ref
 /// Iterator through all the arguments a function takes
 pub struct Params<'a> {
     _type: jit_type_t,
@@ -182,7 +195,7 @@ pub struct Params<'a> {
     marker: ContravariantLifetime<'a>
 }
 impl<'a> Params<'a> {
-    fn new(ty:Type) -> Params<'a> {
+    fn new(ty:TypeRef<'a>) -> Params<'a> {
         unsafe {
             Params {
                 _type: ty.as_ptr(),
@@ -209,11 +222,44 @@ impl<'a> Iterator for Params<'a> {
         ((self.length - self.index) as usize, None)
     }
 }
-/// A static type that is owned by LibJIT itself
-pub trait StaticType: Copy + Eq + PartialEq {
-    /// Get type contained in this static type
-    fn get(self) -> Type;
+
+#[derive(Eq, PartialEq, Copy)]
+#[repr(packed)]
+pub struct TypeRef<'a> {
+    _type: jit_type_t,
+    lifetime: ContravariantLifetime<'a>
 }
+impl<'a> NativeRef for TypeRef<'a> {
+    fn as_ptr(&self) -> jit_type_t {
+        self._type
+    }
+    fn from_ptr(ptr: jit_type_t) -> TypeRef<'a> {
+        TypeRef {
+            _type: ptr,
+            lifetime: ContravariantLifetime::<'a>
+        }
+    }
+}
+impl<'a> ToOwned<Type> for TypeRef<'a> {
+    fn to_owned(&self) -> Type {
+        unsafe {
+            from_ptr(jit_type_copy(self.as_ptr()))
+        }
+    }
+}
+impl<'a> BorrowFrom<Type> for TypeRef<'a> {
+    fn borrow_from(owned: &Type) -> &TypeRef<'a> {
+        unsafe {
+            mem::transmute(owned)
+        }
+    }
+}
+impl<'a: 'b, 'b> IntoCow<'b, Type, TypeRef<'a>> for &'b TypeRef<'a> {
+    fn into_cow(self) -> Cow<'b, Type, TypeRef<'a>> {
+        Cow::Borrowed(self)
+    }
+}
+
 /// An object that represents a native system type.
 /// Each `Type` represents a basic system type, be it a primitive, a struct, a
 /// union, a pointer, or a function signature. The library uses this information
@@ -259,9 +305,32 @@ impl Drop for Type {
         }
     }
 }
+impl<'a> Deref for Type {
+    type Target = TypeRef<'a>;
+    fn deref(&self) -> &TypeRef<'a> {
+        BorrowFrom::borrow_from(self)
+    }
+}
+pub enum CowType<'a> {
+    Owned(Type),
+    Borrowed(TypeRef<'a>)
+}
+impl<'a> CowType<'a> {
+    pub fn get(&self) -> TypeRef<'a> {
+        match *self {
+            CowType::Owned(ref ty) => **ty,
+            CowType::Borrowed(ty) => ty
+        }
+    }
+}
+
+pub type StaticType = TypeRef<'static>;
 impl Type {
+    pub fn into_cow<'a>(self) -> CowType<'a> {
+        CowType::Owned(self)
+    }
     /// Create a type descriptor for a function signature.
-    pub fn new_signature(abi: Abi, return_type: Type, params: &mut [Type]) -> Type {
+    pub fn new_signature(abi: Abi, return_type: TypeRef, params: &mut [TypeRef]) -> Type {
         unsafe {
             let mut native_params:Vec<jit_type_t> = params.iter().map(|param| param.as_ptr()).collect();
             let signature = jit_type_create_signature(abi as jit_abi_t, return_type.as_ptr(), native_params.as_mut_ptr(), params.len() as c_uint, 1);
@@ -270,7 +339,7 @@ impl Type {
     }
     #[inline(always)]
     /// Create a type descriptor for a structure.
-    pub fn new_struct(fields: &mut [Type]) -> Type {
+    pub fn new_struct(fields: &mut [TypeRef]) -> Type {
         unsafe {
             let mut native_fields:Vec<_> = fields.iter().map(|field| field.as_ptr()).collect();
             from_ptr(jit_type_create_struct(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
@@ -278,7 +347,7 @@ impl Type {
     }
     #[inline(always)]
     /// Create a type descriptor for a union.
-    pub fn new_union(fields: &mut [Type]) -> Type {
+    pub fn new_union(fields: &mut [TypeRef]) -> Type {
         unsafe {
             let mut native_fields:Vec<_> = fields.iter().map(|field| field.as_ptr()).collect();
             from_ptr(jit_type_create_union(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
@@ -286,22 +355,27 @@ impl Type {
     }
     #[inline(always)]
     /// Create a type descriptor for a pointer to another type.
-    pub fn new_pointer(pointee: Type) -> Type {
+    pub fn new_pointer(pointee: TypeRef) -> Type {
         unsafe {
             let ptr = jit_type_create_pointer(pointee.as_ptr(), 1);
             from_ptr(ptr)
         }
     }
+}
+impl<'a> TypeRef<'a> {
+    pub fn into_cow(self) -> CowType<'a> {
+        CowType::Borrowed(self)
+    }
     #[inline(always)]
     /// Get the size of this type in bytes.
-    pub fn get_size(&self) -> usize {
+    pub fn get_size(self) -> usize {
         unsafe {
             jit_type_get_size(self.as_ptr()) as usize
         }
     }
     #[inline(always)]
     /// Get the alignment of this type in bytes.
-    pub fn get_alignment(&self) -> usize {
+    pub fn get_alignment(self) -> usize {
         unsafe {
             jit_type_get_alignment(self.as_ptr()) as usize
         }
@@ -309,27 +383,27 @@ impl Type {
     #[inline]
     /// Get a value that indicates the kind of this type. This allows callers to
     /// quickly classify a type to determine how it should be handled further.
-    pub fn get_kind(&self) -> kind::TypeKind {
+    pub fn get_kind(self) -> kind::TypeKind {
         unsafe {
             mem::transmute(jit_type_get_kind(self.as_ptr()))
         }
     }
     #[inline(always)]
     /// Get the type that is referred to by this pointer type.
-    pub fn get_ref(&self) -> Option<Type> {
+    pub fn get_ref(self) -> Option<TypeRef<'a>> {
         unsafe {
             from_ptr(jit_type_get_ref(self.as_ptr()))
         }
     }
     #[inline(always)]
     /// Get the type returned by this function type.
-    pub fn get_return(&self) -> Option<Type> {
+    pub fn get_return(self) -> Option<TypeRef<'a>> {
         unsafe {
             from_ptr(jit_type_get_return(self.as_ptr()))
         }
     }
     /// Set the field or parameter names of this type.
-    pub fn with_names(self, names:&[&str]) -> Type {
+    pub fn with_names(self, names:&[&str]) -> TypeRef<'a> {
         unsafe {
             let names = names.iter().map(|name| CString::from_slice(name.as_bytes())).collect::<Vec<_>>();
             let mut c_names = names.iter().map(|name| mem::transmute(name.as_ptr())).collect::<Vec<_>>();
@@ -341,17 +415,17 @@ impl Type {
     }
     #[inline(always)]
     /// Iterator over the type's fields
-    pub fn fields<'a>(&'a self) -> Fields<'a> {
-        Fields::new(self.clone())
+    pub fn fields(self) -> Fields<'a> {
+        Fields::new(self)
     }
     #[inline(always)]
     /// Iterator over the function signature's parameters
-    pub fn params<'a>(&'a self) -> Params<'a> {
-        Params::new(self.clone())
+    pub fn params(self) -> Params<'a> {
+        Params::new(self)
     }
     #[inline]
     /// Find the field/parameter index for a particular name.
-    pub fn get_field<'a>(&'a self, name:&str) -> Field<'a> {
+    pub fn get_field(self, name:&str) -> Field<'a> {
         unsafe {
             let c_name = CString::from_slice(name.as_bytes());
             Field {
@@ -363,48 +437,48 @@ impl Type {
     }
     #[inline(always)]
     /// Check if this is a pointer
-    pub fn is_primitive(&self) -> bool {
+    pub fn is_primitive(self) -> bool {
         unsafe {
             jit_type_is_primitive(self.as_ptr()) != 0
         }
     }
     #[inline(always)]
     /// Check if this is a struct
-    pub fn is_struct(&self) -> bool {
+    pub fn is_struct(self) -> bool {
         unsafe {
             jit_type_is_struct(self.as_ptr()) != 0
         }
     }
     #[inline(always)]
     /// Check if this is a union
-    pub fn is_union(&self) -> bool {
+    pub fn is_union(self) -> bool {
         unsafe {
             jit_type_is_union(self.as_ptr()) != 0
         }
     }
     #[inline(always)]
     /// Check if this is a signature
-    pub fn is_signature(&self) -> bool {
+    pub fn is_signature(self) -> bool {
         unsafe {
             jit_type_is_signature(self.as_ptr()) != 0
         }
     }
     #[inline(always)]
     /// Check if this is a pointer
-    pub fn is_pointer(&self) -> bool {
+    pub fn is_pointer(self) -> bool {
         unsafe {
             jit_type_is_pointer(self.as_ptr()) != 0
         }
     }
     #[inline(always)]
     /// Check if this is tagged
-    pub fn is_tagged(&self) -> bool {
+    pub fn is_tagged(self) -> bool {
         unsafe {
             jit_type_is_tagged(self.as_ptr()) != 0
         }
     }
 }
-impl<'a> IntoIterator for &'a Type {
+impl<'a> IntoIterator for TypeRef<'a> {
     type Iter = Fields<'a>;
     fn into_iter(self) -> Fields<'a> {
         self.fields()   
@@ -431,7 +505,7 @@ impl<T> NativeRef for TaggedType<T> {
 }
 impl<T> TaggedType<T> where T:'static {
     /// Create a new tagged type
-    pub fn new(ty:Type, kind: kind::TypeKind, data: Box<T>) -> TaggedType<T> {
+    pub fn new(ty:TypeRef, kind: kind::TypeKind, data: Box<T>) -> TaggedType<T> {
         unsafe {
             let free_data:extern fn(*mut c_void) = ::free_data::<T>;
             let ty = jit_type_create_tagged(ty.as_ptr(), kind.bits(), mem::transmute(&*data), Some(free_data), 1);
@@ -446,7 +520,7 @@ impl<T> TaggedType<T> where T:'static {
         }
     }
     /// Get the type this is tagged to
-    pub fn get_tagged_type(&self) -> Type {
+    pub fn get_tagged_type(&self) -> TypeRef {
         unsafe {
             from_ptr(jit_type_get_tagged_type(self.as_ptr()))
         }
@@ -472,7 +546,7 @@ impl<T> Drop for TaggedType<T> {
         }
     }
 }
-impl<T> ::std::ops::Deref for TaggedType<T> {
+impl<T> Deref for TaggedType<T> {
     type Target = Type;
     fn deref(&self) -> &Type {
         unsafe {
@@ -482,6 +556,6 @@ impl<T> ::std::ops::Deref for TaggedType<T> {
 }
 #[inline(always)]
 /// Get the Rust type given as a type descriptor
-pub fn get<T>() -> Type where T:Compile {
+pub fn get<T>() -> CowType<'static> where T:Compile {
     <T as Compile>::get_type()
 }

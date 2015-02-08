@@ -28,8 +28,9 @@ static BAD_STRUCT:&'static str = "jit-compatible structs must be packed, mark wi
 static BAD_ITEM:&'static str = "only structs can be compatible with LibJIT";
 
 fn simple_type(cx: &mut ExtCtxt, name: &'static str) -> Option<P<Expr>> {
-    let name = cx.ident_of(name);
-    Some(quote_expr!(cx, *jit::typecs::$name))
+    let new_name = format!("get_{}", name);
+    let name = cx.ident_of(&*new_name);
+    Some(quote_expr!(cx, jit::typecs::$name()))
 }
 fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
     match ty.node {
@@ -38,20 +39,20 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
         Ty_::TyPath(ref path, _) => {
             let path_parts = path.segments.iter().map(|s| s.identifier.as_str()).collect::<Vec<_>>();
             match &*path_parts {
-                ["i8"] => simple_type(cx, "SBYTE"),
-                ["u8"] => simple_type(cx, "UBYTE"),
-                ["i16"] => simple_type(cx, "SHORT"),
-                ["u16"] => simple_type(cx, "USHORT"),
-                ["i32"] => simple_type(cx, "INT"),
-                ["u32"] => simple_type(cx, "UINT"),
-                ["i64"] => simple_type(cx, "LONG"),
-                ["u64"] => simple_type(cx, "ULONG"),
-                ["isize"] => simple_type(cx, "NINT"),
-                ["usize"] => simple_type(cx, "NUINT"),
-                ["f32"] => simple_type(cx, "FLOAT32"),
-                ["f64"] => simple_type(cx, "FLOAT64"),
-                ["bool"] => simple_type(cx, "SYS_BOOL"),
-                ["char"] => simple_type(cx, "SYS_CHAR"),
+                ["i8"] => simple_type(cx, "sbyte"),
+                ["u8"] => simple_type(cx, "ubyte"),
+                ["i16"] => simple_type(cx, "short"),
+                ["u16"] => simple_type(cx, "ushort"),
+                ["i32"] => simple_type(cx, "int"),
+                ["u32"] => simple_type(cx, "uint"),
+                ["i64"] => simple_type(cx, "long"),
+                ["u64"] => simple_type(cx, "ulong"),
+                ["isize"] => simple_type(cx, "nint"),
+                ["usize"] => simple_type(cx, "nuint"),
+                ["f32"] => simple_type(cx, "float32"),
+                ["f64"] => simple_type(cx, "float64"),
+                ["bool"] => simple_type(cx, "sys_bool"),
+                ["char"] => simple_type(cx, "sys_char"),
                 _ => {
                     let jit = cx.ident_of("jit");
                     let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
@@ -67,7 +68,7 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
                             })
                         }
                     })));
-                    Some(cx.expr_call(sp, qpath, vec![]))
+                    Some(quote_expr!(cx, $qpath().get()))
                 }
             }
         },
@@ -84,7 +85,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
     let jit = cx.ident_of("jit");
     let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
     let jit_type = cx.path(sp, vec![jit, cx.ident_of("Type")]);
-   //let jit_static_type = cx.path(sp, vec![jit, cx.ident_of("StaticType")]);
+    let jit_cow_type = cx.path_all(sp, false, vec![jit, cx.ident_of("CowType")], vec![cx.lifetime(sp, token::intern("'static"))], vec![], vec![]);
     let jit_life = cx.lifetime(sp, token::intern("a"));
     let jit_func = cx.path_all(sp, false, vec![jit, cx.ident_of("UncompiledFunction")], vec![jit_life], vec![], vec![]);
     let jit_value = cx.path_all(sp, false, vec![jit, cx.ident_of("Value")], vec![jit_life], vec![], vec![]);
@@ -94,7 +95,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
     let value = cx.ident_of("value");
     let offset = cx.ident_of("offset");
     let mut is_packed = false;
-    //push(cx.item_use_simple(sp, Visibility::Inherited, jit_static_type));
+    push(cx.item_use_simple(sp, Visibility::Inherited, cx.path(sp, vec![cx.ident_of("std"), cx.ident_of("borrow"), cx.ident_of("IntoCow")])));
     for attr in item.attrs.iter() {
         if let MetaItem_::MetaList(ref name, ref items) = attr.node.value.node {
             if name.get() == "repr" && items.len() == 1 {
@@ -114,7 +115,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
             }
             let ret = match dec.output {
                 FunctionRetTy::NoReturn(_) => {
-                    quote_expr!(cx, jit::typecs::VOID_PTR.get())
+                    quote_expr!(cx, jit::typecs::get_void_ptr())
                 },
                 FunctionRetTy::Return(ref ty) => {
                     if let Some(ex) = type_expr(cx, sp, ty.clone()) {
@@ -151,7 +152,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
                 }
             }
             let block = cx.block(sp, block, None);
-            let block = cx.block_expr(quote_expr!(cx, ctx.build_func($sig, |func| $block)));
+            let block = cx.block_expr(quote_expr!(cx, ctx.build_func(*$sig, |func| $block)));
             let args = vec![
                 cx.arg(sp, cx.ident_of("ctx"), quote_ty!(cx, &jit::Context))
             ];
@@ -187,7 +188,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
             }
             for (index, field) in def.fields.iter().enumerate() {
                 if let Some(expr) = type_expr(cx, sp, field.node.ty.clone()) {
-                    fields.push(cx.expr_method_call(sp, expr, cx.ident_of("get"), vec![]));
+                    fields.push(expr);
                     let has_name = field.node.ident().is_some();
                     if has_name && names.is_some() {
                         let ident = field.node.ident().unwrap();
@@ -203,7 +204,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
                     };
                     let name = field.node.ident().unwrap();
                     compiler.push(quote_stmt!(cx, func.insn_store_relative(value, $current_offset, self.$name.compile(func))));
-                    let size_of = cx.expr_path(cx.path_all(sp, false, vec![cx.ident_of("mem"), cx.ident_of("size_of")], vec![], vec![field.node.ty.clone()], vec![]));
+                    let size_of = cx.expr_path(cx.path_all(sp, false, vec![cx.ident_of("std"), cx.ident_of("mem"), cx.ident_of("size_of")], vec![], vec![field.node.ty.clone()], vec![]));
                     if def.fields.len() > 1 && index < def.fields.len() - 1 {
                         compiler.push(quote_stmt!(cx, offset += $size_of()));
                     }
@@ -217,6 +218,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
                 let names = cx.expr_addr_of(sp, cx.expr_vec(sp, names));
                 type_expr = cx.expr_method_call(sp, type_expr, cx.ident_of("with_names"), vec![names]);
             }
+            type_expr = quote_expr!(cx, $type_expr.into_cow());
             push(cx.item(sp, name, vec![], Item_::ItemImpl(
                 Unsafety::Normal,
                 ImplPolarity::Positive,
@@ -237,7 +239,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
                                 span: sp
                             },
                             Unsafety::Normal,
-                            cx.fn_decl(vec![], cx.ty_path(jit_type)),
+                            cx.fn_decl(vec![], cx.ty_path(jit_cow_type)),
                             cx.block_expr(
                                 type_expr
                             ),
@@ -294,12 +296,12 @@ pub fn plugin_registrar(reg: &mut Registry) {
 macro_rules! jit_struct(
     ($($name:ident: $ty:ty),*) => ({
         Type::new_struct([
-            $(get::<$ty>()),*
+            $(get::<$ty>().get()),*
         ].as_mut_slice()).with_names(&[$(stringify!($name)),*])
     });
     ($($ty:ty),+ ) => ({
         Type::new_struct([
-            $(get::<$ty>()),+
+            $(get::<$ty>().get()),+
         ].as_mut_slice())
     })
 );
@@ -309,12 +311,12 @@ macro_rules! jit_struct(
 macro_rules! jit_union(
     ($($name:ident: $ty:ty),*) => ({
         Type::new_union([
-            $(get::<$ty>()),*
+            $(get::<$ty>().get()),*
         ].as_mut_slice()).with_names(&[$(stringify!($name)),*])
     });
     ($($ty:ty),+ ) => ({
         Type::new_union([
-            $(get::<$ty>()),+
+            $(get::<$ty>().get()),+
         ].as_mut_slice())
     })
 );
@@ -323,8 +325,8 @@ macro_rules! jit_union(
 macro_rules! jit_fn(
     ($($arg:ty),* -> $ret:ty) => ({
         use std::default::Default;
-        Type::new_signature(Default::default(), get::<$ret>(), [
-            $(get::<$arg>()),*
+        Type::new_signature(Default::default(), get::<$ret>().get(), [
+            $(get::<$arg>().get()),*
         ].as_mut_slice())
     });
     (raw $($arg:expr),* -> $ret:expr) => ({
@@ -399,13 +401,13 @@ macro_rules! jit(
 macro_rules! jit_func(
     ($ctx:expr, $func:ident, $name:ident() -> $ret:ty, $value:expr) => ({
         use std::default::Default;
-        let sig = Type::new_signature(Default::default(), get::<$ret>(), [].as_mut_slice());
-        $ctx.build_func(sig, |$func| $value)
+        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [].as_mut_slice());
+        $ctx.build_func(*sig, |$func| $value)
     });
     ($ctx:expr, $func:ident, $name:ident($($arg:ident:$ty:ty),+) -> $ret:ty, $value:expr) => ({
         use std::default::Default;
-        let sig = Type::new_signature(Default::default(), get::<$ret>(), [$(get::<$arg_ty>()),*].as_mut_slice());
-        $ctx.build_func(sig, |$func| {
+        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$arg_ty>().get()),*].as_mut_slice());
+        $ctx.build_func(*sig, |$func| {
             let mut i = 0u;
             $(let $arg = {
                 i += 1;
@@ -416,14 +418,14 @@ macro_rules! jit_func(
     });
     ($ctx:expr, $func:ident, $name:ident() -> $ret:ty, $value:expr, |$comp_func:ident| $comp:expr) => ({
         use std::default::Default;
-        let sig = Type::new_signature(Default::default(), get::<$ret>(), [].as_mut_slice());
-        $ctx.build_func(sig, |$func| $value)
+        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [].as_mut_slice());
+        $ctx.build_func(*sig, |$func| $value)
             .with::<(), $ret, _>(|$comp_func| $comp)
     });
     ($ctx:expr, $func:ident, $name:ident($($arg:ident:$arg_ty:ty),+) -> $ret:ty, $value:expr, |$comp_func:ident| $comp:expr) => ({
         use std::default::Default;
-        let sig = Type::new_signature(Default::default(), get::<$ret>(), [$(get::<$arg_ty>()),*].as_mut_slice());
-        $ctx.build_func(sig, |$func| {
+        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$arg_ty>().get()),*].as_mut_slice());
+        $ctx.build_func(*sig, |$func| {
             let mut i = 0us;
             $(let $arg = {
                 i += 1;

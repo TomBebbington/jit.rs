@@ -3,7 +3,7 @@ use function::UncompiledFunction;
 use std::marker::ContravariantLifetime;
 use std::fmt;
 use std::ops::*;
-use types::Type;
+use types::*;
 use util::NativeRef;
 /// Values form the backbone of the storage system in `libjit`.
 /// Every value in the system, be it a constant, a local variable, or a
@@ -48,7 +48,7 @@ impl<'a> Value<'a> {
     /// The value initially starts off as a block-specific temporary. It will be
     /// converted into a function-wide local variable if it is ever referenced
     /// from a different block.
-    pub fn new(func:&UncompiledFunction<'a>, value_type:Type) -> Value<'a> {
+    pub fn new(func:&UncompiledFunction<'a>, value_type:TypeRef<'a>) -> Value<'a> {
         unsafe {
             let value = jit_value_create(func.as_ptr(), value_type.as_ptr());
             NativeRef::from_ptr(value)
