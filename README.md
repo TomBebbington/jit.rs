@@ -4,18 +4,18 @@ jit.rs is a Rust library that wraps LibJIT, the lightweight open-source JIT comp
 from Rust expressions.
 
 If you want to build this, you'll need to install these packages:
-```
+``` bash
 sudo apt install autoconf automake texinfo libtool bison flex g++
 ```
 
 Brainfuck VM
 ------------
 You can run the simple brainfuck VM with this command:
-```
+``` bash
 cargo run --example brainfuck
 ```
 You should then type in the brainfuck code followed by a newline to run it. For example:
-```
+``` bash
 cargo run --example brainfuck
 > ++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.
 Hello, world!

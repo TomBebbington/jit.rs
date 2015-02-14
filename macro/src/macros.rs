@@ -1,10 +1,9 @@
 #![feature(core, rustc_private, plugin_registrar, quote, plugin)]
-
+#![plugin(matches)]
 extern crate syntax;
 extern crate rustc;
 #[no_link]
 #[macro_use]
-#[plugin]
 extern crate matches;
 
 use syntax::codemap::*;
@@ -98,9 +97,9 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
     push(cx.item_use_simple(sp, Visibility::Inherited, cx.path(sp, vec![cx.ident_of("std"), cx.ident_of("borrow"), cx.ident_of("IntoCow")])));
     for attr in item.attrs.iter() {
         if let MetaItem_::MetaList(ref name, ref items) = attr.node.value.node {
-            if name.get() == "repr" && items.len() == 1 {
+            if &**name == "repr" && items.len() == 1 {
                 if let MetaItem_::MetaWord(ref text) = items[0].node {
-                    if text.get() == "packed" {
+                    if &**text == "packed" {
                         is_packed = true;
                     }
                 } 
