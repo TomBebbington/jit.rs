@@ -94,7 +94,7 @@ impl Context {
     }
 }
 impl<'a> IntoIterator for &'a Context {
-    type Iter = Functions<'a>;
+    type IntoIter = Functions<'a>;
     fn into_iter(self) -> Functions<'a> {
         self.functions()   
     }

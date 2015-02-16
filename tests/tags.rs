@@ -1,5 +1,6 @@
-#![feature(plugin)]
-#[no_link] #[plugin] #[macro_use]
+#![feature(test, plugin)]
+#![plugin(jit_macros)]
+#[no_link] #[macro_use]
 extern crate jit_macros;
 extern crate jit;
 use jit::*;

@@ -1,9 +1,9 @@
-#![feature(env, io, path)]
+#![feature(libc, std_misc, env, path, fs)]
 #[cfg(not(windows))]
 extern crate "pkg-config" as pkg_config;
-use std::old_io::process::Command;
-use std::old_io::fs;
-use std::old_path::Path as OPath;
+extern crate libc;
+use std::ffi::CString;
+use std::fs::{self, PathExt};
 use std::env;
 use std::path::Path;
 
@@ -15,16 +15,15 @@ static FINAL_LIB:&'static str = "libjit.a";
 
 static MINGW:&'static str = "c:/mingw";
 
-fn exists(path: &Path) -> bool {
-	use std::old_io::fs::{PathExtensions};
-	OPath::new(path.to_str().unwrap()).exists()
-}
-fn path(path: &str) -> &Path {
-	&Path::new(path)
-}
+static INSTALL_AUTOTOOLS_MSG:&'static str = "Failed to generate configuration script. Did you forget to install autotools, bison, flex, and libtool?";
+#[cfg(windows)]
+static INSTALL_COMPILER_MSG:&'static str = "Failed to configure the library for your platform. Did you forget to install MinGW and MSYS?";
+#[cfg(not(windows))]
+static INSTALL_COMPILER_MSG:&'static str = "Failed to configure the library for your platform. Did you forget to install gcc?";
+
 fn main() {
-	if cfg!(windows) && !exists(path(MINGW)) {
-		panic!("LibJIT build requires MinGW and MSYS to be installed");
+	if cfg!(windows) && !Path::new(MINGW).exists() {
+		panic!("{}", INSTALL_COMPILER_MSG);
 	} else if pkg_config::find_library("jit").is_ok() {
 		return;
 	}
@@ -32,31 +31,54 @@ fn main() {
 	let out_dir = Path::new(&*out_dir);
 	let submod_path = Path::new("libjit");
 	let final_lib_dir = submod_path.join("jit/.libs");
-	if !exists(&*final_lib_dir.join(FINAL_LIB)) {
-		if !exists(submod_path) {
-			run(Command::new("git").arg("submodule").arg("init"));
+	if !final_lib_dir.join(FINAL_LIB).exists() {
+		run_wocare("git submodule init");
+		run("git submodule update");
+		if !submod_path.exists() {
+			let text = format!("git clone git://git.savannah.gnu.org/libjit.git {}", submod_path.display());
+			run(&*text);
 		}
-		run(Command::new("git").arg("submodule").arg("update"));
-		if !exists(submod_path) {
-			run(Command::new("git").arg("clone").arg("git://git.savannah.gnu.org/libjit.git").arg(&*submod_path.display().to_string()));
-		}
-		let submod_path = OPath::new(submod_path.to_str().unwrap());
-		run(Command::new("sh").arg("auto_gen.sh").cwd(&submod_path));
-		run(Command::new("sh").arg("configure").arg("--enable-static").arg("--disable-shared").arg("CFLAGS=-fPIC").cwd(&submod_path));
-		run(Command::new("make").cwd(&submod_path));
+		chdir(submod_path);
+		run_nice("sh auto_gen.sh", INSTALL_AUTOTOOLS_MSG);
+		run_nice("sh configure --enable-static --disable-shared CC=clang CFLAGS=-fPIC", INSTALL_COMPILER_MSG);
+		run("make");
 	}
-	let ref from = OPath::new(final_lib_dir.join(FINAL_LIB).to_str().unwrap());
-	let ref to = OPath::new(out_dir.join(FINAL_LIB).to_str().unwrap());
-	fs::copy(from, to).unwrap();
+	let from = final_lib_dir.join(FINAL_LIB);
+	let to = out_dir.join(FINAL_LIB);
+	fs::copy(&from, &to).unwrap();
     println!("cargo:rustc-flags=-l jit:static -L {}", out_dir.display());
 }
-fn run(command: &mut Command) {
-	println!("{:?}" , command);
-	match command.output() {
-		Ok(ref process) if !process.status.success() => {
-			panic!("failed with output: \n{}\n{}", String::from_utf8_lossy(&*process.output), String::from_utf8_lossy(&*process.error));
-		},
-		Ok(_) => (),
-		Err(err) => panic!("failed due to {}", err)
+fn chdir(path: &Path) {
+	use libc::chdir;
+	use std::str::from_utf8_unchecked;
+	unsafe {
+		let c_path = CString::from_slice(path.to_str().unwrap().as_bytes());
+		if libc::chdir(c_path.as_ptr()) == -1 {
+			panic!("Failed to change directory into {}", from_utf8_unchecked(c_path.as_bytes()))
+		}
+	}
+}
+fn run_nice(cmd: &str, text: &str) {
+	unsafe {
+		let c_cmd = CString::from_slice(cmd.as_bytes());
+		if libc::system(c_cmd.as_ptr()) != 0 {
+			panic!("{}", text);
+		}
+	}
+}
+fn run(cmd: &str) {
+	unsafe {
+		let c_cmd = CString::from_slice(cmd.as_bytes());
+		if libc::system(c_cmd.as_ptr()) != 0 {
+			panic!("{} failed", cmd);
+		}
+	}
+}
+fn run_wocare(cmd: &str) {
+	unsafe {
+		let c_cmd = CString::from_slice(cmd.as_bytes());
+		if libc::system(c_cmd.as_ptr()) < 0 {
+			panic!("{} failed", cmd);
+		}
 	}
 }

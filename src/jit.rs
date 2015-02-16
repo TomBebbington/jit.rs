@@ -27,14 +27,16 @@
 #![allow(raw_pointer_derive, dead_code, non_camel_case_types, non_upper_case_globals, unused_attributes)]
 #![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
 #![feature(alloc, libc, core, hash, std_misc, io, os, plugin, slicing_syntax, unboxed_closures, unsafe_destructor)]
+#![plugin(rustc_bitflags)]
 #![stable]
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
 //! 
 //! ```rust
 //! #![feature(plugin)]
+//! #![plugin(jit_macros)]
 //! extern crate jit;
-//! #[no_link] #[plugin] #[macro_use]
+//! #[no_link] #[macro_use]
 //! extern crate jit_macros;
 //! use jit::{Context, get, Type};
 //! fn main() {
@@ -48,7 +50,7 @@
 //!     });
 //! }
 //! ```
-#[no_link] #[plugin] #[macro_use]
+#[no_link] #[macro_use]
 extern crate rustc_bitflags;
 extern crate alloc;
 extern crate libc;

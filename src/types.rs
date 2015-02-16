@@ -479,7 +479,7 @@ impl<'a> TypeRef<'a> {
     }
 }
 impl<'a> IntoIterator for TypeRef<'a> {
-    type Iter = Fields<'a>;
+    type IntoIter = Fields<'a>;
     fn into_iter(self) -> Fields<'a> {
         self.fields()   
     }

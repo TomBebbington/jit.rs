@@ -1,5 +1,6 @@
 #![feature(test, plugin)]
-#[no_link] #[plugin] #[macro_use]
+#![plugin(jit_macros)]
+#[no_link] #[macro_use]
 extern crate jit_macros;
 extern crate jit;
 extern crate test;
