@@ -1,9 +1,10 @@
-#![feature(core, env, io, os, path, slicing_syntax, plugin)]
+#![feature(env, fs, io, path, slicing_syntax, plugin)]
 extern crate jit;
 use jit::*;
 use std::cell::RefCell;
-use std::old_io as io;
-use std::old_io::fs::File;
+use std::old_io;
+use std::io::Read;
+use std::fs::File;
 use std::iter::Peekable;
 use std::mem;
 use std::env;
@@ -81,14 +82,14 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
             },
             '.' => {
                 extern fn putchar(c: u8) {
-                    io::stdout().write_u8(c).unwrap();
+                    old_io::stdout().write_u8(c).unwrap();
                 }
                 let value = func.insn_load_relative(data, 0, ubyte);
                 func.insn_call_native1(Some("putchar"), putchar, putchar_sig.get(), [value], flags::NO_THROW);
             },
             ',' => {
                 extern fn readchar() -> u8 {
-                    io::stdin().read_byte().unwrap()
+                    old_io::stdin().read_byte().unwrap()
                 }
                 let value = func.insn_call_native0(Some("readchar"), readchar, readchar_sig.get(), flags::NO_THROW);
                 func.insn_store_relative(data, 0, value);
@@ -126,14 +127,16 @@ fn run(ctx: &mut Context, code: &str) {
 fn main() {
     let mut ctx = Context::new();
     if let Some(ref script) = env::args().skip(1).next() {
-        let ref script = Path::new(&*script.to_str().unwrap());
-        let contents = File::open(script).unwrap().read_to_string().unwrap();
-        run(&mut ctx, &*contents);
+        let ref script = Path::new(&*script);
+        let mut text = String::new();
+        File::open(script).unwrap().read_to_string(&mut text).unwrap();
+        run(&mut ctx, &*text);
     } else {
-        io::print(PROMPT);
-        for line in io::stdin().lock().lines() {
+        old_io::print(PROMPT);
+        let mut input = old_io::stdin();
+        for line in input.lock().lines() {
             run(&mut ctx, &*line.unwrap());
-            io::print(PROMPT);
+            old_io::print(PROMPT);
         }
     }
 }
