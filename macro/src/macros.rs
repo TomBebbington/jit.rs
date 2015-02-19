@@ -79,7 +79,7 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
     }
 }
 
-fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push: Box<FnMut(P<Item>)>) {
+fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push: &mut FnMut(P<Item>)) {
     let name = item.ident;
     let jit = cx.ident_of("jit");
     let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
