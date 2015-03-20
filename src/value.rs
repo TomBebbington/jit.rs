@@ -1,6 +1,6 @@
 use raw::*;
 use function::UncompiledFunction;
-use std::marker::ContravariantLifetime;
+use std::marker::PhantomData;
 use std::fmt;
 use std::ops::*;
 use types::*;
@@ -12,7 +12,7 @@ use util::NativeRef;
 #[derive(Copy, PartialEq)]
 pub struct Value<'a> {
     _value: jit_value_t,
-    marker: ContravariantLifetime<'a>
+    marker: PhantomData<&'a ()>,
 }
 impl<'a> NativeRef for Value<'a> {
     #[inline(always)]
@@ -25,7 +25,7 @@ impl<'a> NativeRef for Value<'a> {
     unsafe fn from_ptr(ptr:jit_value_t) -> Value<'a> {
         Value {
             _value: ptr,
-            marker: ContravariantLifetime::<'a>
+            marker: PhantomData
         }
     }
 }
@@ -83,7 +83,7 @@ impl<'a> Value<'a> {
         }
     }
     /// Set a flag on a value to indicate that it is addressable.
-    /// This should be used when you want to take the address of a value (e.g. 
+    /// This should be used when you want to take the address of a value (e.g.
     /// `&variable` in Rust/C).  The value is guaranteed to not be stored in a
     /// register across a function call.
     #[inline]

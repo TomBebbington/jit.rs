@@ -1,3 +1,5 @@
+#![allow(deprecated)] // old_io, os
+
 use libc::{c_void, FILE};
 use std::ptr;
 use std::fmt::Error;

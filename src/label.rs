@@ -3,7 +3,7 @@ use raw::{
     jit_function_reserve_label
 };
 use function::UncompiledFunction;
-use std::marker::ContravariantLifetime;
+use std::marker::PhantomData;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
 use util::NativeRef;
@@ -11,7 +11,7 @@ use util::NativeRef;
 /// A label in the code that can be branched to in instructions
 pub struct Label<'a> {
     _label: jit_label_t,
-    marker: ContravariantLifetime<'a>
+    marker: PhantomData<&'a ()>,
 }
 impl<'a> fmt::Display for Label<'a> {
     fn fmt(&self, fmt:&mut fmt::Formatter) -> fmt::Result {
@@ -25,7 +25,7 @@ impl<'a> Label<'a> {
         unsafe {
             Label {
                 _label: jit_function_reserve_label(func.as_ptr()),
-                marker: ContravariantLifetime::<'a>
+                marker: PhantomData,
             }
         }
     }

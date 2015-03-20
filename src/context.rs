@@ -1,6 +1,6 @@
 use raw::*;
 use alloc::oom;
-use std::marker::{ContravariantLifetime, NoCopy};
+use std::marker::PhantomData;
 use std::any::TypeId;
 use std::{hash, mem, ptr};
 use std::iter::IntoIterator;
@@ -15,7 +15,6 @@ native_ref!(Context {
 /// A context that is in the build phase while generating IR
 pub struct Builder {
     _context: jit_context_t,
-    no_copy: NoCopy
 }
 impl NativeRef for Builder {
     #[inline(always)]
@@ -26,7 +25,6 @@ impl NativeRef for Builder {
     unsafe fn from_ptr(ptr:jit_context_t) -> Builder {
         Builder {
             _context: ptr,
-            no_copy: NoCopy
         }
     }
 }
@@ -88,7 +86,7 @@ impl Context {
             Functions {
                 context: self.as_ptr(),
                 last: ptr::null_mut(),
-                lifetime: ContravariantLifetime::<'a>
+                lifetime: PhantomData,
             }
         }
     }
@@ -97,7 +95,7 @@ impl<'a> IntoIterator for &'a Context {
     type IntoIter = Functions<'a>;
     type Item = AnyFunction<'a>;
     fn into_iter(self) -> Functions<'a> {
-        self.functions()   
+        self.functions()
     }
 }
 #[unsafe_destructor]
@@ -113,7 +111,7 @@ impl Drop for Context {
 pub struct Functions<'a> {
     context: jit_context_t,
     last: jit_function_t,
-    lifetime: ContravariantLifetime<'a>
+    lifetime: PhantomData<&'a ()>
 }
 impl<'a> Iterator for Functions<'a> {
     type Item = AnyFunction<'a>;

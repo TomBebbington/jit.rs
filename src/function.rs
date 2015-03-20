@@ -14,7 +14,6 @@ use libc::{
 use std::default::Default;
 use std::fmt;
 use std::ops::Index;
-use std::marker::ContravariantLifetime;
 use std::{mem, ptr};
 use std::ffi::CString;
 /// A platform's application binary interface
@@ -60,7 +59,7 @@ pub trait Function<'a> : NativeRef {
     }
 }
 /// Any kind of function, compiled or not
-native_ref!(AnyFunction ContravariantLifetime {
+native_ref!(AnyFunction contravariant {
     _func: jit_function_t
 });
 impl<'a> AnyFunction<'a> {
@@ -92,7 +91,7 @@ impl<'a> Function<'a> for AnyFunction<'a> {
 ///
 /// A function persists for the lifetime of its containing context. This is
 /// a function which has already been compiled and is now in executable form.
-native_ref!(CompiledFunction ContravariantLifetime {
+native_ref!(CompiledFunction contravariant {
     _func: jit_function_t
 });
 impl<'a> Function<'a> for CompiledFunction<'a> {
@@ -127,7 +126,6 @@ impl<'a> CompiledFunction<'a> {
 pub struct UncompiledFunction<'a> {
     _func: jit_function_t,
     args: Vec<Value<'a>>,
-    marker: ContravariantLifetime<'a>,
     owned: bool
 }
 impl<'a> NativeRef for UncompiledFunction<'a> {
@@ -140,11 +138,10 @@ impl<'a> NativeRef for UncompiledFunction<'a> {
     /// Convert from a native pointer
     unsafe fn from_ptr(ptr:jit_function_t) -> UncompiledFunction<'a> {
         let sig = jit_function_get_signature(ptr);
-        let args = range(0, jit_type_num_params(sig)).map(|i| from_ptr(jit_value_get_param(ptr, i as c_uint))).collect::<Vec<_>>();
+        let args = (0..jit_type_num_params(sig)).map(|i| from_ptr(jit_value_get_param(ptr, i as c_uint))).collect::<Vec<_>>();
         UncompiledFunction {
             _func: ptr,
             args: args,
-            marker: ContravariantLifetime::<'a>,
             owned: false
         }
     }
@@ -184,7 +181,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Create a new function block and associate it with a JIT context.
     /// It is recommended that you call `Function::new` and `function.compile()`
     /// in the closure you give to `context.build(...)`.
-    /// 
+    ///
     /// This will protect the JIT's internal data structures within a
     /// multi-threaded environment.
     pub fn new(context:&'a Builder, signature:TypeRef) -> UncompiledFunction<'a> {
@@ -206,7 +203,7 @@ impl<'a> UncompiledFunction<'a> {
     /// In addition, this function is nested inside the specified *parent*
     /// function and is able to access its parent's (and grandparent's) local
     /// variables.
-    /// 
+    ///
     /// The front end is responsible for ensuring that the nested function can
     /// never be called by anyone except its parent and sibling functions.
     /// The front end is also responsible for ensuring that the nested function
@@ -424,7 +421,7 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that stores a value a certain offset away from a
     /// destination value
-    pub fn insn_store_relative(&self, dest: Value<'a>, offset: usize, 
+    pub fn insn_store_relative(&self, dest: Value<'a>, offset: usize,
                                src: Value<'a>) {
         unsafe {
             jit_insn_store_relative(self.as_ptr(), dest.as_ptr(), offset as jit_nint, src.as_ptr());
@@ -617,7 +614,7 @@ impl<'a> UncompiledFunction<'a> {
         args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> where F:Function<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
-            let c_name = name.map(|name| CString::from_slice(name.as_bytes()));
+            let c_name = name.map(|name| CString::new(name.as_bytes()).unwrap());
             from_ptr(jit_insn_call(
                 self.as_ptr(),
                 c_name.map(|name| mem::transmute(name.as_ptr())).unwrap_or(ptr::null_mut()),
@@ -645,7 +642,7 @@ impl<'a> UncompiledFunction<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter()
                 .map(|arg| arg.as_ptr()).collect();
-            let c_name = name.map(|name| CString::from_slice(name.as_bytes()));
+            let c_name = name.map(|name| CString::new(name.as_bytes()).unwrap());
             from_ptr(jit_insn_call_native(
                 self.as_ptr(),
                 c_name.map(|name| mem::transmute(name.as_ptr())).unwrap_or(ptr::null_mut()),

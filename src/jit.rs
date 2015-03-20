@@ -1,10 +1,10 @@
 /* Copyright (c) 2014, Peter Nelson
  * All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
- * 1. Redistributions of source code must retain the above copyright notice, 
+ * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
@@ -26,12 +26,13 @@
 #![crate_name = "jit"]
 #![allow(raw_pointer_derive, dead_code, non_camel_case_types, non_upper_case_globals, unused_attributes)]
 #![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
-#![feature(alloc, libc, core, hash, std_misc, io, os, plugin, unboxed_closures, unsafe_destructor)]
+#![feature(alloc, libc, core, hash, os, plugin, unboxed_closures, unsafe_destructor)]
+#![feature(old_io)]
 #![plugin(rustc_bitflags)]
 #![stable]
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
-//! 
+//!
 //! ```rust
 //! #![feature(plugin)]
 //! #![plugin(jit_macros)]

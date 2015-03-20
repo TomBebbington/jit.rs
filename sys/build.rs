@@ -1,8 +1,9 @@
-#![feature(libc, std_misc, env, path, fs)]
+#![feature(libc, std_misc, path_ext)]
 #[cfg(not(windows))]
 extern crate "pkg-config" as pkg_config;
 extern crate libc;
-use std::ffi::CString;
+use std::ffi::{OsStr, AsOsStr};
+use std::os::unix::ffi::OsStrExt;
 use std::fs::{self, PathExt};
 use std::env;
 use std::path::Path;
@@ -45,6 +46,7 @@ fn main() {
 	}
 	let from = final_lib_dir.join(FINAL_LIB);
 	let to = out_dir.join(FINAL_LIB);
+    println!("{:?} -> {:?}", from, to);
 	fs::copy(&from, &to).unwrap();
     println!("cargo:rustc-flags=-l jit:static -L {}", out_dir.display());
 }
@@ -52,7 +54,7 @@ fn chdir(path: &Path) {
 	use libc::chdir;
 	use std::str::from_utf8_unchecked;
 	unsafe {
-		let c_path = CString::from_slice(path.to_str().unwrap().as_bytes());
+		let c_path = path.as_os_str().to_cstring().unwrap();
 		if libc::chdir(c_path.as_ptr()) == -1 {
 			panic!("Failed to change directory into {}", from_utf8_unchecked(c_path.as_bytes()))
 		}
@@ -60,7 +62,7 @@ fn chdir(path: &Path) {
 }
 fn run_nice(cmd: &str, text: &str) {
 	unsafe {
-		let c_cmd = CString::from_slice(cmd.as_bytes());
+		let c_cmd = OsStr::from_str(cmd).to_cstring().unwrap();
 		if libc::system(c_cmd.as_ptr()) != 0 {
 			panic!("{}", text);
 		}
@@ -68,7 +70,7 @@ fn run_nice(cmd: &str, text: &str) {
 }
 fn run(cmd: &str) {
 	unsafe {
-		let c_cmd = CString::from_slice(cmd.as_bytes());
+		let c_cmd = OsStr::from_str(cmd).to_cstring().unwrap();
 		if libc::system(c_cmd.as_ptr()) != 0 {
 			panic!("{} failed", cmd);
 		}
@@ -76,7 +78,7 @@ fn run(cmd: &str) {
 }
 fn run_wocare(cmd: &str) {
 	unsafe {
-		let c_cmd = CString::from_slice(cmd.as_bytes());
+		let c_cmd = OsStr::from_str(cmd).to_cstring().unwrap();
 		if libc::system(c_cmd.as_ptr()) < 0 {
 			panic!("{} failed", cmd);
 		}
