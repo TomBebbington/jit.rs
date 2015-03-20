@@ -1,4 +1,4 @@
-#![feature(test, plugin)]
+#![feature(test, plugin, custom_attribute)]
 #![plugin(jit_macros)]
 #[no_link] #[macro_use]
 extern crate jit_macros;
@@ -39,7 +39,7 @@ fn test_tags() {
     let pos_t = get::<Pos>();
     let pos_t = pos_t.get();
     let kind = pos_t.get_kind();
-    let new_pos_t = TaggedType::new(pos_t, kind, Box::new(42us));
-    assert!(new_pos_t.get_tagged_data() == Some(&42us));
+    let new_pos_t = TaggedType::new(pos_t, kind, Box::new(42));
+    assert!(new_pos_t.get_tagged_data() == Some(&42));
     assert!(new_pos_t.get_tagged_type() == pos_t);
 }
