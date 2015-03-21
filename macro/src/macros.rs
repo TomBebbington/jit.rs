@@ -377,7 +377,7 @@ macro_rules! jit(
         $func.insn_sqrt(&jit!($func, $($t)+))
     );
     ($func:ident, $var:ident = $($t:tt)+) => (
-        $func.insn_store($var, jit($func, $val));
+        $func.insn_store($var, jit!($func, $val));
     );
     ($func:ident, *$var:ident) => (
         $func.insn_load($var)
@@ -407,9 +407,9 @@ macro_rules! jit_func(
     });
     ($ctx:expr, $func:ident, $name:ident($($arg:ident:$ty:ty),+) -> $ret:ty, $value:expr) => ({
         use std::default::Default;
-        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$arg_ty>().get()),*].as_mut_slice());
+        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$ty>().get()),*].as_mut_slice());
         $ctx.build_func(*sig, |$func| {
-            let mut i = 0u;
+            let mut i = 0;
             $(let $arg = {
                 i += 1;
                 $func[i - 1]
