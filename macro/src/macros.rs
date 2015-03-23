@@ -1,4 +1,4 @@
-#![feature(core, rustc_private, plugin_registrar, quote, plugin)]
+#![feature(rustc_private, plugin_registrar, quote, plugin)]
 #![plugin(matches)]
 extern crate syntax;
 extern crate rustc;
@@ -80,11 +80,10 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
     }
 }
 
-fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push: &mut FnMut(P<Item>)) {
+fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut push: &mut FnMut(P<Item>)) {
     let name = item.ident;
     let jit = cx.ident_of("jit");
     let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
-    let jit_type = cx.path(sp, vec![jit, cx.ident_of("Type")]);
     let jit_cow_type = cx.path_all(sp, false, vec![jit, cx.ident_of("CowType")], vec![cx.lifetime(sp, token::intern("'static"))], vec![], vec![]);
     let jit_life = cx.lifetime(sp, token::intern("a"));
     let jit_func = cx.path_all(sp, false, vec![jit, cx.ident_of("UncompiledFunction")], vec![jit_life], vec![], vec![]);
@@ -108,7 +107,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
         }
     }
     match item.node {
-        Item_::ItemFn(ref dec, Unsafety::Normal, abi, _, ref block) => {
+        Item_::ItemFn(ref dec, Unsafety::Normal, abi, _, ref _block) => {
             if !matches!(abi, Abi::Rust | Abi::C | Abi::Cdecl) {
                 cx.span_err(sp, BAD_ABI);
                 return;
@@ -427,7 +426,7 @@ macro_rules! jit_func(
         use std::default::Default;
         let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$arg_ty>().get()),*].as_mut_slice());
         $ctx.build_func(*sig, |$func| {
-            let mut i = 0us;
+            let mut i = 0;
             $(let $arg = {
                 i += 1;
                 $func[i - 1]

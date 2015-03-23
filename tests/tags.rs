@@ -1,4 +1,4 @@
-#![feature(test, plugin, custom_attribute)]
+#![feature(plugin, custom_attribute)]
 #![plugin(jit_macros)]
 #[no_link] #[macro_use]
 extern crate jit_macros;
@@ -20,7 +20,7 @@ impl Drop for PanicDrop {
     }
 }
 #[test]
-#[should_fail]
+#[should_panic]
 fn test_panic_tags() {
     let pos_t = get::<Pos>();
     let pos_t = pos_t.get();
