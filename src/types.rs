@@ -229,10 +229,10 @@ pub struct TypeRef<'a> {
     lifetime: PhantomData<&'a ()>,
 }
 impl<'a> NativeRef for TypeRef<'a> {
-    fn as_ptr(&self) -> jit_type_t {
+    unsafe fn as_ptr(&self) -> jit_type_t {
         self._type
     }
-    fn from_ptr(ptr: jit_type_t) -> TypeRef<'a> {
+    unsafe fn from_ptr(ptr: jit_type_t) -> TypeRef<'a> {
         TypeRef {
             _type: ptr,
             lifetime: PhantomData,
