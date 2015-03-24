@@ -17,6 +17,9 @@ static FINAL_LIB:&'static str = "libjit.a";
 static MINGW:&'static str = "c:/mingw";
 
 static INSTALL_AUTOTOOLS_MSG:&'static str = "Failed to generate configuration script. Did you forget to install autotools, bison, flex, and libtool?";
+
+static USE_CARGO_MSG:&'static str = "Build script should be ran with Cargo";
+
 #[cfg(windows)]
 static INSTALL_COMPILER_MSG:&'static str = "Failed to configure the library for your platform. Did you forget to install MinGW and MSYS?";
 #[cfg(not(windows))]
@@ -28,7 +31,7 @@ fn main() {
 	} else if pkg_config::find_library("jit").is_ok() {
 		return;
 	}
-	let out_dir = env::var("OUT_DIR").unwrap();
+	let out_dir = env::var("OUT_DIR").ok().expect(USE_CARGO_MSG);
 	let out_dir = Path::new(&*out_dir);
 	let submod_path = Path::new("libjit");
 	let final_lib_dir = submod_path.join("jit/.libs");
@@ -47,7 +50,9 @@ fn main() {
 	let from = final_lib_dir.join(FINAL_LIB);
 	let to = out_dir.join(FINAL_LIB);
     println!("{:?} -> {:?}", from, to);
-	fs::copy(&from, &to).unwrap();
+	if let Err(error) = fs::copy(&from, &to) {
+		panic!("Failed to copy library from {:?} to {:?} due to {}", from, to, error)
+	}
     println!("cargo:rustc-flags=-l jit:static -L {}", out_dir.display());
 }
 fn chdir(path: &Path) {
