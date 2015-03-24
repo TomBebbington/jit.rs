@@ -1,4 +1,4 @@
-#![feature(test, plugin)]
+#![feature(plugin)]
 #![plugin(jit_macros)]
 #[no_link] #[macro_use]
 extern crate jit_macros;

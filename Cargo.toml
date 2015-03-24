@@ -16,6 +16,9 @@ version = "0.4.0"
 name = "jit"
 path = "src/jit.rs"
 
-[dependencies]
-libjit-sys = "*"
-jit_macros = "*"
+[dependencies.libjit-sys]
+path = "sys"
+version = "*"
+[dependencies.jit_macros]
+path = "macro"
+version = "*"

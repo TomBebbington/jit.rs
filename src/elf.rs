@@ -5,7 +5,7 @@ use libc::c_uint;
 use util::NativeRef;
 use std::ffi::{self, CString};
 use std::{fmt, str};
-use std::marker::ContravariantLifetime;
+use std::marker::PhantomData;
 use std::{mem, ptr};
 use std::iter::Iterator;
 use std::error::Error;
@@ -14,7 +14,7 @@ pub struct Needed<'a> {
     _reader: jit_readelf_t,
     index: c_uint,
     length: c_uint,
-    marker: ContravariantLifetime<'a>
+    marker: PhantomData<&'a ()>
 }
 impl<'a> Needed<'a> {
     #[inline(always)]
@@ -24,7 +24,7 @@ impl<'a> Needed<'a> {
                 _reader: read.as_ptr(),
                 index: 0 as c_uint,
                 length: jit_readelf_num_needed(read.as_ptr()),
-                marker: ContravariantLifetime::<'a>
+                marker: PhantomData
             }
         }
     }
@@ -37,8 +37,7 @@ impl<'a> Iterator for Needed<'a> {
         unsafe {
             if index < self.length {
                 let c_name = jit_readelf_get_needed(self._reader, index);
-                let name: &*const i8 = mem::transmute(&c_name);
-                Some(str::from_utf8(ffi::c_str_to_bytes(name)).unwrap())
+                Some(str::from_utf8(ffi::CStr::from_ptr(c_name).to_bytes()).unwrap())
             } else {
                 None
             }
@@ -100,7 +99,7 @@ impl ReadElf {
     pub fn new(filename:&str) -> Result<ReadElf, ReadElfError> {
         unsafe {
             let mut this = ptr::null_mut();
-            let c_name = CString::from_slice(filename.as_bytes());
+            let c_name = CString::new(filename.as_bytes()).unwrap();
             let code = jit_readelf_open(&mut this, mem::transmute(c_name.as_ptr()), 0);
             if code == 0 {
                 Ok(NativeRef::from_ptr(this))
@@ -117,8 +116,7 @@ impl ReadElf {
     pub fn get_name(&self) -> &str {
         unsafe {
             let c_name = jit_readelf_get_name(self.as_ptr());
-            let name: &*const i8 = mem::transmute(&c_name);
-            str::from_utf8(ffi::c_str_to_bytes(name)).unwrap()
+            str::from_utf8(ffi::CStr::from_ptr(c_name).to_bytes()).unwrap()
         }
     }
     #[inline]
@@ -130,7 +128,7 @@ impl ReadElf {
     #[inline]
     /// Get a symbol in the ELF binary
     pub unsafe fn get_symbol<T>(&self, symbol:&str) -> &mut T {
-        let c_sym = CString::from_slice(symbol.as_bytes());
+        let c_sym = CString::new(symbol.as_bytes()).unwrap();
         mem::transmute(jit_readelf_get_symbol(self.as_ptr(), mem::transmute(c_sym.as_ptr())))
     }
     #[inline]
@@ -158,7 +156,7 @@ impl WriteElf {
     /// Create a new ELF binary reader
     pub fn new(lib_name:&str) -> WriteElf {
         unsafe {
-            let c_lib = CString::from_slice(lib_name.as_bytes());
+            let c_lib = CString::new(lib_name.as_bytes()).unwrap();
             NativeRef::from_ptr(jit_writeelf_create(mem::transmute(c_lib.as_ptr())))
         }
     }
@@ -167,7 +165,7 @@ impl WriteElf {
     /// but I'm sure GNU will hear the people sing the songs of angry men soon enough)
     pub fn write(&self, filename:&str) -> bool {
         unsafe {
-            let c_filename = CString::from_slice(filename.as_bytes());
+            let c_filename = CString::new(filename.as_bytes()).unwrap();
             jit_writeelf_write(self.as_ptr(), mem::transmute(c_filename.as_ptr())) != 0
         }
     }
@@ -175,7 +173,7 @@ impl WriteElf {
     /// Add a function to the ELF
     pub fn add_function(&self, func:&CompiledFunction, name:&str) -> bool {
         unsafe {
-            let c_name = CString::from_slice(name.as_bytes());
+            let c_name = CString::new(name.as_bytes()).unwrap();
             jit_writeelf_add_function(self.as_ptr(), func.as_ptr(), mem::transmute(c_name.as_ptr())) != 0
         }
     }
@@ -183,7 +181,7 @@ impl WriteElf {
     /// Add a dependency to the ELF
     pub fn add_needed(&self, lib_name:&str) -> bool {
         unsafe {
-            let c_lib = CString::from_slice(lib_name.as_bytes());
+            let c_lib = CString::new(lib_name.as_bytes()).unwrap();
             jit_writeelf_add_needed(self.as_ptr(), mem::transmute(c_lib.as_ptr())) != 0
         }
     }

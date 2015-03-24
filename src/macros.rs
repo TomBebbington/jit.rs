@@ -111,12 +111,12 @@ macro_rules! native_ref(
             }
         }
     );
-    ($(#[$attr:meta])* $name:ident $marker:ident { $field:ident: $pointer_ty:ty }) => (
+    ($(#[$attr:meta])* $name:ident contravariant { $field:ident: $pointer_ty:ty }) => (
         $(#[$attr])*
         #[derive(PartialEq, Eq)]
         pub struct $name<'a> {
             $field: $pointer_ty,
-            marker: $marker<'a>
+            marker: ::std::marker::PhantomData<&'a ()>,
         }
         impl<'a> NativeRef for $name<'a> {
             #[inline]
@@ -129,7 +129,7 @@ macro_rules! native_ref(
             unsafe fn from_ptr(ptr:$pointer_ty) -> $name<'a> {
                 $name {
                     $field: ptr,
-                    marker: $marker::<'a>
+                    marker: ::std::marker::PhantomData
                 }
             }
         }

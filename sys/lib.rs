@@ -213,7 +213,7 @@ pub struct jit_unwind_context_t {
 }
 #[repr(C)]
 pub struct Union_Unnamed1 {
-    pub data: [u8; 16us],
+    pub data: [u8; 16],
 }
 impl Union_Unnamed1 {
     pub fn ptr_value(&mut self) -> *mut *mut c_void {
@@ -293,7 +293,7 @@ extern "C" {
     pub static jit_type_sys_float: jit_type_t;
     pub static jit_type_sys_double: jit_type_t;
     pub static jit_type_sys_long_double: jit_type_t;
-    pub static mut jit_opcodes: [jit_opcode_info_t; 439us];
+    pub static mut jit_opcodes: [jit_opcode_info_t; 439];
     pub fn jit_default_memory_manager() -> jit_memory_manager_t;
     pub fn jit_context_create() -> jit_context_t;
     pub fn jit_context_destroy(context: jit_context_t);

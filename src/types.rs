@@ -4,7 +4,7 @@ use function::Abi;
 use alloc::oom;
 use libc::{c_uint, c_void};
 use std::borrow::*;
-use std::marker::{ContravariantLifetime, NoCopy};
+use std::marker::PhantomData;
 use std::{fmt, mem, str};
 use std::iter::IntoIterator;
 use std::fmt::Display;
@@ -116,7 +116,7 @@ pub struct Field<'a> {
     /// The index of the field
     pub index: c_uint,
     _type: jit_type_t,
-    marker: ContravariantLifetime<'a>
+    marker: PhantomData<&'a ()>,
 }
 impl<'a> Field<'a> {
     #[inline]
@@ -127,8 +127,7 @@ impl<'a> Field<'a> {
             if c_name.is_null() {
                 None
             } else {
-                let name: &*const i8 = mem::transmute(&c_name);
-                Some(str::from_utf8(ffi::c_str_to_bytes(name)).unwrap())
+                Some(str::from_utf8(ffi::CStr::from_ptr(c_name).to_bytes()).unwrap())
             }
         }
     }
@@ -152,7 +151,7 @@ pub struct Fields<'a> {
     _type: jit_type_t,
     index: c_uint,
     length: c_uint,
-    marker: ContravariantLifetime<'a>
+    marker: PhantomData<&'a ()>,
 }
 impl<'a> Fields<'a> {
     #[inline(always)]
@@ -162,7 +161,7 @@ impl<'a> Fields<'a> {
                 _type: ty.as_ptr(),
                 index: 0 as c_uint,
                 length: jit_type_num_fields(ty.as_ptr()),
-                marker: ContravariantLifetime::<'a>
+                marker: PhantomData,
             }
         }
     }
@@ -176,7 +175,7 @@ impl<'a> Iterator for Fields<'a> {
             Some(Field {
                 index: index,
                 _type: self._type,
-                marker: ContravariantLifetime::<'a>
+                marker: PhantomData,
             })
         } else {
             None
@@ -192,7 +191,7 @@ pub struct Params<'a> {
     _type: jit_type_t,
     index: c_uint,
     length: c_uint,
-    marker: ContravariantLifetime<'a>
+    marker: PhantomData<&'a ()>
 }
 impl<'a> Params<'a> {
     fn new(ty:TypeRef<'a>) -> Params<'a> {
@@ -201,7 +200,7 @@ impl<'a> Params<'a> {
                 _type: ty.as_ptr(),
                 index: 0,
                 length: jit_type_num_params(ty.as_ptr()),
-                marker: ContravariantLifetime::<'a>
+                marker: PhantomData,
             }
         }
     }
@@ -227,35 +226,36 @@ impl<'a> Iterator for Params<'a> {
 #[repr(packed)]
 pub struct TypeRef<'a> {
     _type: jit_type_t,
-    lifetime: ContravariantLifetime<'a>
+    lifetime: PhantomData<&'a ()>,
 }
 impl<'a> NativeRef for TypeRef<'a> {
-    fn as_ptr(&self) -> jit_type_t {
+    unsafe fn as_ptr(&self) -> jit_type_t {
         self._type
     }
-    fn from_ptr(ptr: jit_type_t) -> TypeRef<'a> {
+    unsafe fn from_ptr(ptr: jit_type_t) -> TypeRef<'a> {
         TypeRef {
             _type: ptr,
-            lifetime: ContravariantLifetime::<'a>
+            lifetime: PhantomData,
         }
     }
 }
-impl<'a> ToOwned<Type> for TypeRef<'a> {
+impl<'a> ToOwned for TypeRef<'a> {
+    type Owned = Type;
     fn to_owned(&self) -> Type {
         unsafe {
             from_ptr(jit_type_copy(self.as_ptr()))
         }
     }
 }
-impl<'a> BorrowFrom<Type> for TypeRef<'a> {
-    fn borrow_from(owned: &Type) -> &TypeRef<'a> {
+impl<'a> Borrow<TypeRef<'a>> for Type {
+    fn borrow(&self) -> &TypeRef<'a> {
         unsafe {
-            mem::transmute(owned)
+            mem::transmute(self)
         }
     }
 }
-impl<'a: 'b, 'b> IntoCow<'b, Type, TypeRef<'a>> for &'b TypeRef<'a> {
-    fn into_cow(self) -> Cow<'b, Type, TypeRef<'a>> {
+impl<'a: 'b, 'b> IntoCow<'b, TypeRef<'a>> for &'b TypeRef<'a> {
+    fn into_cow(self) -> Cow<'b, TypeRef<'a>> {
         Cow::Borrowed(self)
     }
 }
@@ -269,7 +269,6 @@ impl<'a: 'b, 'b> IntoCow<'b, Type, TypeRef<'a>> for &'b TypeRef<'a> {
 #[derive(PartialEq, Eq)]
 pub struct Type {
     _type: jit_type_t,
-    no_copy: NoCopy
 }
 impl NativeRef for Type {
     #[inline(always)]
@@ -280,7 +279,6 @@ impl NativeRef for Type {
     unsafe fn from_ptr(ptr:jit_type_t) -> Type {
         Type {
             _type: ptr,
-            no_copy: NoCopy
         }
     }
 }
@@ -308,7 +306,7 @@ impl Drop for Type {
 impl<'a> Deref for Type {
     type Target = TypeRef<'a>;
     fn deref(&self) -> &TypeRef<'a> {
-        BorrowFrom::borrow_from(self)
+        self.borrow()
     }
 }
 pub enum CowType<'a> {
@@ -405,7 +403,9 @@ impl<'a> TypeRef<'a> {
     /// Set the field or parameter names of this type.
     pub fn with_names(self, names:&[&str]) -> TypeRef<'a> {
         unsafe {
-            let names = names.iter().map(|name| CString::from_slice(name.as_bytes())).collect::<Vec<_>>();
+            let names = names.iter()
+                             .map(|name| CString::new(name.as_bytes()).unwrap())
+                             .collect::<Vec<_>>();
             let mut c_names = names.iter().map(|name| mem::transmute(name.as_ptr())).collect::<Vec<_>>();
             if jit_type_set_names(self.as_ptr(), c_names.as_mut_ptr(), names.len() as u32) == 0 {
                 oom();
@@ -427,11 +427,11 @@ impl<'a> TypeRef<'a> {
     /// Find the field/parameter index for a particular name.
     pub fn get_field(self, name:&str) -> Field<'a> {
         unsafe {
-            let c_name = CString::from_slice(name.as_bytes());
+            let c_name = CString::new(name.as_bytes()).unwrap();
             Field {
                 index: jit_type_find_name(self.as_ptr(), mem::transmute(c_name.as_ptr())),
                 _type: self.as_ptr(),
-                marker: ContravariantLifetime::<'a>
+                marker: PhantomData,
             }
         }
     }
@@ -482,14 +482,14 @@ impl<'a> IntoIterator for TypeRef<'a> {
     type IntoIter = Fields<'a>;
     type Item = Field<'a>;
     fn into_iter(self) -> Fields<'a> {
-        self.fields()   
+        self.fields()
     }
 }
 
 #[derive(PartialEq, Eq)]
 pub struct TaggedType<T> {
     _type: jit_type_t,
-    no_copy: NoCopy
+    _marker: PhantomData<fn(T) -> T>
 }
 impl<T> NativeRef for TaggedType<T> {
     #[inline(always)]
@@ -500,7 +500,7 @@ impl<T> NativeRef for TaggedType<T> {
     unsafe fn from_ptr(ptr:jit_type_t) -> TaggedType<T> {
         TaggedType {
             _type: ptr,
-            no_copy: NoCopy
+            _marker: PhantomData,
         }
     }
 }

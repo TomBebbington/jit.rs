@@ -1,3 +1,5 @@
+#![allow(deprecated)] // old_io, os
+
 use libc::{c_void, FILE};
 use std::ptr;
 use std::fmt::Error;
@@ -32,6 +34,7 @@ impl<T> NativeRef for Option<T> where T:NativeRef {
 
 pub fn dump<F>(cb: F) -> Result<String, Error> where F:FnOnce(*mut FILE) {
     use std::old_io::pipe::PipeStream;
+    use std::old_io::Reader;
     use std::os;
     use libc::{fdopen, fclose};
     unsafe {

@@ -1,13 +1,13 @@
 use raw::*;
-use std::marker::ContravariantLifetime;
 use std::{ffi, fmt, mem, str};
+use std::marker::PhantomData;
 use function::AnyFunction;
 use value::Value;
 use types::Type;
 use util::{from_ptr, NativeRef};
 
 /// Represents a single LibJIT instruction
-native_ref!(Instruction ContravariantLifetime {
+native_ref!(Instruction contravariant {
     _insn: jit_insn_t
 });
 impl<'a> Copy for Instruction<'a> {}
@@ -59,8 +59,7 @@ impl<'a> Instruction<'a> {
 	fn get_name(self) -> &'a str {
 		unsafe {
 			let name = jit_insn_get_name(self._insn);
-			let name: &*const i8 = mem::transmute(&name);
-			str::from_utf8(ffi::c_str_to_bytes(name)).unwrap()
+			str::from_utf8(ffi::CStr::from_ptr(name).to_bytes()).unwrap()
 		}
 	}
 }
@@ -72,7 +71,7 @@ impl<'a> fmt::Display for Instruction<'a> {
 
 pub struct InstructionIter<'a> {
 	_iter: jit_insn_iter_t,
-	marker: ContravariantLifetime<'a>
+	marker: PhantomData<&'a ()>,
 }
 impl<'a> Iterator for InstructionIter<'a> {
 	type Item = Instruction<'a>;
@@ -84,7 +83,7 @@ impl<'a> Iterator for InstructionIter<'a> {
 }
 
 /// Represents a single LibJIT block
-native_ref!(Block ContravariantLifetime {
+native_ref!(Block contravariant {
     _block: jit_block_t
 });
 impl<'a> Copy for Block<'a> {}
@@ -116,7 +115,7 @@ impl<'a> Block<'a> {
 			assert!(iter.posn == 0);
 			InstructionIter {
 				_iter: iter,
-				marker: ContravariantLifetime::<'a>
+				marker: PhantomData
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-#![feature(core, rustc_private, plugin_registrar, quote, plugin)]
+#![feature(rustc_private, plugin_registrar, quote, plugin)]
 #![plugin(matches)]
 extern crate syntax;
 extern crate rustc;
@@ -35,41 +35,42 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
     match ty.node {
         Ty_::TyParen(ref ty) => type_expr(cx, sp, ty.clone()),
         Ty_::TyPtr(_) | Ty_::TyRptr(_, _) => simple_type(cx, "VOID_PTR"),
-        Ty_::TyPath(ref path, _) => {
-            let path_parts = path.segments.iter().map(|s| s.identifier.as_str()).collect::<Vec<_>>();
-            match &*path_parts {
-                ["i8"] => simple_type(cx, "sbyte"),
-                ["u8"] => simple_type(cx, "ubyte"),
-                ["i16"] => simple_type(cx, "short"),
-                ["u16"] => simple_type(cx, "ushort"),
-                ["i32"] => simple_type(cx, "int"),
-                ["u32"] => simple_type(cx, "uint"),
-                ["i64"] => simple_type(cx, "long"),
-                ["u64"] => simple_type(cx, "ulong"),
-                ["isize"] => simple_type(cx, "nint"),
-                ["usize"] => simple_type(cx, "nuint"),
-                ["f32"] => simple_type(cx, "float32"),
-                ["f64"] => simple_type(cx, "float64"),
-                ["bool"] => simple_type(cx, "sys_bool"),
-                ["char"] => simple_type(cx, "sys_char"),
-                _ => {
-                    let jit = cx.ident_of("jit");
-                    let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
-                    let qpath = cx.expr(sp, Expr_::ExprQPath(P(QPath {
-                        self_type: ty.clone(),
-                        trait_ref: P(cx.trait_ref(jit_compile)),
-                        item_path: PathSegment {
-                            identifier: cx.ident_of("get_type"),
-                            parameters: PathParameters::AngleBracketedParameters(AngleBracketedParameterData {
-                                lifetimes: vec![],
-                                types: OwnedSlice::empty(),
-                                bindings: OwnedSlice::empty()
-                            })
-                        }
-                    })));
-                    Some(quote_expr!(cx, $qpath().get()))
+        Ty_::TyPath(ref self_, ref path) => {
+            if self_.is_none() && path.segments.len() == 1 {
+                match path.segments[0].identifier.as_str() {
+                    "i8" => return simple_type(cx, "sbyte"),
+                    "u8" => return simple_type(cx, "ubyte"),
+                    "i16" => return simple_type(cx, "short"),
+                    "u16" => return simple_type(cx, "ushort"),
+                    "i32" => return simple_type(cx, "int"),
+                    "u32" => return simple_type(cx, "uint"),
+                    "i64" => return simple_type(cx, "long"),
+                    "u64" => return simple_type(cx, "ulong"),
+                    "isize" => return simple_type(cx, "nint"),
+                    "usize" => return simple_type(cx, "nuint"),
+                    "f32" => return simple_type(cx, "float32"),
+                    "f64" => return simple_type(cx, "float64"),
+                    "bool" => return simple_type(cx, "sys_bool"),
+                    "char" => return simple_type(cx, "sys_char"),
+                    _ => {/* fall through */}
                 }
             }
+
+            let get_type =
+                cx.path(sp,
+                        vec![cx.ident_of("jit"),
+                             cx.ident_of("Compile"),
+                             cx.ident_of("get_type")]);
+            // <ty as jit::Compile>::get_type
+            let qpath = cx.expr(sp, Expr_::ExprPath(
+                Some(QSelf {
+                    ty: ty.clone(),
+                    // trait's path includes everything except
+                    // the function at the end.
+                    position: get_type.segments.len() - 1
+                }),
+                get_type));
+            Some(quote_expr!(cx, $qpath().get()))
         },
         _ => {
             let error = format!("could not resolve type {}", ty.to_source());
@@ -79,11 +80,10 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
     }
 }
 
-fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push: &mut FnMut(P<Item>)) {
+fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut push: &mut FnMut(P<Item>)) {
     let name = item.ident;
     let jit = cx.ident_of("jit");
     let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
-    let jit_type = cx.path(sp, vec![jit, cx.ident_of("Type")]);
     let jit_cow_type = cx.path_all(sp, false, vec![jit, cx.ident_of("CowType")], vec![cx.lifetime(sp, token::intern("'static"))], vec![], vec![]);
     let jit_life = cx.lifetime(sp, token::intern("a"));
     let jit_func = cx.path_all(sp, false, vec![jit, cx.ident_of("UncompiledFunction")], vec![jit_life], vec![], vec![]);
@@ -102,12 +102,12 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
                     if &**text == "packed" {
                         is_packed = true;
                     }
-                } 
+                }
             }
-        } 
+        }
     }
     match item.node {
-        Item_::ItemFn(ref dec, Unsafety::Normal, abi, _, ref block) => {
+        Item_::ItemFn(ref dec, Unsafety::Normal, abi, _, ref _block) => {
             if !matches!(abi, Abi::Rust | Abi::C | Abi::Cdecl) {
                 cx.span_err(sp, BAD_ABI);
                 return;
@@ -147,7 +147,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
                 let index = cx.expr_int(sp, index as isize);
                 if let Pat_::PatIdent(BindingMode::BindByValue(_), ident, _) = arg.pat.node {
                     let name = ident.node;
-                    block.push(quote_stmt!(cx, let $name = func[$index]))
+                    block.push(quote_stmt!(cx, let $name = func[$index]).unwrap())
                 }
             }
             let block = cx.block(sp, block, None);
@@ -202,10 +202,10 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
                         cx.expr_ident(sp, offset)
                     };
                     let name = field.node.ident().unwrap();
-                    compiler.push(quote_stmt!(cx, func.insn_store_relative(value, $current_offset, self.$name.compile(func))));
+                    compiler.push(quote_stmt!(cx, func.insn_store_relative(value, $current_offset, self.$name.compile(func))).unwrap());
                     let size_of = cx.expr_path(cx.path_all(sp, false, vec![cx.ident_of("std"), cx.ident_of("mem"), cx.ident_of("size_of")], vec![], vec![field.node.ty.clone()], vec![]));
                     if def.fields.len() > 1 && index < def.fields.len() - 1 {
-                        compiler.push(quote_stmt!(cx, offset += $size_of()));
+                        compiler.push(quote_stmt!(cx, offset += $size_of()).unwrap());
                     }
                 } else {
                     return;
@@ -225,57 +225,58 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, meta: &MetaItem, item: &Item, mut push
                 Some(cx.trait_ref(jit_compile)),
                 cx.ty_ident(sp, name),
                 vec![
-                    ImplItem::MethodImplItem(P(Method {
+                    P(ImplItem {
                         attrs: vec![],
                         id: DUMMY_NODE_ID,
                         span: sp,
-                        node: Method_::MethDecl(
-                            cx.ident_of("get_type"),
-                            empty_generics(),
-                            Abi::Rust,
-                            Spanned {
-                                node: ExplicitSelf_::SelfStatic,
-                                span: sp
+                        ident: cx.ident_of("get_type"),
+                        vis: Visibility::Inherited,
+                        node: ImplItem_::MethodImplItem(
+                            MethodSig {
+                                unsafety: Unsafety::Normal,
+                                abi: Abi::Rust,
+                                explicit_self: respan(sp, ExplicitSelf_::SelfStatic),
+                                decl: cx.fn_decl(vec![], cx.ty_path(jit_cow_type)),
+                                generics: empty_generics(),
                             },
-                            Unsafety::Normal,
-                            cx.fn_decl(vec![], cx.ty_path(jit_cow_type)),
-                            cx.block_expr(
-                                type_expr
-                            ),
-                            Visibility::Inherited
-                        )
-                    })),
-                    ImplItem::MethodImplItem(P(Method {
+                            cx.block_expr(type_expr))
+                    }),
+                    P(ImplItem {
                         attrs: vec![],
                         id: DUMMY_NODE_ID,
                         span: sp,
-                        node: Method_::MethDecl(
-                            cx.ident_of("compile"),
-                            Generics {
-                                lifetimes: vec![LifetimeDef {
-                                    lifetime: jit_life,
-                                    bounds: vec![]
-                                }],
-                                ty_params: OwnedSlice::empty(),
-                                where_clause: WhereClause {
-                                    id: DUMMY_NODE_ID,
-                                    predicates: vec![]
-                                }
+                        ident: cx.ident_of("compile"),
+                        vis: Visibility::Inherited,
+                        node: ImplItem_::MethodImplItem(
+                            MethodSig {
+                                unsafety: Unsafety::Normal,
+                                abi: Abi::Rust,
+                                explicit_self: respan(
+                                    sp,
+                                    ExplicitSelf_::SelfRegion(None,
+                                                              Mutability::MutImmutable,
+                                                              cx.ident_of("b"))),
+                                decl: cx.fn_decl(
+                                    vec![
+                                        Arg::new_self(sp, Mutability::MutImmutable,
+                                                      cx.ident_of("self")),
+                                        cx.arg(sp, func, cx.ty_rptr(sp, cx.ty_path(jit_func),
+                                                                    None, Mutability::MutImmutable))],
+                                    cx.ty_path(jit_value)),
+                                generics: Generics {
+                                    lifetimes: vec![LifetimeDef {
+                                        lifetime: jit_life,
+                                        bounds: vec![]
+                                    }],
+                                    ty_params: OwnedSlice::empty(),
+                                    where_clause: WhereClause {
+                                        id: DUMMY_NODE_ID,
+                                        predicates: vec![]
+                                    }
+                                },
                             },
-                            Abi::Rust,
-                            Spanned {
-                                node: ExplicitSelf_::SelfRegion(None, Mutability::MutImmutable, cx.ident_of("b")),
-                                span: sp
-                            },
-                            Unsafety::Normal,
-                            cx.fn_decl(vec![
-                                Arg::new_self(sp, Mutability::MutImmutable, cx.ident_of("self")),
-                                cx.arg(sp, func, cx.ty_rptr(sp, cx.ty_path(jit_func) ,None, Mutability::MutImmutable))
-                            ], cx.ty_path(jit_value)),
-                            cx.block(sp, compiler, Some(cx.expr_ident(sp, value))),
-                            Visibility::Inherited
-                        )
-                    }))
+                            cx.block(sp, compiler, Some(cx.expr_ident(sp, value))))
+                    })
                 ]
             )))
         },
@@ -375,7 +376,7 @@ macro_rules! jit(
         $func.insn_sqrt(&jit!($func, $($t)+))
     );
     ($func:ident, $var:ident = $($t:tt)+) => (
-        $func.insn_store($var, jit($func, $val));
+        $func.insn_store($var, jit!($func, $val));
     );
     ($func:ident, *$var:ident) => (
         $func.insn_load($var)
@@ -405,9 +406,9 @@ macro_rules! jit_func(
     });
     ($ctx:expr, $func:ident, $name:ident($($arg:ident:$ty:ty),+) -> $ret:ty, $value:expr) => ({
         use std::default::Default;
-        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$arg_ty>().get()),*].as_mut_slice());
+        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$ty>().get()),*].as_mut_slice());
         $ctx.build_func(*sig, |$func| {
-            let mut i = 0u;
+            let mut i = 0;
             $(let $arg = {
                 i += 1;
                 $func[i - 1]
@@ -425,7 +426,7 @@ macro_rules! jit_func(
         use std::default::Default;
         let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$arg_ty>().get()),*].as_mut_slice());
         $ctx.build_func(*sig, |$func| {
-            let mut i = 0us;
+            let mut i = 0;
             $(let $arg = {
                 i += 1;
                 $func[i - 1]
