@@ -18,8 +18,7 @@ pub trait Compile {
 impl Compile for () {
     #[inline(always)]
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
-        let ty = get::<()>();
-        Value::new(func, ty.get())
+        Value::new(func, consts::get_void())
     }
     #[inline(always)]
     fn get_type() -> CowType<'static> {
@@ -47,14 +46,14 @@ impl<T> Compile for *mut T where T:Compile {
         unsafe {
             from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
-                get::<*mut T>().get().as_ptr(),
+                (&*get::<*mut T>()).as_ptr(),
                 *self as c_long
             ))
         }
     }
     #[inline(always)]
     fn get_type() -> CowType<'static> {
-        Type::new_pointer(get::<T>().get()).into_cow()
+        Type::new_pointer(&*get::<T>()).into_cow()
     }
 }
 impl<T> Compile for *const T where T:Compile {
@@ -62,14 +61,14 @@ impl<T> Compile for *const T where T:Compile {
         unsafe {
             from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
-                get::<*const T>().get().as_ptr(),
+                (&*get::<*const T>()).as_ptr(),
                 *self as c_long
             ))
         }
     }
     #[inline(always)]
     fn get_type() -> CowType<'static> {
-        Type::new_pointer(get::<T>().get()).into_cow()
+        Type::new_pointer(&*get::<T>()).into_cow()
     }
 }
 impl<T> Compile for &'static T where T:Compile {
@@ -78,14 +77,14 @@ impl<T> Compile for &'static T where T:Compile {
         unsafe {
             from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
-                get::<&'static T>().get().as_ptr(),
+                (&*get::<&'static T>()).as_ptr(),
                 *self as *const T as c_long
             ))
         }
     }
     #[inline(always)]
     fn get_type() -> CowType<'static> {
-        Type::new_pointer(get::<T>().get()).into_cow()
+        Type::new_pointer(&get::<T>()).into_cow()
     }
 }
 impl Compile for CString {

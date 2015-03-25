@@ -11,7 +11,7 @@ fn test_sqrt() {
     assert_eq!(ctx.functions().count(), 0);
     jit_func!(ctx, func, sqrt(num: usize) -> usize, {
         let sqrt = func.insn_sqrt(num);
-        let sqrt_arg_ui = func.insn_convert(sqrt, get::<usize>().get(), false);
+        let sqrt_arg_ui = func.insn_convert(sqrt, &get::<usize>(), false);
         func.insn_return(sqrt_arg_ui);
     }, |sqrt| {
         assert_eq!(sqrt(64), 8);

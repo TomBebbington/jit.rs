@@ -11,7 +11,8 @@ macro_rules! test_compile(
         #[test]
         fn $test_name() {
             let default_value:$ty = Default::default();
-            assert_eq!(typecs::$id(), get::<$ty>().get());
+            let ty = get::<$ty>();
+            assert_eq!(typecs::$id(), &*ty);
             let mut ctx = Context::new();
             jit_func!(ctx, func, gen_value() -> $ty, {
                 let val = func.insn_of(&default_value);

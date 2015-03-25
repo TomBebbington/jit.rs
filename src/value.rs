@@ -29,9 +29,9 @@ impl<'a> NativeRef for Value<'a> {
         }
     }
 }
-impl<'a> fmt::Display for Value<'a> {
+impl<'a> fmt::Debug for Value<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "v({})", self.get_type())
+        write!(fmt, "v({:?})", self.get_type())
     }
 }
 impl<'a> Clone for Value<'a> {
@@ -48,7 +48,7 @@ impl<'a> Value<'a> {
     /// The value initially starts off as a block-specific temporary. It will be
     /// converted into a function-wide local variable if it is ever referenced
     /// from a different block.
-    pub fn new(func:&UncompiledFunction<'a>, value_type:TypeRef<'a>) -> Value<'a> {
+    pub fn new(func:&UncompiledFunction<'a>, value_type:&Ty) -> Value<'a> {
         unsafe {
             let value = jit_value_create(func.as_ptr(), value_type.as_ptr());
             NativeRef::from_ptr(value)

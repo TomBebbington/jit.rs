@@ -2,7 +2,7 @@ use raw::*;
 use context::Builder;
 use compile::Compile;
 use label::Label;
-use types::TypeRef;
+use types::Ty;
 use insn::Block;
 use util::{self, from_ptr, NativeRef};
 use value::Value;
@@ -50,11 +50,11 @@ pub mod flags {
     );
 }
 /// A function that can be compiled or not
-pub trait Function<'a> : NativeRef {
+pub trait Function : NativeRef {
     /// Check if this function is compiled
     fn is_compiled(&self) -> bool;
     /// Get the signature of this function
-    fn get_signature(&self) -> TypeRef<'a> {
+    fn get_signature(&self) -> &Ty {
         unsafe { from_ptr(jit_function_get_signature(self.as_ptr())) }
     }
 }
@@ -80,7 +80,7 @@ impl<'a> AnyFunction<'a> {
         }
     }
 }
-impl<'a> Function<'a> for AnyFunction<'a> {
+impl<'a> Function for AnyFunction<'a> {
     /// Check if this function is compiled
     fn is_compiled(&self) -> bool {
         unsafe { jit_function_is_compiled(self.as_ptr()) != 0 }
@@ -94,7 +94,7 @@ impl<'a> Function<'a> for AnyFunction<'a> {
 native_ref!(CompiledFunction contravariant {
     _func: jit_function_t
 });
-impl<'a> Function<'a> for CompiledFunction<'a> {
+impl<'a> Function for CompiledFunction<'a> {
     /// 10/10 would compile again
     fn is_compiled(&self) -> bool {
         true
@@ -138,7 +138,9 @@ impl<'a> NativeRef for UncompiledFunction<'a> {
     /// Convert from a native pointer
     unsafe fn from_ptr(ptr:jit_function_t) -> UncompiledFunction<'a> {
         let sig = jit_function_get_signature(ptr);
+        println!("{} - {:?}", jit_type_num_params(sig), sig);
         let args = (0..jit_type_num_params(sig)).map(|i| from_ptr(jit_value_get_param(ptr, i as c_uint))).collect::<Vec<_>>();
+        println!("{:?}", args);
         UncompiledFunction {
             _func: ptr,
             args: args,
@@ -146,7 +148,7 @@ impl<'a> NativeRef for UncompiledFunction<'a> {
         }
     }
 }
-impl<'a> Function<'a> for UncompiledFunction<'a> {
+impl<'a> Function for UncompiledFunction<'a> {
     fn is_compiled(&self) -> bool {
         false
     }
@@ -184,7 +186,7 @@ impl<'a> UncompiledFunction<'a> {
     ///
     /// This will protect the JIT's internal data structures within a
     /// multi-threaded environment.
-    pub fn new(context:&'a Builder, signature:TypeRef) -> UncompiledFunction<'a> {
+    pub fn new(context:&'a Builder, signature:&Ty) -> UncompiledFunction<'a> {
         unsafe {
             let mut me:UncompiledFunction = from_ptr(jit_function_create(
                 context.as_ptr(),
@@ -208,7 +210,7 @@ impl<'a> UncompiledFunction<'a> {
     /// never be called by anyone except its parent and sibling functions.
     /// The front end is also responsible for ensuring that the nested function
     /// is compiled before its parent.
-    pub fn new_nested(context:&'a Builder, signature: TypeRef,
+    pub fn new_nested(context:&'a Builder, signature: &Ty,
                         parent: &'a UncompiledFunction<'a>) -> UncompiledFunction<'a> {
         unsafe {
             let mut me:UncompiledFunction = from_ptr(jit_function_create_nested(
@@ -227,7 +229,7 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that converts the value to the type given
     pub fn insn_convert(&self, v: Value<'a>,
-                            t:TypeRef, overflow_check:bool) -> Value<'a> {
+                            t:&Ty, overflow_check:bool) -> Value<'a> {
         unsafe {
             from_ptr(jit_insn_convert(
                 self.as_ptr(),
@@ -401,7 +403,7 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that loads a value from a src value
-    pub fn insn_load_relative(&self, src: Value<'a>, offset: usize, ty:TypeRef) -> Value<'a> {
+    pub fn insn_load_relative(&self, src: Value<'a>, offset: usize, ty: &Ty) -> Value<'a> {
         unsafe {
             from_ptr(jit_insn_load_relative(
                 self.as_ptr(),
@@ -610,8 +612,8 @@ impl<'a> UncompiledFunction<'a> {
     }
 
     /// Call the function, which may or may not be translated yet
-    pub fn insn_call<F>(&self, name:Option<&str>, func:&F, sig:Option<TypeRef>,
-        args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> where F:Function<'a> {
+    pub fn insn_call<F>(&self, name:Option<&str>, func:&F, sig:Option<&Ty>,
+        args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> where F:Function {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
             let c_name = name.map(|name| CString::new(name.as_bytes()).unwrap());
@@ -627,7 +629,7 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that calls a function that has the signature given
     /// with some arguments through a pointer to the fucntion
-    pub fn insn_call_indirect(&self, func:Value<'a>, signature: TypeRef,
+    pub fn insn_call_indirect(&self, func:Value<'a>, signature: &Ty,
                                args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
@@ -637,7 +639,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that calls a native function that has the signature
     /// given with some arguments
     fn insn_call_native(&self, name: Option<&str>,
-                        native_func: *mut c_void, signature: TypeRef,
+                        native_func: *mut c_void, signature: &Ty,
                         args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter()
@@ -659,7 +661,7 @@ impl<'a> UncompiledFunction<'a> {
     /// given with no arguments and expects a return value
     pub fn insn_call_native0<R>(&self, name: Option<&str>,
                             native_func: extern fn() -> R,
-                            signature: TypeRef,
+                            signature: &Ty,
                             flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, [].as_mut_slice(), flags)
@@ -669,7 +671,7 @@ impl<'a> UncompiledFunction<'a> {
     /// given with a single argument and expects a return value
     pub fn insn_call_native1<A,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A) -> R,
-                                signature: TypeRef,
+                                signature: &Ty,
                                 mut args: [Value<'a>; 1],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
@@ -680,7 +682,7 @@ impl<'a> UncompiledFunction<'a> {
     /// given with two arguments and expects a return value
     pub fn insn_call_native2<A,B,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A, B) -> R,
-                                signature: TypeRef,
+                                signature: &Ty,
                                 mut args: [Value<'a>; 2],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
@@ -691,7 +693,7 @@ impl<'a> UncompiledFunction<'a> {
     /// given with three arguments and expects a return value
     pub fn insn_call_native3<A,B,C,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A, B, C) -> R,
-                                signature: TypeRef,
+                                signature: &Ty,
                                 mut args: [Value<'a>; 3],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
@@ -702,7 +704,7 @@ impl<'a> UncompiledFunction<'a> {
     /// given with four arguments and expects a return value
     pub fn insn_call_native4<A,B,C,D,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A, B, C, D) -> R,
-                                signature: TypeRef,
+                                signature: &Ty,
                                 mut args: [Value<'a>; 4],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };

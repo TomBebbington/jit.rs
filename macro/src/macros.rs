@@ -28,7 +28,7 @@ static BAD_ITEM:&'static str = "only structs can be compatible with LibJIT";
 
 fn simple_type(cx: &mut ExtCtxt, name: &'static str) -> Option<P<Expr>> {
     let new_name = format!("get_{}", name);
-    let name = cx.ident_of(&*new_name);
+    let name = cx.ident_of(&new_name);
     Some(quote_expr!(cx, jit::typecs::$name()))
 }
 fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
@@ -70,7 +70,7 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
                     position: get_type.segments.len() - 1
                 }),
                 get_type));
-            Some(quote_expr!(cx, $qpath().get()))
+            Some(quote_expr!(cx, &*$qpath()))
         },
         _ => {
             let error = format!("could not resolve type {}", ty.to_source());
@@ -215,7 +215,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
             let mut type_expr = cx.expr_call(sp, cx.expr_path(new_struct), vec![fields]);
             if let Some(names) = names {
                 let names = cx.expr_addr_of(sp, cx.expr_vec(sp, names));
-                type_expr = cx.expr_method_call(sp, type_expr, cx.ident_of("with_names"), vec![names]);
+                cx.expr_method_call(sp, type_expr.clone(), cx.ident_of("set_names"), vec![names]);
             }
             type_expr = quote_expr!(cx, $type_expr.into_cow());
             push(cx.item(sp, name, vec![], Item_::ItemImpl(
@@ -295,45 +295,49 @@ pub fn plugin_registrar(reg: &mut Registry) {
 /// Construct a JIT struct with the fields given
 macro_rules! jit_struct(
     ($($name:ident: $ty:ty),*) => ({
-        Type::new_struct([
-            $(get::<$ty>().get()),*
-        ].as_mut_slice()).with_names(&[$(stringify!($name)),*])
+        let ty = Type::new_struct(&mut [
+            $(&get::<$ty>()),*
+        ]);
+        ty.set_names(&[$(stringify!($name)),*]);
+        ty
     });
-    ($($ty:ty),+ ) => ({
-        Type::new_struct([
-            $(get::<$ty>().get()),+
-        ].as_mut_slice())
-    })
+    ($($ty:ty),+ ) => (
+        Type::new_struct(&mut [
+            $(&get::<$ty>()),+
+        ])
+    )
 );
 
 #[macro_export]
 /// Construct a JIT union with the fields given
 macro_rules! jit_union(
     ($($name:ident: $ty:ty),*) => ({
-        Type::new_union([
-            $(get::<$ty>().get()),*
-        ].as_mut_slice()).with_names(&[$(stringify!($name)),*])
+        let union = Type::new_union(&mut [
+            $(&get::<$ty>()),*
+        ]);
+        union.set_names(&[$(stringify!($name)),*]);
+        union
     });
-    ($($ty:ty),+ ) => ({
-        Type::new_union([
-            $(get::<$ty>().get()),+
-        ].as_mut_slice())
-    })
+    ($($ty:ty),+ ) => (
+        Type::new_union(&mut [
+            $(&get::<$ty>()),*
+        ])
+    )
 );
 #[macro_export]
 /// Construct a JIT function signature with the arguments and return type given
 macro_rules! jit_fn(
     ($($arg:ty),* -> $ret:ty) => ({
         use std::default::Default;
-        Type::new_signature(Default::default(), get::<$ret>().get(), [
-            $(get::<$arg>().get()),*
-        ].as_mut_slice())
+        Type::new_signature(Default::default(), get::<$ret>().get(), &mut [
+            $(&get::<$arg>()),*
+        ])
     });
     (raw $($arg:expr),* -> $ret:expr) => ({
         use std::default::Default;
-        Type::new_signature(Default::default(), $ret, [
-            $($arg),*
-        ].as_mut_slice())
+        Type::new_signature(Default::default(), $ret, &mut [
+            $(&$arg),*
+        ])
     });
 );
 
@@ -402,12 +406,12 @@ macro_rules! jit_func(
     ($ctx:expr, $func:ident, $name:ident() -> $ret:ty, $value:expr) => ({
         use std::default::Default;
         let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [].as_mut_slice());
-        $ctx.build_func(*sig, |$func| $value)
+        $ctx.build_func(&sig, |$func| $value)
     });
     ($ctx:expr, $func:ident, $name:ident($($arg:ident:$ty:ty),+) -> $ret:ty, $value:expr) => ({
         use std::default::Default;
         let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$ty>().get()),*].as_mut_slice());
-        $ctx.build_func(*sig, |$func| {
+        $ctx.build_func(&sig, |$func| {
             let mut i = 0;
             $(let $arg = {
                 i += 1;
@@ -418,14 +422,14 @@ macro_rules! jit_func(
     });
     ($ctx:expr, $func:ident, $name:ident() -> $ret:ty, $value:expr, |$comp_func:ident| $comp:expr) => ({
         use std::default::Default;
-        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [].as_mut_slice());
-        $ctx.build_func(*sig, |$func| $value)
+        let sig = Type::new_signature(Default::default(), &get::<$ret>(), &mut []);
+        $ctx.build_func(&sig, |$func| $value)
             .with::<(), $ret, _>(|$comp_func| $comp)
     });
     ($ctx:expr, $func:ident, $name:ident($($arg:ident:$arg_ty:ty),+) -> $ret:ty, $value:expr, |$comp_func:ident| $comp:expr) => ({
         use std::default::Default;
-        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$arg_ty>().get()),*].as_mut_slice());
-        $ctx.build_func(*sig, |$func| {
+        let sig = Type::new_signature(Default::default(), &get::<$ret>(), &mut [$(&get::<$arg_ty>()),*]);
+        $ctx.build_func(&sig, |$func| {
             let mut i = 0;
             $(let $arg = {
                 i += 1;

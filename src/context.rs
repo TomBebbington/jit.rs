@@ -5,7 +5,7 @@ use std::any::TypeId;
 use std::{hash, mem, ptr};
 use std::iter::IntoIterator;
 use util::{from_ptr, NativeRef};
-use {AnyFunction, CompiledFunction, TypeRef, UncompiledFunction};
+use {AnyFunction, CompiledFunction, Ty, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
 /// multiple, but normally there is only one.
 native_ref!(Context {
@@ -70,7 +70,7 @@ impl Context {
     #[inline(always)]
     /// Lock the context so you can safely generate IR in a new function on the context which is
     /// compiled for you
-    pub fn build_func<'a, F:FnOnce(&UncompiledFunction<'a>)>(&'a mut self, signature: TypeRef, cb: F) -> CompiledFunction<'a> {
+    pub fn build_func<'a, 'b, F:FnOnce(&UncompiledFunction<'a>)>(&'a mut self, signature: &'b Ty, cb: F) -> CompiledFunction<'a> {
         unsafe {
             jit_context_build_start(self.as_ptr());
             let builder = self.as_builder();
@@ -81,7 +81,7 @@ impl Context {
         }
     }
     /// Iterate through the functions contained inside this context
-    pub fn functions<'a>(&'a self) -> Functions<'a> {
+    pub fn functions(&self) -> Functions {
         unsafe {
             Functions {
                 context: self.as_ptr(),

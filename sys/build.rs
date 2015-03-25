@@ -1,12 +1,10 @@
-#![feature(libc, std_misc, path_ext)]
+#![feature(path_ext)]
 #[cfg(not(windows))]
 extern crate "pkg-config" as pkg_config;
-extern crate libc;
-use std::ffi::{OsStr, AsOsStr};
-use std::os::unix::ffi::OsStrExt;
 use std::fs::{self, PathExt};
 use std::env;
 use std::path::Path;
+use std::process::Command;
 
 #[cfg(windows)]
 static FINAL_LIB:&'static str = "libjit.dll";
@@ -23,7 +21,16 @@ static USE_CARGO_MSG:&'static str = "Build script should be ran with Cargo";
 #[cfg(windows)]
 static INSTALL_COMPILER_MSG:&'static str = "Failed to configure the library for your platform. Did you forget to install MinGW and MSYS?";
 #[cfg(not(windows))]
-static INSTALL_COMPILER_MSG:&'static str = "Failed to configure the library for your platform. Did you forget to install gcc?";
+static INSTALL_COMPILER_MSG:&'static str = "Failed to configure the library for your platform. Did you forget to install gcc or clang?";
+
+fn parse(cmd: &str) -> Command {
+	let mut words = cmd.split(' ');
+	let mut command = Command::new(words.next().unwrap());
+	for arg in words {
+		command.arg(arg);
+	}
+	command
+}
 
 fn main() {
 	if cfg!(windows) && !Path::new(MINGW).exists() {
@@ -36,16 +43,14 @@ fn main() {
 	let submod_path = Path::new("libjit");
 	let final_lib_dir = submod_path.join("jit/.libs");
 	if !final_lib_dir.join(FINAL_LIB).exists() {
-		run_wocare("git submodule init");
-		run("git submodule update");
+		run_wocare(&mut parse("git submodule init"));
+		run(&mut parse("git submodule update"));
 		if !submod_path.exists() {
-			let text = format!("git clone git://git.savannah.gnu.org/libjit.git {}", submod_path.display());
-			run(&*text);
+			run(Command::new("git").args(&["clone", "git://git.savannah.gnu.org/libjit.git", submod_path.to_str().unwrap()]))
 		}
-		chdir(submod_path);
-		run_nice("sh auto_gen.sh", INSTALL_AUTOTOOLS_MSG);
-		run_nice("sh configure --enable-static --disable-shared CC=clang CFLAGS=-fPIC", INSTALL_COMPILER_MSG);
-		run("make");
+		run_nice(parse("sh auto_gen.sh").current_dir(submod_path), INSTALL_AUTOTOOLS_MSG);
+		run_nice(parse("sh configure --enable-static --disable-shared CC=clang CFLAGS=-fPIC").current_dir(submod_path), INSTALL_COMPILER_MSG);
+		run(Command::new("make").current_dir(submod_path));
 	}
 	let from = final_lib_dir.join(FINAL_LIB);
 	let to = out_dir.join(FINAL_LIB);
@@ -55,37 +60,16 @@ fn main() {
 	}
     println!("cargo:rustc-flags=-l jit:static -L {}", out_dir.display());
 }
-fn chdir(path: &Path) {
-	use libc::chdir;
-	use std::str::from_utf8_unchecked;
-	unsafe {
-		let c_path = path.as_os_str().to_cstring().unwrap();
-		if libc::chdir(c_path.as_ptr()) == -1 {
-			panic!("Failed to change directory into {}", from_utf8_unchecked(c_path.as_bytes()))
-		}
+fn run_nice(cmd: &mut Command, text: &str) {
+	if !cmd.status().unwrap().success() {
+		panic!("{:?} failed - {}", cmd, text)
 	}
 }
-fn run_nice(cmd: &str, text: &str) {
-	unsafe {
-		let c_cmd = OsStr::from_str(cmd).to_cstring().unwrap();
-		if libc::system(c_cmd.as_ptr()) != 0 {
-			panic!("{}", text);
-		}
+fn run(cmd: &mut Command) {
+	if !cmd.status().unwrap().success() {
+		panic!("{:?} failed", cmd)
 	}
 }
-fn run(cmd: &str) {
-	unsafe {
-		let c_cmd = OsStr::from_str(cmd).to_cstring().unwrap();
-		if libc::system(c_cmd.as_ptr()) != 0 {
-			panic!("{} failed", cmd);
-		}
-	}
-}
-fn run_wocare(cmd: &str) {
-	unsafe {
-		let c_cmd = OsStr::from_str(cmd).to_cstring().unwrap();
-		if libc::system(c_cmd.as_ptr()) < 0 {
-			panic!("{} failed", cmd);
-		}
-	}
+fn run_wocare(cmd: &mut Command) {
+	cmd.status().unwrap();
 }

@@ -46,7 +46,7 @@ macro_rules! compile_func(
             }
             #[inline(always)]
             fn get_type() -> CowType<'static> {
-                Type::new_signature(CDecl, get::<R>().get(), [$(get::<$arg>().get()),*].as_mut_slice()).into_cow()
+                Type::new_signature(CDecl, &get::<R>(), &mut [$(&get::<$arg>()),*]).into_cow()
             }
         }
         impl<$($arg:Compile,)* R:Compile> Compile for $ext_sig {
@@ -67,8 +67,8 @@ macro_rules! compile_tuple(
             #[inline(always)]
             fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
                 let ($(ref $name),+) = *self;
-                let ty = get::<($($ty),+)>().get();
-                let tuple = Value::new(func, ty);
+                let ty = get::<($($ty),+)>();
+                let tuple = Value::new(func, &ty);
                 let ($($name),+) = ($(func.insn_of($name)),+);
                 let mut fields = ty.fields();
                 $(func.insn_store_relative(tuple, fields.next().unwrap().get_offset(), $name);)+
@@ -76,7 +76,7 @@ macro_rules! compile_tuple(
             }
             #[inline(always)]
             fn get_type() -> CowType<'static> {
-                let mut types = [$(get::<$ty>().get()),+];
+                let mut types = [$(&*get::<$ty>()),+];
                 Type::new_struct(types.as_mut_slice()).into_cow()
             }
         }

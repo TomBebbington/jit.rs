@@ -26,7 +26,7 @@
 #![crate_name = "jit"]
 #![allow(raw_pointer_derive, dead_code, non_camel_case_types, non_upper_case_globals, unused_attributes)]
 #![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
-#![feature(alloc, libc, core, hash, os, plugin, unboxed_closures, unsafe_destructor)]
+#![feature(alloc, libc, core, hash, os, plugin, unboxed_closures, unsafe_destructor, optin_builtin_traits)]
 #![feature(old_io)]
 #![plugin(rustc_bitflags)]
 #![stable]
@@ -66,7 +66,7 @@ pub use function::{flags, Abi, AnyFunction, UncompiledFunction, Function, Compil
 pub use function::flags::CallFlags;
 pub use label::Label;
 pub use types::kind::TypeKind;
-pub use types::{kind, get, Type, Field, Fields, Params, CowType, StaticType, TypeRef, TaggedType};
+pub use types::{kind, get, Type, Field, Fields, Params, CowType, StaticType, Ty, TaggedType};
 pub use types::consts as typecs;
 pub use util::NativeRef;
 pub use value::Value;

@@ -46,13 +46,20 @@ fn count<'a, I>(func: &UncompiledFunction<'a>, code: &mut Peekable<I>, curr:char
 }
 
 fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
-    let ubyte = typecs::get_ubyte();;
+    println!("Getting ubyte");
+    let ubyte = typecs::get_ubyte();
+    println!("Getting fn(u8)");
     let putchar_sig = get::<fn(u8)>();
+    println!("Getting fn() -> u8");
     let readchar_sig = get::<fn() -> u8>();
+    println!("Getting first argument");
     let data = func[0];
+    println!("initialising crrent loop");
     let mut current_loop = None;
+    println!("making peeky iter");
     let mut code = code.chars().peekable();
     while let Some(c) = code.next() {
+        println!("Processing {}", c);
         match c {
             '>' => {
                 let amount = count(func, &mut code, c);
@@ -80,19 +87,24 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
             },
             '.' => {
                 extern fn putchar(c: u8) {
-                    io::stdout().write(&[c]).unwrap();
+                    let mut output = io::stdout();
+                    output.write(&[c]).unwrap();
+                    output.flush().unwrap()
                 }
                 let value = func.insn_load_relative(data, 0, ubyte);
-                func.insn_call_native1(Some("putchar"), putchar, putchar_sig.get(), [value], flags::NO_THROW);
+                func.insn_call_native1(Some("putchar"), putchar, &putchar_sig, [value], flags::NO_THROW);
             },
             ',' => {
                 extern fn readchar() -> u8 {
                     let mut buf = [0];
                     // we better have read one byte
-                    assert_eq!(io::stdin().read(&mut buf).unwrap(), 1);
+                    let mut input = io::stdin();
+                    if input.read(&mut buf).unwrap() != 1 {
+                        panic!("read more than one byte")
+                    }
                     buf[0]
                 }
-                let value = func.insn_call_native0(Some("readchar"), readchar, readchar_sig.get(), flags::NO_THROW);
+                let value = func.insn_call_native0(Some("readchar"), readchar, &readchar_sig, flags::NO_THROW);
                 func.insn_store_relative(data, 0, value);
             },
             '[' => {
@@ -119,7 +131,8 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
 }
 fn run(ctx: &mut Context, code: &str) {
     let sig = get::<fn(*mut u8)>();
-    let func = ctx.build_func(sig.get(), |func| compile(func, code));
+    println!("Running {}", code);
+    let func = ctx.build_func(&sig, |func| compile(func, code));
     func.with(|func:extern fn(*mut u8)| {
         let mut data: [u8; 3000] = unsafe { mem::zeroed() };
         func(data.as_mut_ptr());
@@ -127,16 +140,21 @@ fn run(ctx: &mut Context, code: &str) {
 }
 fn main() {
     let mut ctx = Context::new();
-    if let Some(ref script) = env::args().skip(1).next() {
+    let mut args = env::args().skip(1);
+    if let Some(ref script) = args.next() {
         let mut text = String::new();
         File::open(script).unwrap().read_to_string(&mut text).unwrap();
         run(&mut ctx, &*text);
     } else {
-        print!("{}", PROMPT);
-        let input = io::stdin();
-        for line in input.lock().lines() {
-            run(&mut ctx, &*line.unwrap());
-            print!("{}", PROMPT);
+        let mut input = io::stdin();
+        let mut output = io::stdout();
+        loop {
+            output.write(PROMPT.as_bytes()).unwrap();
+            output.flush().unwrap();
+            let mut line = String::new();
+            input.read_line(&mut line).unwrap();
+            run(&mut ctx, &line);
+            output.write("\n".as_bytes()).unwrap();
         }
     }
 }

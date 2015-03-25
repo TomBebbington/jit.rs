@@ -23,9 +23,8 @@ impl Drop for PanicDrop {
 #[should_panic]
 fn test_panic_tags() {
     let pos_t = get::<Pos>();
-    let pos_t = pos_t.get();
     let kind = pos_t.get_kind();
-    let pos_t = TaggedType::new(pos_t, kind, Box::new(PanicDrop(42)));
+    let pos_t = TaggedType::new(&pos_t, kind, Box::new(PanicDrop(42)));
     assert_eq!(pos_t.get_tagged_data(), Some(&PanicDrop(42)));
 }
 #[jit]
@@ -37,9 +36,8 @@ struct Pos {
 #[test]
 fn test_tags() {
     let pos_t = get::<Pos>();
-    let pos_t = pos_t.get();
     let kind = pos_t.get_kind();
-    let new_pos_t = TaggedType::new(pos_t, kind, Box::new(42));
+    let new_pos_t = TaggedType::new(&pos_t, kind, Box::new(42));
     assert!(new_pos_t.get_tagged_data() == Some(&42));
-    assert!(new_pos_t.get_tagged_type() == pos_t);
+    assert!(new_pos_t.get_tagged_type() == &*pos_t);
 }
