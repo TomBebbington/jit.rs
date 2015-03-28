@@ -6,7 +6,6 @@ use libc::c_long;
 use value::Value;
 use types::{consts, CowType, Type};
 use util::{from_ptr, NativeRef};
-use std::borrow::IntoCow;
 use std::ffi::CString;
 /// A type that can be compiled into a LibJIT representation
 pub trait Compile {
@@ -22,7 +21,7 @@ impl Compile for () {
     }
     #[inline(always)]
     fn get_type() -> CowType<'static> {
-        consts::get_void().into_cow()
+        consts::get_void().into()
     }
 }
 compile_prims!{
@@ -53,7 +52,7 @@ impl<T> Compile for *mut T where T:Compile {
     }
     #[inline(always)]
     fn get_type() -> CowType<'static> {
-        Type::new_pointer(&*get::<T>()).into_cow()
+        Type::new_pointer(&*get::<T>()).into()
     }
 }
 impl<T> Compile for *const T where T:Compile {
@@ -68,23 +67,24 @@ impl<T> Compile for *const T where T:Compile {
     }
     #[inline(always)]
     fn get_type() -> CowType<'static> {
-        Type::new_pointer(&*get::<T>()).into_cow()
+        Type::new_pointer(&*get::<T>()).into()
     }
 }
 impl<T> Compile for &'static T where T:Compile {
     #[inline(always)]
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
         unsafe {
+            use std::mem;
             from_ptr(jit_value_create_nint_constant(
                 func.as_ptr(),
                 (&*get::<&'static T>()).as_ptr(),
-                *self as *const T as c_long
+                mem::transmute(*self)
             ))
         }
     }
     #[inline(always)]
     fn get_type() -> CowType<'static> {
-        Type::new_pointer(&get::<T>()).into_cow()
+        Type::new_pointer(&get::<T>()).into()
     }
 }
 impl Compile for CString {
@@ -94,7 +94,7 @@ impl Compile for CString {
     }
     #[inline(always)]
     fn get_type() -> CowType<'static> {
-        Type::new_pointer(consts::get_sys_char()).into_cow()
+        Type::new_pointer(consts::get_sys_char()).into()
     }
 }
 compile_tuple!(A, B => a, b);

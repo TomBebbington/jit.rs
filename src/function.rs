@@ -139,7 +139,7 @@ impl<'a> NativeRef for UncompiledFunction<'a> {
     unsafe fn from_ptr(ptr:jit_function_t) -> UncompiledFunction<'a> {
         let sig = jit_function_get_signature(ptr);
         println!("{} - {:?}", jit_type_num_params(sig), sig);
-        let args = (0..jit_type_num_params(sig)).map(|i| from_ptr(jit_value_get_param(ptr, i as c_uint))).collect::<Vec<_>>();
+        let args = (0..jit_type_num_params(sig)).map(|i| from_ptr(jit_value_get_param(ptr, i))).collect::<Vec<_>>();
         println!("{:?}", args);
         UncompiledFunction {
             _func: ptr,
@@ -174,8 +174,8 @@ impl<'a> Drop for UncompiledFunction<'a> {
 impl<'a> Index<usize> for UncompiledFunction<'a> {
     type Output = Value<'a>;
     /// Get the value that corresponds to a specified function parameter.
-    fn index(&self, param: &usize) -> &Value<'a> {
-        &self.args[*param]
+    fn index(&self, param: usize) -> &Value<'a> {
+        &self.args[param]
     }
 }
 impl<'a> UncompiledFunction<'a> {
@@ -263,6 +263,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Return from the function with the value given
     pub fn insn_return(&self, retval: Value<'a>) {
         unsafe {
+            println!("Returning from {:?} with {:?}", self.get_signature(), retval);
             jit_insn_return(self.as_ptr(), retval.as_ptr());
         }
     }
@@ -633,7 +634,7 @@ impl<'a> UncompiledFunction<'a> {
                                args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
-            from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, flags.bits() as c_int))
+            from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, flags.bits()))
         }
     }
     /// Make an instruction that calls a native function that has the signature

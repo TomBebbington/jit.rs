@@ -94,7 +94,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
     let value = cx.ident_of("value");
     let offset = cx.ident_of("offset");
     let mut is_packed = false;
-    push(cx.item_use_simple(sp, Visibility::Inherited, cx.path(sp, vec![cx.ident_of("std"), cx.ident_of("borrow"), cx.ident_of("IntoCow")])));
+    push(cx.item_use_simple(sp, Visibility::Inherited, cx.path(sp, vec![cx.ident_of("std"), cx.ident_of("convert"), cx.ident_of("Into")])));
     for attr in item.attrs.iter() {
         if let MetaItem_::MetaList(ref name, ref items) = attr.node.value.node {
             if &**name == "repr" && items.len() == 1 {
@@ -217,7 +217,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                 let names = cx.expr_addr_of(sp, cx.expr_vec(sp, names));
                 cx.expr_method_call(sp, type_expr.clone(), cx.ident_of("set_names"), vec![names]);
             }
-            type_expr = quote_expr!(cx, $type_expr.into_cow());
+            type_expr = quote_expr!(cx, $type_expr.into());
             push(cx.item(sp, name, vec![], Item_::ItemImpl(
                 Unsafety::Normal,
                 ImplPolarity::Positive,
@@ -288,7 +288,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
 }
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(token::intern("jit"), SyntaxExtension::Decorator(Box::new(expand_jit) as Box<ItemDecorator>));
+    reg.register_syntax_extension(token::intern("jit"), SyntaxExtension::Decorator(Box::new(expand_jit)));
 }
 
 #[macro_export]

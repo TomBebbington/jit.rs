@@ -155,7 +155,7 @@ impl<'a> Fields<'a> {
         unsafe {
             Fields {
                 _type: ty.as_ptr(),
-                index: 0 as c_uint,
+                index: 0,
                 length: jit_type_num_fields(ty.as_ptr()),
                 marker: PhantomData,
             }
@@ -242,13 +242,8 @@ impl ToOwned for Ty {
 impl Borrow<Ty> for Type {
     fn borrow(&self) -> &Ty {
         unsafe {
-            mem::transmute(&self._type)
+            mem::transmute(self._type)
         }
-    }
-}
-impl<'a> IntoCow<'a, Ty> for &'a Ty {
-    fn into_cow(self) -> Cow<'a, Ty> {
-        Cow::Borrowed(self)
     }
 }
 
@@ -303,9 +298,14 @@ impl<'a> Deref for Type {
 }
 pub type CowType<'a> = Cow<'a, Ty>;
 pub type StaticType = &'static Ty;
-impl IntoCow<'static, Ty> for Type {
-    fn into_cow(self) -> Cow<'static, Ty> {
+impl Into<CowType<'static>> for Type {
+    fn into(self) -> CowType<'static> {
         Cow::Owned(self)
+    }
+}
+impl<'a> Into<CowType<'a>> for &'a Ty {
+    fn into(self) -> CowType<'a> {
+        Cow::Borrowed(self)
     }
 }
 impl Type {

@@ -26,7 +26,7 @@
 #![crate_name = "jit"]
 #![allow(raw_pointer_derive, dead_code, non_camel_case_types, non_upper_case_globals, unused_attributes)]
 #![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
-#![feature(alloc, libc, core, hash, os, plugin, unboxed_closures, unsafe_destructor, optin_builtin_traits)]
+#![feature(alloc, libc, core, convert, hash, os, plugin, unboxed_closures, unsafe_destructor, optin_builtin_traits)]
 #![feature(old_io)]
 #![plugin(rustc_bitflags)]
 #![stable]

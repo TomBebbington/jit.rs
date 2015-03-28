@@ -22,7 +22,7 @@ impl<'a> Needed<'a> {
         unsafe {
             Needed {
                 _reader: read.as_ptr(),
-                index: 0 as c_uint,
+                index: 0,
                 length: jit_readelf_num_needed(read.as_ptr()),
                 marker: PhantomData
             }
@@ -67,6 +67,11 @@ pub enum ReadElfErrorCode {
     Memory
 }
 impl Copy for ReadElfErrorCode {}
+impl fmt::Debug for ReadElfErrorCode {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", self.description())
+    }
+}
 impl fmt::Display for ReadElfErrorCode {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", self.description())

@@ -15,6 +15,7 @@ impl Compile for $ty {
     }
 });
     ($ty:ty, $type_name:ident, $make_constant:ident, $cast:ty) => (
+#[allow(trivial_numeric_casts)]
 impl Compile for $ty {
     #[inline(always)]
     fn compile<'a>(&self, func:&UncompiledFunction<'a>) -> Value<'a> {
@@ -26,7 +27,7 @@ impl Compile for $ty {
     #[inline(always)]
     fn get_type() -> CowType<'static> {
         use types::consts;
-        consts::$type_name().into_cow()
+        consts::$type_name().into()
     }
 });
 );
@@ -46,7 +47,7 @@ macro_rules! compile_func(
             }
             #[inline(always)]
             fn get_type() -> CowType<'static> {
-                Type::new_signature(CDecl, &get::<R>(), &mut [$(&get::<$arg>()),*]).into_cow()
+                Type::new_signature(CDecl, &get::<R>(), &mut [$(&get::<$arg>()),*]).into()
             }
         }
         impl<$($arg:Compile,)* R:Compile> Compile for $ext_sig {
@@ -77,7 +78,7 @@ macro_rules! compile_tuple(
             #[inline(always)]
             fn get_type() -> CowType<'static> {
                 let mut types = [$(&*get::<$ty>()),+];
-                Type::new_struct(types.as_mut_slice()).into_cow()
+                Type::new_struct(types.as_mut_slice()).into()
             }
         }
     )
