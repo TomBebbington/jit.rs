@@ -1,6 +1,6 @@
 #![feature(path_ext)]
 #[cfg(not(windows))]
-extern crate "pkg-config" as pkg_config;
+extern crate pkg_config;
 use std::fs::{self, PathExt};
 use std::env;
 use std::path::Path;

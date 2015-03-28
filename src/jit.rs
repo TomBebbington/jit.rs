@@ -55,7 +55,7 @@
 extern crate rustc_bitflags;
 extern crate alloc;
 extern crate libc;
-extern crate "libjit-sys" as raw;
+extern crate libjit_sys as raw;
 use raw::*;
 use libc::c_void;
 use std::mem;

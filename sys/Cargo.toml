@@ -11,7 +11,7 @@ links = "jit"
 build = "build.rs"
 
 [lib]
-name = "libjit-sys"
+name = "libjit_sys"
 path = "lib.rs"
 
 [build-dependencies]
