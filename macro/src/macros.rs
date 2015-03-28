@@ -83,9 +83,9 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
 fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut push: &mut FnMut(P<Item>)) {
     let name = item.ident;
     let jit = cx.ident_of("jit");
-    let jit_compile = cx.path(sp, vec![jit, cx.ident_of("Compile")]);
+    let jit_life = cx.lifetime(sp, token::intern("'a"));
+    let jit_compile = cx.path_all(sp, false, vec![jit, cx.ident_of("Compile")], vec![jit_life], vec![], vec![]);
     let jit_cow_type = cx.path_all(sp, false, vec![jit, cx.ident_of("CowType")], vec![cx.lifetime(sp, token::intern("'static"))], vec![], vec![]);
-    let jit_life = cx.lifetime(sp, token::intern("a"));
     let jit_func = cx.path_all(sp, false, vec![jit, cx.ident_of("UncompiledFunction")], vec![jit_life], vec![], vec![]);
     let jit_value = cx.path_all(sp, false, vec![jit, cx.ident_of("Value")], vec![jit_life], vec![], vec![]);
     let jit_value_new = cx.path(sp, vec![jit, cx.ident_of("Value"), cx.ident_of("new")]);
@@ -218,10 +218,17 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                 cx.expr_method_call(sp, type_expr.clone(), cx.ident_of("set_names"), vec![names]);
             }
             type_expr = quote_expr!(cx, $type_expr.into());
-            push(cx.item(sp, name, vec![], Item_::ItemImpl(
+            let item = cx.item(sp, name, vec![], Item_::ItemImpl(
                 Unsafety::Normal,
                 ImplPolarity::Positive,
-                empty_generics(),
+                Generics {
+                    lifetimes: vec![ LifetimeDef {lifetime: jit_life, bounds: vec![]}],
+                    ty_params: OwnedSlice::empty(),
+                    where_clause: WhereClause {
+                        id: DUMMY_NODE_ID,
+                        predicates: vec![]
+                    }
+                },
                 Some(cx.trait_ref(jit_compile)),
                 cx.ty_ident(sp, name),
                 vec![
@@ -253,9 +260,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                                 abi: Abi::Rust,
                                 explicit_self: respan(
                                     sp,
-                                    ExplicitSelf_::SelfRegion(None,
-                                                              Mutability::MutImmutable,
-                                                              cx.ident_of("b"))),
+                                    ExplicitSelf_::SelfValue(cx.ident_of("b"))),
                                 decl: cx.fn_decl(
                                     vec![
                                         Arg::new_self(sp, Mutability::MutImmutable,
@@ -263,22 +268,13 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                                         cx.arg(sp, func, cx.ty_rptr(sp, cx.ty_path(jit_func),
                                                                     None, Mutability::MutImmutable))],
                                     cx.ty_path(jit_value)),
-                                generics: Generics {
-                                    lifetimes: vec![LifetimeDef {
-                                        lifetime: jit_life,
-                                        bounds: vec![]
-                                    }],
-                                    ty_params: OwnedSlice::empty(),
-                                    where_clause: WhereClause {
-                                        id: DUMMY_NODE_ID,
-                                        predicates: vec![]
-                                    }
-                                },
+                                generics: empty_generics(),
                             },
                             cx.block(sp, compiler, Some(cx.expr_ident(sp, value))))
                     })
                 ]
-            )))
+            ));
+            push(item);
         },
         _ => {
             cx.span_err(sp, BAD_ITEM);
@@ -295,7 +291,7 @@ pub fn plugin_registrar(reg: &mut Registry) {
 /// Construct a JIT struct with the fields given
 macro_rules! jit_struct(
     ($($name:ident: $ty:ty),*) => ({
-        let ty = Type::new_struct(&mut [
+        let mut ty = Type::new_struct(&mut [
             $(&get::<$ty>()),*
         ]);
         ty.set_names(&[$(stringify!($name)),*]);
@@ -405,12 +401,12 @@ macro_rules! jit(
 macro_rules! jit_func(
     ($ctx:expr, $func:ident, $name:ident() -> $ret:ty, $value:expr) => ({
         use std::default::Default;
-        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [].as_mut_slice());
+        let sig = Type::new_signature(Default::default(), &get::<$ret>(), &mut []);
         $ctx.build_func(&sig, |$func| $value)
     });
     ($ctx:expr, $func:ident, $name:ident($($arg:ident:$ty:ty),+) -> $ret:ty, $value:expr) => ({
         use std::default::Default;
-        let sig = Type::new_signature(Default::default(), get::<$ret>().get(), [$(get::<$ty>().get()),*].as_mut_slice());
+        let sig = Type::new_signature(Default::default(), &get::<$ret>(), &mut [$(&get::<$ty>()),*]);
         $ctx.build_func(&sig, |$func| {
             let mut i = 0;
             $(let $arg = {

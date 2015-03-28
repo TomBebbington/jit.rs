@@ -7,7 +7,7 @@ use jit::*;
 
 #[test]
 fn test_gcd() {
-    let mut ctx = Context::new();
+    let mut ctx = Context::<()>::new();
     jit_func!(ctx, func, gcd(x: usize, y:usize) -> usize, {
         func.insn_if(func.insn_eq(x, y), || func.insn_return(x));
         func.insn_if(func.insn_lt(x, y), || {

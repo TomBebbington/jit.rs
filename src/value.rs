@@ -1,10 +1,10 @@
 use raw::*;
 use function::UncompiledFunction;
+use types::*;
+use util::from_ptr;
 use std::marker::PhantomData;
 use std::fmt;
 use std::ops::*;
-use types::*;
-use util::NativeRef;
 /// Values form the backbone of the storage system in `libjit`.
 /// Every value in the system, be it a constant, a local variable, or a
 /// temporary result, is represented by an object of type `Value`. The JIT then
@@ -14,21 +14,7 @@ pub struct Value<'a> {
     _value: jit_value_t,
     marker: PhantomData<&'a ()>,
 }
-impl<'a> NativeRef for Value<'a> {
-    #[inline(always)]
-    /// Convert to a native pointer
-    unsafe fn as_ptr(&self) -> jit_value_t {
-        self._value
-    }
-    #[inline(always)]
-    /// Convert from a native pointer
-    unsafe fn from_ptr(ptr:jit_value_t) -> Value<'a> {
-        Value {
-            _value: ptr,
-            marker: PhantomData
-        }
-    }
-}
+native_ref!(contra Value, _value: jit_value_t);
 impl<'a> fmt::Debug for Value<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "v({:?})", self.get_type())
@@ -37,8 +23,8 @@ impl<'a> fmt::Debug for Value<'a> {
 impl<'a> Clone for Value<'a> {
     fn clone(&self) -> Value<'a> {
         unsafe {
-            let func = jit_value_get_function(self.as_ptr());
-            NativeRef::from_ptr(jit_insn_dup(func, self.as_ptr()))
+            let func = jit_value_get_function(self.into());
+            from_ptr(jit_insn_dup(func, self.into()))
         }
     }
 }
@@ -50,21 +36,21 @@ impl<'a> Value<'a> {
     /// from a different block.
     pub fn new(func:&UncompiledFunction<'a>, value_type:&Ty) -> Value<'a> {
         unsafe {
-            let value = jit_value_create(func.as_ptr(), value_type.as_ptr());
-            NativeRef::from_ptr(value)
+            let value = jit_value_create(func.into(), value_type.into());
+            from_ptr(value)
         }
     }
     /// Get the type of the value
     pub fn get_type(&self) -> Type {
         unsafe {
-            let ty = jit_value_get_type(self.as_ptr());
-            NativeRef::from_ptr(ty)
+            let ty = jit_value_get_type(self.into());
+            from_ptr(ty)
         }
     }
     /// Get the function which made this value
     pub fn get_function(&self) -> UncompiledFunction<'a> {
         unsafe {
-            NativeRef::from_ptr(jit_value_get_function(self.as_ptr()))
+            from_ptr(jit_value_get_function(self.into()))
         }
     }
     /// Determine if a value is temporary.  i.e. its scope extends over a single
@@ -72,14 +58,14 @@ impl<'a> Value<'a> {
     #[inline]
     pub fn is_temp(&self) -> bool {
         unsafe {
-            jit_value_is_temporary(self.as_ptr()) != 0
+            jit_value_is_temporary(self.into()) != 0
         }
     }
     /// Determine if a value is addressable.
     #[inline]
     pub fn is_addressable(&self) -> bool {
         unsafe {
-            jit_value_is_addressable(self.as_ptr()) != 0
+            jit_value_is_addressable(self.into()) != 0
         }
     }
     /// Set a flag on a value to indicate that it is addressable.
@@ -89,7 +75,7 @@ impl<'a> Value<'a> {
     #[inline]
     pub fn set_addressable(&self) -> () {
         unsafe {
-            jit_value_set_addressable(self.as_ptr())
+            jit_value_set_addressable(self.into())
         }
     }
 }

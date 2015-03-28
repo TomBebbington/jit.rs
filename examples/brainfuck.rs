@@ -42,7 +42,7 @@ fn count<'a, I>(func: &UncompiledFunction<'a>, code: &mut Peekable<I>, curr:char
         amount += 1;
         code.next();
     }
-    func.insn_of(&amount)
+    func.insn_of(amount)
 }
 
 fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
@@ -130,8 +130,7 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
     func.insn_default_return();
 }
 fn run(ctx: &mut Context, code: &str) {
-    let sig = get::<fn(*mut u8)>();
-    println!("Running {}", code);
+    let sig = get::<fn(&u8)>();
     let func = ctx.build_func(&sig, |func| compile(func, code));
     func.with(|func:extern fn(*mut u8)| {
         let mut data: [u8; 3000] = unsafe { mem::zeroed() };

@@ -7,7 +7,7 @@ use jit::*;
 
 #[test]
 fn test_sqrt() {
-    let mut ctx = Context::new();
+    let mut ctx = Context::<()>::new();
     assert_eq!(ctx.functions().count(), 0);
     jit_func!(ctx, func, sqrt(num: usize) -> usize, {
         let sqrt = func.insn_sqrt(num);

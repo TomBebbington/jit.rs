@@ -2,15 +2,15 @@ use raw::*;
 use compile::Compile;
 use function::Abi;
 use alloc::oom;
-use libc::{c_uint, c_void};
+use libc::{c_char, c_uint, c_void};
+use util::{from_ptr, from_ptr_opt};
 use std::borrow::*;
 use std::marker::PhantomData;
 use std::{fmt, mem, str};
 use std::iter::IntoIterator;
-use std::fmt::Display;
 use std::ffi::{self, CString};
-use std::ops::Deref;
-use util::{self, from_ptr, NativeRef};
+use std::ops::{Deref, DerefMut};
+
 pub use kind::TypeKind;
 /// The integer representation of a type
 pub mod kind {
@@ -44,24 +44,80 @@ pub mod kind {
 impl fmt::Debug for Ty {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let kind = self.get_kind();
-        if kind.contains(kind::Pointer) {
-            try!(fmt.write_str("*mut "));
-            self.get_ref().unwrap().fmt(fmt)
+        if kind.contains(kind::SysChar) {
+            fmt.write_str("char")
+        } else if kind.contains(kind::SysBool) {
+            fmt.write_str("bool")
+        } else if kind.contains(kind::Pointer) {
+            try!(fmt.write_str("&mut"));
+            write!(fmt, "&mut {:?}", self.get_ref().unwrap())
         } else if kind.contains(kind::Signature) {
             try!(fmt.write_str("fn("));
-            for arg in self.params() {
+            let params = self.params();
+            let (size, _) = params.size_hint();
+            for (i, arg) in params.enumerate() {
                 try!(write!(fmt, "{:?}", arg));
+                if i < size - 1 {
+                    try!(fmt.write_str(", "));
+                }
             }
             try!(fmt.write_str(")"));
-            match self.get_return() {
-                Some(x) => try!(write!(fmt, "{:?}", x)),
-                None => ()
+            if let Some(x) = self.get_return() {
+                if !x.get_kind().contains(kind::Void) {
+                    try!(write!(fmt, " -> {:?}", x))
+                }
             }
             Ok(())
+        } else if kind.contains(kind::Struct) {
+            try!(fmt.write_str("("));
+            let fields = self.fields();
+            let (size, _) = fields.size_hint();
+            for (i, field) in fields.enumerate() {
+                try!(write!(fmt, "{:?}", field.get_type()));
+                if i < size - 1 {
+                    try!(fmt.write_str(", "));
+                }
+            }
+            fmt.write_str(")")
+        } else if kind.contains(kind::Union) {
+            try!(fmt.write_str("union("));
+            let fields = self.fields();
+            let (size, _) = fields.size_hint();
+            for (i, field) in fields.enumerate() {
+                try!(write!(fmt, "{:?}", field.get_type()));
+                if i < size - 1 {
+                    try!(fmt.write_str(", "));
+                }
+            }
+            fmt.write_str(")")
+        } else if kind.contains(kind::NFloat) {
+            fmt.write_str("float")
+        } else if kind.contains(kind::Float32) {
+            fmt.write_str("f32")
+        } else if kind.contains(kind::Float64) {
+            fmt.write_str("f64")
+        } else if kind.contains(kind::ULong) {
+            fmt.write_str("u64")
+        } else if kind.contains(kind::Long) {
+            fmt.write_str("i64")
+        } else if kind.contains(kind::NUInt) {
+            fmt.write_str("usize")
+        } else if kind.contains(kind::NInt) {
+            fmt.write_str("isize")
+        } else if kind.contains(kind::UInt) {
+            fmt.write_str("u32")
+        } else if kind.contains(kind::Int) {
+            fmt.write_str("i32")
+        } else if kind.contains(kind::UShort) {
+            fmt.write_str("u16")
+        } else if kind.contains(kind::Short) {
+            fmt.write_str("i16")
+        } else if kind.contains(kind::UByte) {
+            fmt.write_str("u8")
+        } else if kind.contains(kind::SByte) {
+            fmt.write_str("i8")
         } else {
-            write!(fmt, "{}", try!(util::dump(|fd| {
-                unsafe { jit_dump_type(mem::transmute(fd), self.as_ptr()) };
-            })))
+            fmt.write_str("()")
         }
     }
 }
@@ -72,6 +128,7 @@ impl fmt::Debug for Type {
 }
 /// Type constants
 pub mod consts {
+    use util::from_ptr;
     use raw::*;
     use types::StaticType;
     builtin_types!{
@@ -123,7 +180,8 @@ impl<'a> Field<'a> {
             if c_name.is_null() {
                 None
             } else {
-                Some(str::from_utf8(ffi::CStr::from_ptr(c_name).to_bytes()).unwrap())
+                let c_name = ffi::CStr::from_ptr(c_name);
+                Some(str::from_utf8(c_name.to_bytes()).unwrap())
             }
         }
     }
@@ -154,9 +212,9 @@ impl<'a> Fields<'a> {
     fn new(ty:&'a Ty) -> Fields<'a> {
         unsafe {
             Fields {
-                _type: ty.as_ptr(),
+                _type: ty.into(),
                 index: 0,
-                length: jit_type_num_fields(ty.as_ptr()),
+                length: jit_type_num_fields(ty.into()),
                 marker: PhantomData,
             }
         }
@@ -193,9 +251,9 @@ impl<'a> Params<'a> {
     fn new(ty:&'a Ty) -> Params<'a> {
         unsafe {
             Params {
-                _type: ty.as_ptr(),
+                _type: ty.into(),
                 index: 0,
-                length: jit_type_num_params(ty.as_ptr()),
+                length: jit_type_num_params(ty.into()),
                 marker: PhantomData,
             }
         }
@@ -207,7 +265,7 @@ impl<'a> Iterator for Params<'a> {
         if self.index < self.length {
             let index = self.index;
             self.index += 1;
-            unsafe { from_ptr(jit_type_get_param(self._type, index)) }
+            unsafe { from_ptr_opt(jit_type_get_param(self._type, index)) }
         } else {
             None
         }
@@ -221,21 +279,40 @@ impl<'a> Iterator for Params<'a> {
 /// This represents a basic system type, be it a primitive, a struct, a
 /// union, a pointer, or a function signature. The library uses this information
 /// to lay out values in memory.
-#[derive(Eq, PartialEq)]
-pub struct Ty;
-impl<'a> NativeRef for &'a Ty {
-    unsafe fn as_ptr(&self) -> jit_type_t {
-        mem::transmute(self)
+#[derive(Eq)]
+pub struct Ty(PhantomData<[()]>);
+impl<'a> From<&'a Ty> for jit_type_t {
+    fn from(ty: &'a Ty) -> jit_type_t {
+        unsafe { mem::transmute(ty) }
     }
-    unsafe fn from_ptr(ptr: jit_type_t) -> &'a Ty {
-        mem::transmute(ptr)
+}
+impl<'a> From<&'a mut Ty> for jit_type_t {
+    fn from(ty: &'a mut Ty) -> jit_type_t {
+        unsafe { mem::transmute(ty) }
+    }
+}
+impl<'a> From<jit_type_t> for &'a Ty {
+    fn from(ty: jit_type_t) -> &'a Ty {
+        unsafe { mem::transmute(ty) }
+    }
+}
+impl PartialEq for Ty {
+    fn eq(&self, other: &Ty) -> bool {
+        unsafe {
+            mem::transmute::<_, isize>(self) == mem::transmute(other)
+        }
+    }
+    fn ne(&self, other: &Ty) -> bool {
+        unsafe {
+            mem::transmute::<_, isize>(self) != mem::transmute(other)
+        }
     }
 }
 impl ToOwned for Ty {
     type Owned = Type;
     fn to_owned(&self) -> Type {
         unsafe {
-            from_ptr(jit_type_copy(self.as_ptr()))
+            from_ptr(jit_type_copy(self.into()))
         }
     }
 }
@@ -257,24 +334,13 @@ impl Borrow<Ty> for Type {
 pub struct Type {
     _type: jit_type_t,
 }
-impl NativeRef for Type {
-    #[inline(always)]
-    unsafe fn as_ptr(&self) -> jit_type_t {
-        self._type
-    }
-    #[inline(always)]
-    unsafe fn from_ptr(ptr:jit_type_t) -> Type {
-        Type {
-            _type: ptr,
-        }
-    }
-}
+native_ref!(Type, _type: jit_type_t);
 impl Clone for Type {
     #[inline]
     /// Make a copy of the type descriptor by increasing its reference count.
     fn clone(&self) -> Type {
         unsafe {
-            from_ptr(jit_type_copy(self.as_ptr()))
+            from_ptr(jit_type_copy((&**self).into()))
         }
     }
 }
@@ -284,7 +350,7 @@ impl Drop for Type {
     /// Free a type descriptor by decreasing its reference count.
     fn drop(&mut self) {
         unsafe {
-            jit_type_free(self.as_ptr());
+            jit_type_free(self.into());
         }
     }
 }
@@ -292,7 +358,14 @@ impl<'a> Deref for Type {
     type Target = Ty;
     fn deref(&self) -> &Ty {
         unsafe {
-            mem::transmute(&self._type)
+            mem::transmute(self._type)
+        }
+    }
+}
+impl<'a> DerefMut for Type {
+    fn deref_mut(&mut self) -> &mut Ty {
+        unsafe {
+            mem::transmute(self._type)
         }
     }
 }
@@ -312,8 +385,8 @@ impl Type {
     /// Create a type descriptor for a function signature.
     pub fn new_signature(abi: Abi, return_type: &Ty, params: &mut [&Ty]) -> Type {
         unsafe {
-            let mut native_params:Vec<jit_type_t> = params.iter().map(|param| param.as_ptr()).collect();
-            let signature = jit_type_create_signature(abi as jit_abi_t, return_type.as_ptr(), native_params.as_mut_ptr(), params.len() as c_uint, 1);
+            let mut params:&mut [jit_type_t] = mem::transmute(params);
+            let signature = jit_type_create_signature(abi as jit_abi_t, return_type.into(), params.as_mut_ptr(), params.len() as c_uint, 1);
             from_ptr(signature)
         }
     }
@@ -321,23 +394,23 @@ impl Type {
     /// Create a type descriptor for a structure.
     pub fn new_struct(fields: &mut [&Ty]) -> Type {
         unsafe {
-            let mut native_fields:Vec<_> = fields.iter().map(|field| field.as_ptr()).collect();
-            from_ptr(jit_type_create_struct(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
+            let fields:&mut [jit_type_t] = mem::transmute(fields);
+            from_ptr(jit_type_create_struct(fields.as_mut_ptr(), fields.len() as c_uint, 1))
         }
     }
     #[inline(always)]
     /// Create a type descriptor for a union.
     pub fn new_union(fields: &mut [&Ty]) -> Type {
         unsafe {
-            let mut native_fields:Vec<_> = fields.iter().map(|field| field.as_ptr()).collect();
-            from_ptr(jit_type_create_union(native_fields.as_mut_ptr(), fields.len() as c_uint, 1))
+            let fields:&mut [jit_type_t] = mem::transmute(fields);
+            from_ptr(jit_type_create_union(fields.as_mut_ptr(), fields.len() as c_uint, 1))
         }
     }
     #[inline(always)]
     /// Create a type descriptor for a pointer to another type.
     pub fn new_pointer(pointee: &Ty) -> Type {
         unsafe {
-            let ptr = jit_type_create_pointer(pointee.as_ptr(), 1);
+            let ptr = jit_type_create_pointer(pointee.into(), 1);
             from_ptr(ptr)
         }
     }
@@ -347,14 +420,14 @@ impl Ty {
     /// Get the size of this type in bytes.
     pub fn get_size(&self) -> usize {
         unsafe {
-            jit_type_get_size(self.as_ptr()) as usize
+            jit_type_get_size(self.into()) as usize
         }
     }
     #[inline(always)]
     /// Get the alignment of this type in bytes.
     pub fn get_alignment(&self) -> usize {
         unsafe {
-            jit_type_get_alignment(self.as_ptr()) as usize
+            jit_type_get_alignment(self.into()) as usize
         }
     }
     #[inline]
@@ -362,33 +435,34 @@ impl Ty {
     /// quickly classify a type to determine how it should be handled further.
     pub fn get_kind(&self) -> kind::TypeKind {
         unsafe {
-            mem::transmute(jit_type_get_kind(self.as_ptr()))
+            mem::transmute(jit_type_get_kind(self.into()))
         }
     }
     #[inline(always)]
     /// Get the type that is referred to by this pointer type.
     pub fn get_ref(&self) -> Option<&Ty> {
         unsafe {
-            from_ptr(jit_type_get_ref(self.as_ptr()))
+            from_ptr_opt(jit_type_get_ref(self.into()))
         }
     }
     #[inline(always)]
     /// Get the type returned by this function type.
     pub fn get_return(&self) -> Option<&Ty> {
         unsafe {
-            from_ptr(jit_type_get_return(self.as_ptr()))
+            //let ty = jit_type_get_return(self.into())
+            from_ptr_opt(jit_type_get_return(self.into()))
         }
     }
     /// Set the field or parameter names of this type.
-    pub fn set_names(&self, names: &[&str]) {
+    pub fn set_names(&mut self, names: &[&str]) {
         unsafe {
             let names = names.iter()
                              .map(|name| CString::new(name.as_bytes()).unwrap())
                              .collect::<Vec<_>>();
             let mut c_names = names.iter()
-                            .map(|name| mem::transmute(name.as_ptr()))
+                            .map(|name| name.as_bytes().as_ptr() as *mut c_char)
                             .collect::<Vec<_>>();
-            if jit_type_set_names(self.as_ptr(), c_names.as_mut_ptr(), names.len() as u32) == 0 {
+            if jit_type_set_names(self.into(), c_names.as_mut_ptr(), names.len() as u32) == 0 {
                 oom();
             }
         }
@@ -409,8 +483,8 @@ impl Ty {
         unsafe {
             let c_name = CString::new(name.as_bytes()).unwrap();
             Field {
-                index: jit_type_find_name(self.as_ptr(), mem::transmute(c_name.as_ptr())),
-                _type: self.as_ptr(),
+                index: jit_type_find_name(self.into(), c_name.as_bytes().as_ptr() as *const c_char),
+                _type: self.into(),
                 marker: PhantomData,
             }
         }
@@ -419,42 +493,42 @@ impl Ty {
     /// Check if this is a pointer
     pub fn is_primitive(&self) -> bool {
         unsafe {
-            jit_type_is_primitive(self.as_ptr()) != 0
+            jit_type_is_primitive(self.into()) != 0
         }
     }
     #[inline(always)]
     /// Check if this is a struct
     pub fn is_struct(&self) -> bool {
         unsafe {
-            jit_type_is_struct(self.as_ptr()) != 0
+            jit_type_is_struct(self.into()) != 0
         }
     }
     #[inline(always)]
     /// Check if this is a union
     pub fn is_union(&self) -> bool {
         unsafe {
-            jit_type_is_union(self.as_ptr()) != 0
+            jit_type_is_union(self.into()) != 0
         }
     }
     #[inline(always)]
     /// Check if this is a signature
     pub fn is_signature(&self) -> bool {
         unsafe {
-            jit_type_is_signature(self.as_ptr()) != 0
+            jit_type_is_signature(self.into()) != 0
         }
     }
     #[inline(always)]
     /// Check if this is a pointer
     pub fn is_pointer(&self) -> bool {
         unsafe {
-            jit_type_is_pointer(self.as_ptr()) != 0
+            jit_type_is_pointer(self.into()) != 0
         }
     }
     #[inline(always)]
     /// Check if this is tagged
     pub fn is_tagged(&self) -> bool {
         unsafe {
-            jit_type_is_tagged(self.as_ptr()) != 0
+            jit_type_is_tagged(self.into()) != 0
         }
     }
 }
@@ -467,20 +541,22 @@ impl<'a> IntoIterator for &'a Ty {
 }
 
 #[derive(PartialEq, Eq)]
-pub struct TaggedType<T> {
+pub struct TaggedType<T> where T:'static {
     _type: jit_type_t,
-    _marker: PhantomData<fn(T) -> T>
+    _marker: PhantomData<T>
 }
-impl<T> NativeRef for TaggedType<T> {
-    #[inline(always)]
-    unsafe fn as_ptr(&self) -> jit_type_t {
+impl<'a, T> Into<jit_type_t> for &'a TaggedType<T> {
+    /// Convert into a native pointer
+    fn into(self) -> jit_type_t {
         self._type
     }
-    #[inline(always)]
-    unsafe fn from_ptr(ptr:jit_type_t) -> TaggedType<T> {
+}
+impl<T> From<jit_type_t> for TaggedType<T> {
+    /// Convert from a native pointer
+    fn from(ptr: jit_type_t) -> TaggedType<T> {
         TaggedType {
             _type: ptr,
-            _marker: PhantomData,
+            _marker: PhantomData
         }
     }
 }
@@ -489,7 +565,7 @@ impl<T> TaggedType<T> where T:'static {
     pub fn new(ty:&Ty, kind: kind::TypeKind, data: Box<T>) -> TaggedType<T> {
         unsafe {
             let free_data:extern fn(*mut c_void) = ::free_data::<T>;
-            let ty = jit_type_create_tagged(ty.as_ptr(), kind.bits(), mem::transmute(&*data), Some(free_data), 1);
+            let ty = jit_type_create_tagged(ty.into(), kind.bits(), mem::transmute(&*data), Some(free_data), 1);
             mem::forget(data);
             from_ptr(ty)
         }
@@ -497,20 +573,20 @@ impl<T> TaggedType<T> where T:'static {
     /// Get the data this is tagged to
     pub fn get_tagged_data(&self) -> Option<&T> {
         unsafe {
-            mem::transmute(jit_type_get_tagged_data(self.as_ptr()))
+            mem::transmute(jit_type_get_tagged_data(self.into()))
         }
     }
     /// Get the type this is tagged to
     pub fn get_tagged_type(&self) -> &Ty {
         unsafe {
-            from_ptr(jit_type_get_tagged_type(self.as_ptr()))
+            from_ptr(jit_type_get_tagged_type(self.into()))
         }
     }
     /// Change the data this is tagged to
     pub fn set_tagged_data(&self, data: Box<T>) {
         unsafe {
             let free_data:extern fn(*mut c_void) = ::free_data::<T>;
-            jit_type_set_tagged_data(self.as_ptr(), mem::transmute(&*data), Some(free_data));
+            jit_type_set_tagged_data(self.into(), mem::transmute(&*data), Some(free_data));
             mem::forget(data);
         }
     }
@@ -537,6 +613,6 @@ impl<T> Deref for TaggedType<T> {
 }
 #[inline(always)]
 /// Get the Rust type given as a type descriptor
-pub fn get<T>() -> CowType<'static> where T:Compile {
+pub fn get<'a, T>() -> CowType<'a> where T:Compile<'a> {
     <T as Compile>::get_type()
 }

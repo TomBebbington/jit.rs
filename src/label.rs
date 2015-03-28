@@ -6,7 +6,6 @@ use function::UncompiledFunction;
 use std::marker::PhantomData;
 use std::fmt;
 use std::ops::{Deref, DerefMut};
-use util::NativeRef;
 #[derive(PartialEq)]
 /// A label in the code that can be branched to in instructions
 pub struct Label<'a> {
@@ -24,7 +23,7 @@ impl<'a> Label<'a> {
     pub fn new(func:&UncompiledFunction<'a>) -> Label<'a> {
         unsafe {
             Label {
-                _label: jit_function_reserve_label(func.as_ptr()),
+                _label: jit_function_reserve_label(func.into()),
                 marker: PhantomData,
             }
         }

@@ -7,9 +7,19 @@ use jit::*;
 
 #[test]
 fn test_context_tags() {
-    let ctx = Context::new();
-    ctx.set_meta(Box::new(3u8));
-    assert_eq!(ctx.get_meta(), Some(&3u8));
+    let mut ctx = Context::<isize>::new();
+    ctx[0] = 3;
+    ctx[1] = 33;
+    assert_eq!(ctx[0], 3);
+    assert_eq!(ctx[1], 33);
+}
+#[test]
+#[should_panic]
+fn test_context_bad_tags() {
+    let mut ctx = Context::<isize>::new();
+    ctx[0] = 3;
+    ctx[1] = 33;
+    assert_eq!(ctx[2], 3);
 }
 
 #[derive(Debug, Eq, PartialEq)]

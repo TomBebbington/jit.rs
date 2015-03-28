@@ -24,10 +24,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #![crate_name = "jit"]
-#![allow(raw_pointer_derive, dead_code, non_camel_case_types, non_upper_case_globals, unused_attributes)]
-#![deny(unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
-#![feature(alloc, libc, core, convert, hash, os, plugin, unboxed_closures, unsafe_destructor, optin_builtin_traits)]
-#![feature(old_io)]
+#![allow(raw_pointer_derive, non_camel_case_types, non_upper_case_globals)]
+#![deny(unused_attributes, dead_code, unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
+#![feature(alloc, libc, core, convert, plugin, unboxed_closures, unsafe_destructor, optin_builtin_traits)]
 #![plugin(rustc_bitflags)]
 #![stable]
 //! This crate wraps LibJIT in an idiomatic style.
@@ -42,10 +41,9 @@
 //! use jit::{Context, get, Type};
 //! fn main() {
 //!     // make a new context to make functions on
-//!     let mut ctx = Context::new();
+//!     let mut ctx = Context::<()>::new();
 //!     jit_func!(ctx, func, mul(x: isize, y: isize) -> isize, {
-//!         let result = x * y;
-//!         func.insn_return(result);
+//!         func.insn_return(x * y);
 //!     }, |mul| {
 //!         assert_eq!(mul((4, 5)), 20);
 //!     });
@@ -65,14 +63,14 @@ pub use elf::*;
 pub use function::{flags, Abi, AnyFunction, UncompiledFunction, Function, CompiledFunction};
 pub use function::flags::CallFlags;
 pub use label::Label;
+pub use insn::{Block, Instruction, InstructionIter};
 pub use types::kind::TypeKind;
 pub use types::{kind, get, Type, Field, Fields, Params, CowType, StaticType, Ty, TaggedType};
 pub use types::consts as typecs;
-pub use util::NativeRef;
 pub use value::Value;
 
 
-extern fn free_data<T>(data: *mut c_void) where T:'static {
+extern fn free_data<T>(data: *mut c_void) {
     unsafe {
         let actual_data:Box<T> = mem::transmute(data);
         mem::drop(actual_data);

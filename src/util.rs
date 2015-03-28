@@ -1,50 +1,54 @@
-#![allow(deprecated)] // old_io, os
-
-use libc::{c_void, FILE};
-use std::ptr;
+use libc::*;
 use std::fmt::Error;
-/// A structure that wraps a native object
-pub trait NativeRef {
-    /// Returns the native reference encapsulated by this object
-    unsafe fn as_ptr(&self) -> *mut c_void;
-    /// Returns a wrapped version of the native reference given, even if the reference is null
-    unsafe fn from_ptr(ptr:*mut c_void) -> Self;
-}
-#[inline(always)]
-pub unsafe fn from_ptr<T>(ptr: *mut c_void) -> T where T:NativeRef {
-    NativeRef::from_ptr(ptr)
-}
-impl<T> NativeRef for Option<T> where T:NativeRef {
-    #[inline(always)]
-    unsafe fn as_ptr(&self) -> *mut c_void {
-        match *self {
-            Some(ref v) => v.as_ptr(),
-            None => ptr::null_mut()
-        }
-    }
-    #[inline(always)]
-    unsafe fn from_ptr(ptr:*mut c_void) -> Option<T> {
-        if ptr.is_null() {
-            None
-        } else {
-            Some(from_ptr(ptr))
-        }
-    }
-}
+use std::{mem, str};
 
 pub fn dump<F>(cb: F) -> Result<String, Error> where F:FnOnce(*mut FILE) {
-    use std::old_io::pipe::PipeStream;
-    use std::old_io::Reader;
-    use std::os;
-    use libc::{fdopen, fclose};
     unsafe {
-        let pair = os::pipe().unwrap();
-        let file = fdopen(pair.writer, b"w".as_ptr() as *const i8);
+        let mut pair = [0, 0];
+        if pipe(pair.as_mut_ptr()) == -1 {
+            return Err(Error)
+        }
+        let file = fdopen(pair[1], b"w".as_ptr() as *const c_char);
+        if file.is_null() {
+            return Err(Error)
+        }
         cb(file);
         fclose(file);
-        match PipeStream::open(pair.reader).read_to_end() {
-            Ok(v) => Ok(String::from_utf8_unchecked(v)),
-            Err(_) => Err(Error)
+        let file = fdopen(pair[0], b"r".as_ptr() as *const c_char);
+        if file.is_null() {
+            return Err(Error)
         }
+        let mut chars:[c_char; 64] = mem::zeroed();
+        let mut text = String::new();
+        loop {
+            let ptr = fgets(chars.as_mut_ptr(), chars.len() as c_int, file);
+            let bytes = chars.split(|&c| c == 0).next().unwrap();
+            let bytes = mem::transmute(bytes);
+            text.push_str(str::from_utf8_unchecked(bytes));
+            if ptr.is_null() {
+                break
+            }
+        }
+        fclose(file);
+        Ok(text)
     }
+}
+pub fn from_ptr_opt<R>(ptr: *mut c_void) -> Option<R> where R:From<*mut c_void> {
+    if ptr.is_null() {
+        None
+    } else {
+        Some(from_ptr(ptr))
+    }
+}
+pub fn from_ptr_oom<R>(ptr: *mut c_void) -> R where R:From<*mut c_void> {
+    use alloc::oom;
+    if ptr.is_null() {
+        oom();
+    } else {
+        from_ptr(ptr)
+    }
+}
+
+pub fn from_ptr<R>(ptr: *mut c_void) -> R where R:From<*mut c_void> {
+    From::from(ptr)
 }

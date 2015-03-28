@@ -1,65 +1,68 @@
 use raw::*;
+use function::AnyFunction;
+use types::Ty;
+use util::{from_ptr, from_ptr_opt};
+use value::Value;
 use std::{ffi, fmt, mem, str};
 use std::marker::PhantomData;
-use function::AnyFunction;
-use value::Value;
-use types::Type;
-use util::{from_ptr, NativeRef};
 
 /// Represents a single LibJIT instruction
-native_ref!(Instruction contravariant {
-    _insn: jit_insn_t
-});
+pub struct Instruction<'a> {
+    _insn: jit_insn_t,
+    marker: PhantomData<&'a ()>
+}
+native_ref!(contra Instruction, _insn: jit_insn_t);
 impl<'a> Copy for Instruction<'a> {}
 
 impl<'a> Instruction<'a> {
 	/// Get the opcode of the instruction
-	fn get_opcode(self) -> i32 {
+	pub fn get_opcode(self) -> i32 {
 		unsafe {
 			jit_insn_get_opcode(self._insn)
 		}
 	}
 	/// Get the destination value
-	fn get_dest(self) -> Option<Value<'a>> {
+	pub fn get_dest(self) -> Option<Value<'a>> {
 		unsafe {
-			from_ptr(jit_insn_get_dest(self._insn))
+			from_ptr_opt(jit_insn_get_dest(self._insn))
 		}
 	}
 	/// Get if the destination value is a value
-	fn dest_is_value(self) -> bool {
+	pub fn dest_is_value(self) -> bool {
 		unsafe {
 			jit_insn_dest_is_value(self._insn) != 0
 		}
 	}
 	/// Get the left value
-	fn get_value1(self) -> Option<Value<'a>> {
+	pub fn get_value1(self) -> Option<Value<'a>> {
 		unsafe {
-			from_ptr(jit_insn_get_value1(self._insn))
+			from_ptr_opt(jit_insn_get_value1(self._insn))
 		}
 	}
 	/// Get the right value
-	fn get_value2(self) -> Option<Value<'a>> {
+	pub fn get_value2(self) -> Option<Value<'a>> {
 		unsafe {
-			from_ptr(jit_insn_get_value2(self._insn))
+			from_ptr_opt(jit_insn_get_value2(self._insn))
 		}
 	}
 	/// Get the function containing this value
-	fn get_function(self) -> Option<AnyFunction<'a>> {
+	pub fn get_function(self) -> Option<AnyFunction<'a>> {
 		unsafe {
-			from_ptr(jit_insn_get_function(self._insn))
+			from_ptr_opt(jit_insn_get_function(self._insn))
 		}
 	}
 	/// Get the signature of this value
-	fn get_signature(self) -> Option<Type> {
+	pub fn get_signature(self) -> Option<&'a Ty> {
 		unsafe {
-			from_ptr(jit_insn_get_signature(self._insn))
+			from_ptr_opt(jit_insn_get_signature(self._insn))
 		}
 	}
 	/// Get the name of the instruction
-	fn get_name(self) -> &'a str {
+	pub fn get_name(self) -> &'a str {
 		unsafe {
-			let name = jit_insn_get_name(self._insn);
-			str::from_utf8(ffi::CStr::from_ptr(name).to_bytes()).unwrap()
+			let c_name = jit_insn_get_name(self._insn);
+            let c_name = ffi::CStr::from_ptr(c_name);
+			str::from_utf8(c_name.to_bytes()).unwrap()
 		}
 	}
 }
@@ -77,15 +80,22 @@ impl<'a> Iterator for InstructionIter<'a> {
 	type Item = Instruction<'a>;
 	fn next(&mut self) -> Option<Instruction<'a>> {
 		unsafe {
-			from_ptr(jit_insn_iter_next(&mut self._iter))
+			let ptr = jit_insn_iter_next(&mut self._iter);
+            if ptr.is_null() {
+                None
+            } else {
+                Some(from_ptr(ptr))
+            }
 		}
 	}
 }
 
 /// Represents a single LibJIT block
-native_ref!(Block contravariant {
-    _block: jit_block_t
-});
+pub struct Block<'a> {
+    _block: jit_block_t,
+    marker: PhantomData<&'a ()>
+}
+native_ref!(contra Block, _block: jit_block_t);
 impl<'a> Copy for Block<'a> {}
 impl<'a> Block<'a> {
 	/// Get the function containing this block

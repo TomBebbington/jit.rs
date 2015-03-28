@@ -26,7 +26,7 @@ fn main() {
     x: 5.0,
     y: -32.2
   };
-  func.insn_return(func.insn_of(&pos))
+  func.insn_return(func.insn_of(pos))
   ...
 }
 ```

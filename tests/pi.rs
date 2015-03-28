@@ -1,3 +1,4 @@
+/*
 #![feature(plugin)]
 #![plugin(jit_macros)]
 #[no_link] #[macro_use]
@@ -6,7 +7,6 @@ extern crate jit;
 use jit::*;
 use std::num::Float;
 use std::iter::IteratorExt;
-/*
 #[jit]
 fn pi() -> f64 {
     let mut pi = 3.0f64;

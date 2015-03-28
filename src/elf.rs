@@ -1,8 +1,8 @@
 use raw::*;
 use context::Context;
 use function::CompiledFunction;
-use libc::c_uint;
-use util::NativeRef;
+use util::from_ptr;
+use libc::{c_uint, c_char};
 use std::ffi::{self, CString};
 use std::{fmt, str};
 use std::marker::PhantomData;
@@ -21,9 +21,9 @@ impl<'a> Needed<'a> {
     fn new(read:&'a ReadElf) -> Needed<'a> {
         unsafe {
             Needed {
-                _reader: read.as_ptr(),
+                _reader: read.into(),
                 index: 0,
-                length: jit_readelf_num_needed(read.as_ptr()),
+                length: jit_readelf_num_needed(read.into()),
                 marker: PhantomData
             }
         }
@@ -49,9 +49,10 @@ impl<'a> Iterator for Needed<'a> {
     }
 }
 /// An ELF binary reader
-native_ref!(ReadElf {
+pub struct ReadElf {
     _reader: jit_readelf_t
-});
+}
+native_ref!(ReadElf, _reader: jit_readelf_t);
 #[repr(i32)]
 /// An error from trying to open the ELF
 pub enum ReadElfErrorCode {
@@ -105,9 +106,9 @@ impl ReadElf {
         unsafe {
             let mut this = ptr::null_mut();
             let c_name = CString::new(filename.as_bytes()).unwrap();
-            let code = jit_readelf_open(&mut this, mem::transmute(c_name.as_ptr()), 0);
+            let code = jit_readelf_open(&mut this, mem::transmute(c_name.as_bytes().as_ptr()), 0);
             if code == 0 {
-                Ok(NativeRef::from_ptr(this))
+                Ok(from_ptr(this))
             } else {
                 Err(ReadElfError {
                     filename: filename,
@@ -120,21 +121,21 @@ impl ReadElf {
     /// Get the name of this ELF binary
     pub fn get_name(&self) -> &str {
         unsafe {
-            let c_name = jit_readelf_get_name(self.as_ptr());
+            let c_name = jit_readelf_get_name(self.into());
             str::from_utf8(ffi::CStr::from_ptr(c_name).to_bytes()).unwrap()
         }
     }
     #[inline]
     pub fn add_to_context(&self, ctx:&Context) {
         unsafe {
-            jit_readelf_add_to_context(self.as_ptr(), ctx.as_ptr())
+            jit_readelf_add_to_context(self.into(), ctx.into())
         }
     }
     #[inline]
     /// Get a symbol in the ELF binary
     pub unsafe fn get_symbol<T>(&self, symbol:&str) -> &mut T {
         let c_sym = CString::new(symbol.as_bytes()).unwrap();
-        mem::transmute(jit_readelf_get_symbol(self.as_ptr(), mem::transmute(c_sym.as_ptr())))
+        mem::transmute(jit_readelf_get_symbol(self.into(), c_sym.as_bytes().as_ptr() as *const c_char))
     }
     #[inline]
     /// Iterate over the needed libraries
@@ -147,22 +148,23 @@ impl Drop for ReadElf {
     #[inline]
     fn drop(&mut self) {
         unsafe {
-            jit_readelf_close(self.as_ptr())
+            jit_readelf_close(self.into())
         }
     }
 }
 
 /// An ELF binary reader
-native_ref!(WriteElf {
+pub struct WriteElf {
     _writer: jit_writeelf_t
-});
+}
+native_ref!(WriteElf, _writer: jit_writeelf_t);
 impl WriteElf {
     #[inline]
     /// Create a new ELF binary reader
     pub fn new(lib_name:&str) -> WriteElf {
         unsafe {
             let c_lib = CString::new(lib_name.as_bytes()).unwrap();
-            NativeRef::from_ptr(jit_writeelf_create(mem::transmute(c_lib.as_ptr())))
+            from_ptr(jit_writeelf_create(c_lib.as_bytes().as_ptr() as *const c_char))
         }
     }
     #[inline]
@@ -171,7 +173,7 @@ impl WriteElf {
     pub fn write(&self, filename:&str) -> bool {
         unsafe {
             let c_filename = CString::new(filename.as_bytes()).unwrap();
-            jit_writeelf_write(self.as_ptr(), mem::transmute(c_filename.as_ptr())) != 0
+            jit_writeelf_write(self.into(), c_filename.as_bytes().as_ptr() as *const c_char) != 0
         }
     }
     #[inline]
@@ -179,7 +181,7 @@ impl WriteElf {
     pub fn add_function(&self, func:&CompiledFunction, name:&str) -> bool {
         unsafe {
             let c_name = CString::new(name.as_bytes()).unwrap();
-            jit_writeelf_add_function(self.as_ptr(), func.as_ptr(), mem::transmute(c_name.as_ptr())) != 0
+            jit_writeelf_add_function(self.into(), func.into(), c_name.as_bytes().as_ptr() as *const c_char) != 0
         }
     }
     #[inline]
@@ -187,7 +189,7 @@ impl WriteElf {
     pub fn add_needed(&self, lib_name:&str) -> bool {
         unsafe {
             let c_lib = CString::new(lib_name.as_bytes()).unwrap();
-            jit_writeelf_add_needed(self.as_ptr(), mem::transmute(c_lib.as_ptr())) != 0
+            jit_writeelf_add_needed(self.into(), c_lib.as_bytes().as_ptr() as *const c_char) != 0
         }
     }
 }
@@ -196,7 +198,7 @@ impl Drop for WriteElf {
     #[inline]
     fn drop(&mut self) {
         unsafe {
-            jit_writeelf_destroy(self.as_ptr())
+            jit_writeelf_destroy(self.into())
         }
     }
 }

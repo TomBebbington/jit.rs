@@ -4,9 +4,10 @@ use compile::Compile;
 use label::Label;
 use types::Ty;
 use insn::Block;
-use util::{self, from_ptr, NativeRef};
 use value::Value;
+use util::{self, from_ptr, from_ptr_opt, from_ptr_oom};
 use libc::{
+    c_char,
     c_int,
     c_uint,
     c_void
@@ -16,6 +17,7 @@ use std::fmt;
 use std::ops::Index;
 use std::{mem, ptr};
 use std::ffi::CString;
+use std::marker::PhantomData;
 /// A platform's application binary interface
 #[repr(C)]
 #[derive(Copy)]
@@ -49,41 +51,43 @@ pub mod flags {
         }
     );
 }
-/// A function that can be compiled or not
-pub trait Function : NativeRef {
+/// A function that can be pre-compiled or not, it doesn't care
+pub trait Function<'a>: 'a + Into<jit_function_t> {
     /// Check if this function is compiled
-    fn is_compiled(&self) -> bool;
+    fn is_compiled(self) -> bool;
     /// Get the signature of this function
-    fn get_signature(&self) -> &Ty {
-        unsafe { from_ptr(jit_function_get_signature(self.as_ptr())) }
-    }
+    fn get_signature(self) -> &'a Ty;
 }
 /// Any kind of function, compiled or not
-native_ref!(AnyFunction contravariant {
-    _func: jit_function_t
-});
-impl<'a> AnyFunction<'a> {
-    /// Return the compiled function if there is one
-    pub fn into_compiled(self) -> Option<CompiledFunction<'a>> {
+pub struct AnyFunction<'a> {
+    _func: jit_function_t,
+    marker: PhantomData<&'a ()>
+}
+native_ref!(contra AnyFunction, _func: jit_function_t);
+impl<'a> Into<Option<CompiledFunction<'a>>> for AnyFunction<'a> {
+    fn into(self) -> Option<CompiledFunction<'a>> {
         if self.is_compiled() {
-            Some(unsafe { from_ptr(self.as_ptr()) })
-        } else {
-            None
-        }
-    }
-    /// Return the uncompiled function if there is one
-    pub fn into_uncompiled(self) -> Option<UncompiledFunction<'a>> {
-        if !self.is_compiled() {
-            Some(unsafe { from_ptr(self.as_ptr()) })
+            Some(from_ptr(self.into()))
         } else {
             None
         }
     }
 }
-impl<'a> Function for AnyFunction<'a> {
-    /// Check if this function is compiled
-    fn is_compiled(&self) -> bool {
-        unsafe { jit_function_is_compiled(self.as_ptr()) != 0 }
+impl<'a> Into<Option<UncompiledFunction<'a>>> for AnyFunction<'a> {
+    fn into(self) -> Option<UncompiledFunction<'a>> {
+        if !self.is_compiled() {
+            Some(from_ptr(self.into()))
+        } else {
+            None
+        }
+    }
+}
+impl<'a> Function<'a> for &'a AnyFunction<'a> {
+    fn is_compiled(self) -> bool {
+        unsafe { jit_function_is_compiled(self.into()) != 0 }
+    }
+    fn get_signature(self) -> &'a Ty {
+        unsafe { from_ptr(jit_function_get_signature(self.into())) }
     }
 }
 /// A function which has already been compiled from an `UncompiledFunction`. This can
@@ -91,25 +95,31 @@ impl<'a> Function for AnyFunction<'a> {
 ///
 /// A function persists for the lifetime of its containing context. This is
 /// a function which has already been compiled and is now in executable form.
-native_ref!(CompiledFunction contravariant {
-    _func: jit_function_t
-});
-impl<'a> Function for CompiledFunction<'a> {
+#[derive(Copy)]
+pub struct CompiledFunction<'a> {
+    _func: jit_function_t,
+    marker: PhantomData<&'a ()>
+}
+native_ref!(contra CompiledFunction, _func: jit_function_t);
+impl<'a> Function<'a> for CompiledFunction<'a> {
     /// 10/10 would compile again
-    fn is_compiled(&self) -> bool {
+    fn is_compiled(self) -> bool {
         true
     }
+    fn get_signature(self) -> &'a Ty {
+        unsafe { from_ptr(jit_function_get_signature(self.into())) }
+    }
 }
-impl<'a> fmt::Display for CompiledFunction<'a> {
+impl<'a> fmt::Debug for CompiledFunction<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", try!(util::dump(|fd| unsafe {
-            jit_dump_function(mem::transmute(fd), self.as_ptr(), ptr::null());
+            jit_dump_function(mem::transmute(fd), self.into(), ptr::null());
         })))
     }
 }
 impl<'a> CompiledFunction<'a> {
     /// Run a closure with the compiled function as an argument
-    pub fn with<A, R, F:FnOnce(extern "C" fn(A) -> R)>(&self, cb:F) {
+    pub fn with<A, R, F:FnOnce(extern "C" fn(A) -> R)>(self, cb:F) {
         cb(unsafe {
             mem::transmute(jit_function_to_closure(self._func))
         })
@@ -128,35 +138,57 @@ pub struct UncompiledFunction<'a> {
     args: Vec<Value<'a>>,
     owned: bool
 }
-impl<'a> NativeRef for UncompiledFunction<'a> {
-    #[inline(always)]
+impl<'a, 'b> From<&'a UncompiledFunction<'b>> for jit_function_t {
     /// Convert to a native pointer
-    unsafe fn as_ptr(&self) -> jit_function_t {
-        self._func
+    fn from(func: &'a UncompiledFunction<'b>) -> jit_function_t {
+        func._func
     }
-    #[inline(always)]
-    /// Convert from a native pointer
-    unsafe fn from_ptr(ptr:jit_function_t) -> UncompiledFunction<'a> {
-        let sig = jit_function_get_signature(ptr);
-        println!("{} - {:?}", jit_type_num_params(sig), sig);
-        let args = (0..jit_type_num_params(sig)).map(|i| from_ptr(jit_value_get_param(ptr, i))).collect::<Vec<_>>();
-        println!("{:?}", args);
-        UncompiledFunction {
-            _func: ptr,
-            args: args,
-            owned: false
+}
+impl<'a, 'b> From<&'a mut UncompiledFunction<'b>> for jit_function_t {
+    /// Convert to a native pointer
+    fn from(func: &'a mut UncompiledFunction<'b>) -> jit_function_t {
+        func._func
+    }
+}
+impl<'a> From<UncompiledFunction<'a>> for jit_function_t {
+    /// Convert to a native pointer
+    fn from(func: UncompiledFunction<'a>) -> jit_function_t {
+        func._func
+    }
+}
+impl<'a> From<jit_function_t> for UncompiledFunction<'a> {
+    fn from(ptr: jit_function_t) -> UncompiledFunction<'a> {
+        unsafe {
+            let sig = jit_function_get_signature(ptr);
+            let args = (0 .. jit_type_num_params(sig)).map(|i| from_ptr(jit_value_get_param(ptr, i))).collect::<Vec<_>>();
+            UncompiledFunction {
+                _func: ptr,
+                args: args,
+                owned: false
+            }
         }
     }
 }
-impl<'a> Function for UncompiledFunction<'a> {
-    fn is_compiled(&self) -> bool {
+impl<'a> Function<'a> for &'a UncompiledFunction<'a> {
+    fn is_compiled(self) -> bool {
         false
+    }
+
+    fn get_signature(self) -> &'a Ty {
+        unsafe { from_ptr(jit_function_get_signature(self.into())) }
+    }
+}
+impl<'a> fmt::Debug for UncompiledFunction<'a> {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{}", try!(util::dump(|fd| unsafe {
+            jit_dump_function(mem::transmute(fd), self.into(), ptr::null());
+        })))
     }
 }
 impl<'a> fmt::Display for UncompiledFunction<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", try!(util::dump(|fd| unsafe {
-            jit_dump_function(mem::transmute(fd), self.as_ptr(), ptr::null());
+            jit_dump_function(mem::transmute(fd), self.into(), ptr::null());
         })))
     }
 }
@@ -166,7 +198,7 @@ impl<'a> Drop for UncompiledFunction<'a> {
     fn drop(&mut self) {
         if self.owned {
             unsafe {
-                jit_function_abandon(self.as_ptr());
+                jit_function_abandon(self.into());
             }
         }
     }
@@ -186,14 +218,14 @@ impl<'a> UncompiledFunction<'a> {
     ///
     /// This will protect the JIT's internal data structures within a
     /// multi-threaded environment.
-    pub fn new(context:&'a Builder, signature:&Ty) -> UncompiledFunction<'a> {
+    pub fn new<T>(context:&'a mut Builder<T>, signature:&Ty) -> UncompiledFunction<'a> {
         unsafe {
-            let mut me:UncompiledFunction = from_ptr(jit_function_create(
-                context.as_ptr(),
-                signature.as_ptr()
+            let mut me:UncompiledFunction = from_ptr_oom(jit_function_create(
+                context.into(),
+                signature.into()
             ));
             me.owned = true;
-            if cfg!(test) {
+            if cfg!(any(test, bench, ndebug)) {
                 me.set_recompilable();
                 me.set_optimization_level(UncompiledFunction::get_max_optimization_level());
             }
@@ -210,16 +242,16 @@ impl<'a> UncompiledFunction<'a> {
     /// never be called by anyone except its parent and sibling functions.
     /// The front end is also responsible for ensuring that the nested function
     /// is compiled before its parent.
-    pub fn new_nested(context:&'a Builder, signature: &Ty,
+    pub fn new_nested<T>(context:&'a mut Builder<T>, signature: &Ty,
                         parent: &'a UncompiledFunction<'a>) -> UncompiledFunction<'a> {
         unsafe {
-            let mut me:UncompiledFunction = from_ptr(jit_function_create_nested(
-                context.as_ptr(),
-                signature.as_ptr(),
-                parent.as_ptr()
+            let mut me:UncompiledFunction = from_ptr_oom(jit_function_create_nested(
+                context.into(),
+                signature.into(),
+                parent.into()
             ));
             me.owned = true;
-            if cfg!(bench) {
+            if cfg!(any(test, bench, ndebug)) {
                 me.set_recompilable();
                 me.set_optimization_level(UncompiledFunction::get_max_optimization_level());
             }
@@ -232,16 +264,16 @@ impl<'a> UncompiledFunction<'a> {
                             t:&Ty, overflow_check:bool) -> Value<'a> {
         unsafe {
             from_ptr(jit_insn_convert(
-                self.as_ptr(),
-                v.as_ptr(),
-                t.as_ptr(),
+                self.into(),
+                v.into(),
+                t.into(),
                 overflow_check as c_int
             ))
         }
     }
     #[inline(always)]
     /// Make an instructional representation of a Rust value
-    pub fn insn_of<T>(&self, val:&T) -> Value<'a> where T:Compile {
+    pub fn insn_of<T>(&self, val:T) -> Value<'a> where T:Compile<'a> {
         val.compile(self)
     }
     #[inline(always)]
@@ -249,29 +281,28 @@ impl<'a> UncompiledFunction<'a> {
     /// in it. This must be called before any code that is part of a try block
     pub fn insn_uses_catcher(&self) {
         unsafe {
-            jit_insn_uses_catcher(self.as_ptr());
+            jit_insn_uses_catcher(self.into());
         }
     }
     #[inline(always)]
     /// Throw an exception from the function with the value given
     pub fn insn_throw(&self, retval: Value<'a>) {
         unsafe {
-            jit_insn_throw(self.as_ptr(), retval.as_ptr());
+            jit_insn_throw(self.into(), retval.into());
         }
     }
     #[inline(always)]
     /// Return from the function with the value given
     pub fn insn_return(&self, retval: Value<'a>) {
         unsafe {
-            println!("Returning from {:?} with {:?}", self.get_signature(), retval);
-            jit_insn_return(self.as_ptr(), retval.as_ptr());
+            jit_insn_return(self.into(), retval.into());
         }
     }
     #[inline(always)]
     /// Return from the function
     pub fn insn_default_return(&self) {
         unsafe {
-            jit_insn_default_return(self.as_ptr());
+            jit_insn_default_return(self.into());
         }
     }
     #[inline(always)]
@@ -393,7 +424,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that duplicates the value given
     pub fn insn_dup(&self, value: Value<'a>) -> Value<'a> {
         unsafe {
-            let dup_value = jit_insn_load(self.as_ptr(), value.as_ptr());
+            let dup_value = jit_insn_load(self.into(), value.into());
             from_ptr(dup_value)
         }
     }
@@ -407,10 +438,10 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_load_relative(&self, src: Value<'a>, offset: usize, ty: &Ty) -> Value<'a> {
         unsafe {
             from_ptr(jit_insn_load_relative(
-                self.as_ptr(),
-                src.as_ptr(),
+                self.into(),
+                src.into(),
                 offset as jit_nint,
-                ty.as_ptr()
+                ty.into()
             ))
         }
     }
@@ -418,7 +449,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that stores a value at a destination value
     pub fn insn_store(&self, dest: Value<'a>, src: Value<'a>) {
         unsafe {
-            jit_insn_store(self.as_ptr(), dest.as_ptr(), src.as_ptr());
+            jit_insn_store(self.into(), dest.into(), src.into());
         }
     }
     #[inline(always)]
@@ -427,35 +458,35 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_store_relative(&self, dest: Value<'a>, offset: usize,
                                src: Value<'a>) {
         unsafe {
-            jit_insn_store_relative(self.as_ptr(), dest.as_ptr(), offset as jit_nint, src.as_ptr());
+            jit_insn_store_relative(self.into(), dest.into(), offset as jit_nint, src.into());
         }
     }
     #[inline(always)]
     /// Make an instruction that sets a label
     pub fn insn_label(&self, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_label(self.as_ptr(), &mut **label);
+            jit_insn_label(self.into(), &mut **label);
         }
     }
     #[inline(always)]
     /// Make an instruction that branches to a certain label
     pub fn insn_branch(&self, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_branch(self.as_ptr(), &mut **label);
+            jit_insn_branch(self.into(), &mut **label);
         }
     }
     #[inline(always)]
     /// Make an instruction that branches to a certain label if the value is true
     pub fn insn_branch_if(&self, value: Value<'a>, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_branch_if(self.as_ptr(), value.as_ptr(), &mut **label);
+            jit_insn_branch_if(self.into(), value.into(), &mut **label);
         }
     }
     #[inline(always)]
     /// Make an instruction that branches to a certain label if the value is false
     pub fn insn_branch_if_not(&self, value: Value<'a>, label: &mut Label<'a>) {
         unsafe {
-            jit_insn_branch_if_not(self.as_ptr(), value.as_ptr(), &mut **label);
+            jit_insn_branch_if_not(self.into(), value.into(), &mut **label);
         }
     }
     #[inline(always)]
@@ -465,8 +496,8 @@ impl<'a> UncompiledFunction<'a> {
             let mut native_labels: Vec<_> = labels.iter()
                 .map(|label| **label).collect();
             jit_insn_jump_table(
-                self.as_ptr(),
-                value.as_ptr(),
+                self.into(),
+                value.into(),
                 native_labels.as_mut_ptr(),
                 labels.len() as c_uint
             );
@@ -613,15 +644,16 @@ impl<'a> UncompiledFunction<'a> {
     }
 
     /// Call the function, which may or may not be translated yet
-    pub fn insn_call<F>(&self, name:Option<&str>, func:&F, sig:Option<&Ty>,
-        args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> where F:Function {
+    pub fn insn_call<F>(&self, name:Option<&str>, func:F, sig:Option<&Ty>,
+        args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> where F:Function<'a> {
         unsafe {
-            let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
+            let mut native_args:Vec<_> = args.iter().map(|arg| arg.into()).collect();
             let c_name = name.map(|name| CString::new(name.as_bytes()).unwrap());
+            let sig = sig.map(|sig| sig.into()).unwrap_or(ptr::null_mut());
             from_ptr(jit_insn_call(
-                self.as_ptr(),
-                c_name.map(|name| mem::transmute(name.as_ptr())).unwrap_or(ptr::null_mut()),
-                func.as_ptr(), sig.as_ptr(), native_args.as_mut_ptr(),
+                self.into(),
+                c_name.map(|name| name.as_bytes().as_ptr() as *mut c_char).unwrap_or(ptr::null_mut()),
+                func.into(), sig, native_args.as_mut_ptr(),
                 args.len() as c_uint,
                 flags.bits()
             ))
@@ -633,8 +665,8 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_call_indirect(&self, func:Value<'a>, signature: &Ty,
                                args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
-            let mut native_args:Vec<_> = args.iter().map(|arg| arg.as_ptr()).collect();
-            from_ptr(jit_insn_call_indirect(self.as_ptr(), func.as_ptr(), signature.as_ptr(), native_args.as_mut_ptr(), args.len() as c_uint, flags.bits()))
+            let mut native_args:Vec<_> = args.iter().map(|arg| arg.into()).collect();
+            from_ptr(jit_insn_call_indirect(self.into(), func.into(), signature.into(), native_args.as_mut_ptr(), args.len() as c_uint, flags.bits()))
         }
     }
     /// Make an instruction that calls a native function that has the signature
@@ -644,13 +676,13 @@ impl<'a> UncompiledFunction<'a> {
                         args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter()
-                .map(|arg| arg.as_ptr()).collect();
+                .map(|arg| arg.into()).collect();
             let c_name = name.map(|name| CString::new(name.as_bytes()).unwrap());
             from_ptr(jit_insn_call_native(
-                self.as_ptr(),
-                c_name.map(|name| mem::transmute(name.as_ptr())).unwrap_or(ptr::null_mut()),
+                self.into(),
+                c_name.map(|name| name.as_bytes().as_ptr() as *mut c_char).unwrap_or(ptr::null_mut()),
                 native_func,
-                signature.as_ptr(),
+                signature.into(),
                 native_args.as_mut_ptr(),
                 args.len() as c_uint,
                 flags.bits()
@@ -716,35 +748,35 @@ impl<'a> UncompiledFunction<'a> {
     /// Make an instruction that copies memory from a source address to a destination address
     pub fn insn_memcpy(&self, dest: Value<'a>, source: Value<'a>, size: Value<'a>) -> bool {
         unsafe {
-            jit_insn_memcpy(self.as_ptr(), dest.as_ptr(), source.as_ptr(), size.as_ptr()) != 0
+            jit_insn_memcpy(self.into(), dest.into(), source.into(), size.into()) != 0
         }
     }
     #[inline(always)]
     /// Make an instruction that moves memory from a source address to a destination address
     pub fn insn_memmove(&self, dest: Value<'a>, source: Value<'a>, size: Value<'a>) -> bool {
         unsafe {
-            jit_insn_memmove(self.as_ptr(), dest.as_ptr(), source.as_ptr(), size.as_ptr()) != 0
+            jit_insn_memmove(self.into(), dest.into(), source.into(), size.into()) != 0
         }
     }
     #[inline(always)]
     /// Make an instruction that sets memory at the destination address
     pub fn insn_memset(&self, dest: Value<'a>, source: Value<'a>, size: Value<'a>) -> bool {
         unsafe {
-            jit_insn_memset(self.as_ptr(), dest.as_ptr(), source.as_ptr(), size.as_ptr()) != 0
+            jit_insn_memset(self.into(), dest.into(), source.into(), size.into()) != 0
         }
     }
     #[inline(always)]
     /// Make an instruction that allocates some space
     pub fn insn_alloca(&self, size: Value<'a>) -> Value<'a> {
         unsafe {
-            from_ptr(jit_insn_alloca(self.as_ptr(), size.as_ptr()))
+            from_ptr(jit_insn_alloca(self.into(), size.into()))
         }
     }
     #[inline(always)]
     /// Make an instruction that gets the address of a value
     pub fn insn_address_of(&self, value: Value<'a>) -> Value<'a> {
         unsafe {
-            from_ptr(jit_insn_address_of(self.as_ptr(), value.as_ptr()))
+            from_ptr(jit_insn_address_of(self.into(), value.into()))
         }
     }
     #[inline(always)]
@@ -756,7 +788,7 @@ impl<'a> UncompiledFunction<'a> {
                         jit_value_t) -> jit_value_t)
                     -> Value<'a> {
         unsafe {
-            from_ptr(f(self.as_ptr(), v1.as_ptr(), v2.as_ptr()))
+            from_ptr(f(self.into(), v1.into(), v2.into()))
         }
     }
     #[inline(always)]
@@ -767,7 +799,7 @@ impl<'a> UncompiledFunction<'a> {
                         jit_value_t) -> jit_value_t)
                     -> Value<'a> {
         unsafe {
-            from_ptr(f(self.as_ptr(), value.as_ptr()))
+            from_ptr(f(self.into(), value.into()))
         }
     }
     #[inline(always)]
@@ -820,7 +852,7 @@ impl<'a> UncompiledFunction<'a> {
     /// the more effort should be spent optimising
     pub fn set_optimization_level(&self, level: c_uint) {
         unsafe {
-            jit_function_set_optimization_level(self.as_ptr(), level);
+            jit_function_set_optimization_level(self.into(), level);
         }
     }
     #[inline(always)]
@@ -834,19 +866,19 @@ impl<'a> UncompiledFunction<'a> {
     /// Make this function a candidate for recompilation
     pub fn set_recompilable(&self) {
         unsafe {
-            jit_function_set_recompilable(self.as_ptr());
+            jit_function_set_recompilable(self.into());
         }
     }
     /// Get the entry block of this function
     pub fn get_entry(&self) -> Option<Block<'a>> {
         unsafe {
-            from_ptr(jit_function_get_entry(self.as_ptr()))
+            from_ptr_opt(jit_function_get_entry(self.into()))
         }
     }
     /// Get the current block of this function
     pub fn get_current(&self) -> Option<Block<'a>> {
         unsafe {
-            from_ptr(jit_function_get_current(self.as_ptr()))
+            from_ptr_opt(jit_function_get_current(self.into()))
         }
     }
     #[inline(always)]
@@ -856,14 +888,14 @@ impl<'a> UncompiledFunction<'a> {
             panic!("The function must be owned")
         }
         unsafe {
-            let ptr = self.as_ptr();
+            let ptr = (&self).into();
             mem::forget(self);
             jit_function_compile(ptr);
             from_ptr(ptr)
         }
     }
     #[inline(always)]
-    /// Compile the function into a closure directly
+    /// Compile the function and call a closure with it directly
     pub fn compile_with<A, R, F>(self, cb: F) -> CompiledFunction<'a>
         where F:FnOnce(extern fn(A) -> R) {
         let compiled = self.compile();

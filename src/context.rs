@@ -1,97 +1,105 @@
 use raw::*;
 use alloc::oom;
+use function::{AnyFunction, CompiledFunction, UncompiledFunction};
+use types::Ty;
+use util::{from_ptr, from_ptr_opt};
 use std::marker::PhantomData;
-use std::any::TypeId;
-use std::{hash, mem, ptr};
+use std::{mem, ptr};
+use std::ops::{Deref, Index, IndexMut};
 use std::iter::IntoIterator;
-use util::{from_ptr, NativeRef};
-use {AnyFunction, CompiledFunction, Ty, UncompiledFunction};
 /// Holds all of the functions you have built and compiled. There can be
 /// multiple, but normally there is only one.
-native_ref!(Context {
-    _context: jit_context_t
-});
+pub struct Context<T = ()> {
+    _context: jit_context_t,
+    marker: PhantomData<T>
+}
+native_ref!(Context<T>, _context: jit_context_t, marker = PhantomData);
 
 /// A context that is in the build phase while generating IR
-pub struct Builder {
+pub struct Builder<T> {
     _context: jit_context_t,
+    marker: PhantomData<T>
 }
-impl NativeRef for Builder {
-    #[inline(always)]
-    unsafe fn as_ptr(&self) -> jit_context_t {
-        self._context
-    }
-    #[inline(always)]
-    unsafe fn from_ptr(ptr:jit_context_t) -> Builder {
-        Builder {
-            _context: ptr,
+impl<T> Deref for Builder<T> {
+    type Target = Context<T>;
+    fn deref(&self) -> &Context<T> {
+        unsafe {
+            mem::transmute(self)
         }
     }
 }
+native_ref!(Builder<T>, _context: jit_context_t, marker = PhantomData);
 
-impl Context {
-    unsafe fn as_builder(&mut self) -> Builder {
-        from_ptr(self.as_ptr())
+impl<T = ()> Index<i32> for Context<T> {
+    type Output = T;
+    fn index(&self, index: i32) -> &T {
+        unsafe {
+            let meta = jit_context_get_meta(self.into(), index);
+            if meta.is_null() {
+                panic!("No such index {} on Context", index)
+            }
+            mem::transmute(meta)
+        }
     }
+}
+impl<T = ()> IndexMut<i32> for Context<T> {
+    fn index_mut(&mut self, index: i32) -> &mut T {
+        unsafe {
+            let meta = jit_context_get_meta(self.into(), index);
+            if meta.is_null() {
+                let boxed = Box::new(mem::uninitialized::<T>());
+                if jit_context_set_meta(self.into(), index, mem::transmute(boxed), Some(::free_data::<T>)) == 0 {
+                    oom()
+                } else {
+                    mem::transmute(jit_context_get_meta(self.into(), index))
+                }
+            } else {
+                mem::transmute(meta)
+            }
+        }
+    }
+}
+impl<T = ()> Context<T> {
     #[inline(always)]
     /// Create a new JIT Context
-    pub fn new() -> Context {
+    pub fn new() -> Context<T> {
         unsafe {
             from_ptr(jit_context_create())
         }
     }
-    /// Get the tagged metadata of an object
-    pub fn get_meta<T>(&self) -> Option<&T> where T:'static {
-        unsafe {
-            let id = hash::hash::<TypeId, hash::SipHasher>(&TypeId::of::<T>());
-            mem::transmute(jit_context_get_meta(self.as_ptr(), id as i32))
-        }
-    }
-
-    /// Tag the context with some metadata
-    pub fn set_meta<T>(&self, data: Box<T>) where T:'static {
-        unsafe {
-            let id = hash::hash::<TypeId, hash::SipHasher>(&TypeId::of::<T>());
-            if jit_context_set_meta(self.as_ptr(), id as i32, mem::transmute(data), Some(::free_data::<T>)) == 0 {
-                oom()
-            }
-        }
-    }
     #[inline(always)]
     /// Lock the context so you can safely generate IR
-    pub fn build<R, F:FnOnce(&Builder) -> R>(&mut self, cb: F) -> R {
+    pub fn build<'a, R, F:FnOnce(Builder<T>) -> R>(&'a mut self, cb: F) -> R {
         unsafe {
-            jit_context_build_start(self.as_ptr());
-            let r = cb(&self.as_builder());
-            jit_context_build_end(self.as_ptr());
+            jit_context_build_start(self.into());
+            let r = cb(Builder { _context: self.into(), marker: PhantomData});
+            jit_context_build_end(self.into());
             r
         }
     }
     #[inline(always)]
     /// Lock the context so you can safely generate IR in a new function on the context which is
     /// compiled for you
-    pub fn build_func<'a, 'b, F:FnOnce(&UncompiledFunction<'a>)>(&'a mut self, signature: &'b Ty, cb: F) -> CompiledFunction<'a> {
+    pub fn build_func<'a, F:FnOnce(&UncompiledFunction<'a>)>(&'a mut self, signature: &Ty, cb: F) -> CompiledFunction<'a> {
         unsafe {
-            jit_context_build_start(self.as_ptr());
-            let builder = self.as_builder();
-            let func = UncompiledFunction::new(mem::copy_lifetime(self, &builder), signature);
+            jit_context_build_start(self.into());
+            let mut builder = Builder { _context: self.into(), marker: PhantomData::<T>};
+            let func = UncompiledFunction::new::<T>(mem::transmute(&mut builder), signature);
             cb(&func);
-            jit_context_build_end(self.as_ptr());
+            jit_context_build_end(self.into());
             func.compile()
         }
     }
     /// Iterate through the functions contained inside this context
     pub fn functions(&self) -> Functions {
-        unsafe {
-            Functions {
-                context: self.as_ptr(),
-                last: ptr::null_mut(),
-                lifetime: PhantomData,
-            }
+        Functions {
+            context: self.into(),
+            last: ptr::null_mut(),
+            lifetime: PhantomData,
         }
     }
 }
-impl<'a> IntoIterator for &'a Context {
+impl<'a, T> IntoIterator for &'a Context<T> {
     type IntoIter = Functions<'a>;
     type Item = AnyFunction<'a>;
     fn into_iter(self) -> Functions<'a> {
@@ -99,11 +107,11 @@ impl<'a> IntoIterator for &'a Context {
     }
 }
 #[unsafe_destructor]
-impl Drop for Context {
+impl<T> Drop for Context<T> {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe {
-            jit_context_destroy(self.as_ptr());
+            jit_context_destroy(self.into());
         }
     }
 }
@@ -118,7 +126,7 @@ impl<'a> Iterator for Functions<'a> {
     fn next(&mut self) -> Option<AnyFunction<'a>> {
         unsafe {
             self.last = jit_function_next(self.context, self.last);
-            from_ptr(self.last)
+            from_ptr_opt(self.last)
         }
     }
 }
