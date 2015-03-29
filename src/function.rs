@@ -670,7 +670,7 @@ impl<'a> UncompiledFunction<'a> {
                             signature: &Ty,
                             flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, [].as_mut_slice(), flags)
+        self.insn_call_native(name, func_ptr, signature, &mut [], flags)
     }
     #[inline(always)]
     /// Make an instruction that calls a Rust function that has the signature
@@ -681,7 +681,7 @@ impl<'a> UncompiledFunction<'a> {
                                 mut args: [Value<'a>; 1],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice(), flags)
+        self.insn_call_native(name, func_ptr, signature, &mut args, flags)
     }
     #[inline(always)]
     /// Make an instruction that calls a Rust function that has the signature
@@ -692,7 +692,7 @@ impl<'a> UncompiledFunction<'a> {
                                 mut args: [Value<'a>; 2],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice(), flags)
+        self.insn_call_native(name, func_ptr, signature, &mut args, flags)
     }
     #[inline(always)]
     /// Make an instruction that calls a Rust function that has the signature
@@ -703,7 +703,7 @@ impl<'a> UncompiledFunction<'a> {
                                 mut args: [Value<'a>; 3],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice(), flags)
+        self.insn_call_native(name, func_ptr, signature, &mut args, flags)
     }
     #[inline(always)]
     /// Make an instruction that calls a Rust function that has the signature
@@ -714,7 +714,7 @@ impl<'a> UncompiledFunction<'a> {
                                 mut args: [Value<'a>; 4],
                                 flags: flags::CallFlags) -> Value<'a> {
         let func_ptr = unsafe { mem::transmute(native_func) };
-        self.insn_call_native(name, func_ptr, signature, args.as_mut_slice()
+        self.insn_call_native(name, func_ptr, signature, &mut args
             , flags)
     }
     #[inline(always)]

@@ -79,7 +79,7 @@ macro_rules! compile_tuple(
             fn get_type() -> CowType<'a> {
                 use std::mem;
                 let mut types = [$(&*get::<$ty>()),+];
-                let ty = Type::new_struct(types.as_mut_slice());
+                let ty = Type::new_struct(&mut types);
                 unsafe {
                     jit_type_set_size_and_alignment((&ty).into(), mem::size_of::<Self>() as i64, mem::align_of::<Self>() as i64);
                 }
