@@ -40,7 +40,6 @@ fn main() {
 		return;
 	}
 	let out_dir = env::var("OUT_DIR").ok().expect(USE_CARGO_MSG);
-	let num_jobs = env::var("NUM_JOBS").ok().expect(USE_CARGO_MSG);
 	let out_dir = Path::new(&*out_dir);
 	let submod_path = Path::new("libjit");
 	let final_lib_dir = submod_path.join("jit/.libs");
@@ -52,7 +51,7 @@ fn main() {
 		}
 		run_nice(parse("sh auto_gen.sh").current_dir(submod_path), INSTALL_AUTOTOOLS_MSG);
 		run_nice(parse("sh configure --enable-static --disable-shared CC=clang CFLAGS=-fPIC").current_dir(submod_path), INSTALL_COMPILER_MSG);
-		run(Command::new("make").arg(&format!("j{}", num_jobs)).current_dir(submod_path));
+		run(Command::new("make").arg("j8").current_dir(submod_path));
 	}
 	let from = final_lib_dir.join(FINAL_LIB);
 	let to = out_dir.join(FINAL_LIB);
