@@ -1,6 +1,6 @@
 use raw::*;
 use alloc::oom;
-use function::{AnyFunction, CompiledFunction, UncompiledFunction};
+use function::{Func, CompiledFunction, UncompiledFunction};
 use types::Ty;
 use util::{from_ptr, from_ptr_opt};
 use std::marker::PhantomData;
@@ -101,7 +101,7 @@ impl<T = ()> Context<T> {
 }
 impl<'a, T> IntoIterator for &'a Context<T> {
     type IntoIter = Functions<'a>;
-    type Item = AnyFunction<'a>;
+    type Item = &'a Func;
     fn into_iter(self) -> Functions<'a> {
         self.functions()
     }
@@ -122,8 +122,8 @@ pub struct Functions<'a> {
     lifetime: PhantomData<&'a ()>
 }
 impl<'a> Iterator for Functions<'a> {
-    type Item = AnyFunction<'a>;
-    fn next(&mut self) -> Option<AnyFunction<'a>> {
+    type Item = &'a Func;
+    fn next(&mut self) -> Option<&'a Func> {
         unsafe {
             self.last = jit_function_next(self.context, self.last);
             from_ptr_opt(self.last)

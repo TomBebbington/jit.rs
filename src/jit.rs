@@ -60,7 +60,7 @@ use std::mem;
 pub use compile::Compile;
 pub use context::{Builder, Context};
 pub use elf::*;
-pub use function::{flags, Abi, AnyFunction, UncompiledFunction, Function, CompiledFunction};
+pub use function::{flags, Abi, UncompiledFunction, Func, CompiledFunction};
 pub use function::flags::CallFlags;
 pub use label::Label;
 pub use insn::{Block, Instruction, InstructionIter};

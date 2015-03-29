@@ -275,39 +275,13 @@ impl<'a> Iterator for Params<'a> {
         ((self.length - self.index) as usize, None)
     }
 }
-/// An object that represents a native system type.
+/// A reference to an object that represents a native system type
+///.
 /// This represents a basic system type, be it a primitive, a struct, a
 /// union, a pointer, or a function signature. The library uses this information
 /// to lay out values in memory.
-#[derive(Eq)]
 pub struct Ty(PhantomData<[()]>);
-impl<'a> From<&'a Ty> for jit_type_t {
-    fn from(ty: &'a Ty) -> jit_type_t {
-        unsafe { mem::transmute(ty) }
-    }
-}
-impl<'a> From<&'a mut Ty> for jit_type_t {
-    fn from(ty: &'a mut Ty) -> jit_type_t {
-        unsafe { mem::transmute(ty) }
-    }
-}
-impl<'a> From<jit_type_t> for &'a Ty {
-    fn from(ty: jit_type_t) -> &'a Ty {
-        unsafe { mem::transmute(ty) }
-    }
-}
-impl PartialEq for Ty {
-    fn eq(&self, other: &Ty) -> bool {
-        unsafe {
-            mem::transmute::<_, isize>(self) == mem::transmute(other)
-        }
-    }
-    fn ne(&self, other: &Ty) -> bool {
-        unsafe {
-            mem::transmute::<_, isize>(self) != mem::transmute(other)
-        }
-    }
-}
+native_ref!(&Ty = jit_type_t);
 impl ToOwned for Ty {
     type Owned = Type;
     fn to_owned(&self) -> Type {
@@ -325,9 +299,11 @@ impl Borrow<Ty> for Type {
 }
 
 /// An owned object that represents a native system type.
+///
 /// Each `Type` represents a basic system type, be it a primitive, a struct, a
 /// union, a pointer, or a function signature. The library uses this information
 /// to lay out values in memory.
+///
 /// Types are not attached to a context so they are reference-counted by LibJIT,
 /// so internally they are represented as `Rc<Ty>`.
 #[derive(PartialEq, Eq)]
@@ -369,7 +345,9 @@ impl<'a> DerefMut for Type {
         }
     }
 }
+/// A copy-on-write type
 pub type CowType<'a> = Cow<'a, Ty>;
+/// A static type
 pub type StaticType = &'static Ty;
 impl Into<CowType<'static>> for Type {
     fn into(self) -> CowType<'static> {
@@ -541,7 +519,7 @@ impl<'a> IntoIterator for &'a Ty {
 }
 
 #[derive(PartialEq, Eq)]
-pub struct TaggedType<T> where T:'static {
+pub struct TaggedType<T> {
     _type: jit_type_t,
     _marker: PhantomData<T>
 }
@@ -560,7 +538,7 @@ impl<T> From<jit_type_t> for TaggedType<T> {
         }
     }
 }
-impl<T> TaggedType<T> where T:'static {
+impl<T> TaggedType<T> {
     /// Create a new tagged type
     pub fn new(ty:&Ty, kind: kind::TypeKind, data: Box<T>) -> TaggedType<T> {
         unsafe {

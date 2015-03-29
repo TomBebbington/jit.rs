@@ -14,7 +14,7 @@ use libc::{
 };
 use std::default::Default;
 use std::fmt;
-use std::ops::Index;
+use std::ops::{Deref, DerefMut, Index};
 use std::{mem, ptr};
 use std::ffi::CString;
 use std::marker::PhantomData;
@@ -51,42 +51,16 @@ pub mod flags {
         }
     );
 }
-/// A function that can be pre-compiled or not, it doesn't care
-pub trait Function<'a>: 'a + Into<jit_function_t> {
-    /// Check if this function is compiled
-    fn is_compiled(self) -> bool;
-    /// Get the signature of this function
-    fn get_signature(self) -> &'a Ty;
-}
-/// Any kind of function, compiled or not
-pub struct AnyFunction<'a> {
-    _func: jit_function_t,
-    marker: PhantomData<&'a ()>
-}
-native_ref!(contra AnyFunction, _func: jit_function_t);
-impl<'a> Into<Option<CompiledFunction<'a>>> for AnyFunction<'a> {
-    fn into(self) -> Option<CompiledFunction<'a>> {
-        if self.is_compiled() {
-            Some(from_ptr(self.into()))
-        } else {
-            None
-        }
-    }
-}
-impl<'a> Into<Option<UncompiledFunction<'a>>> for AnyFunction<'a> {
-    fn into(self) -> Option<UncompiledFunction<'a>> {
-        if !self.is_compiled() {
-            Some(from_ptr(self.into()))
-        } else {
-            None
-        }
-    }
-}
-impl<'a> Function<'a> for &'a AnyFunction<'a> {
-    fn is_compiled(self) -> bool {
+/// A function
+pub struct Func(PhantomData<[()]>);
+native_ref!(&Func = jit_function_t);
+impl Func {
+    /// Check if the given function is compiled
+    pub fn is_compiled(&self) -> bool {
         unsafe { jit_function_is_compiled(self.into()) != 0 }
     }
-    fn get_signature(self) -> &'a Ty {
+    /// Get the signature of the given function
+    pub fn get_signature(&self) -> &Ty {
         unsafe { from_ptr(jit_function_get_signature(self.into())) }
     }
 }
@@ -101,13 +75,15 @@ pub struct CompiledFunction<'a> {
     marker: PhantomData<&'a ()>
 }
 native_ref!(contra CompiledFunction, _func: jit_function_t);
-impl<'a> Function<'a> for CompiledFunction<'a> {
-    /// 10/10 would compile again
-    fn is_compiled(self) -> bool {
-        true
+impl<'a> Deref for CompiledFunction<'a> {
+    type Target = Func;
+    fn deref(&self) -> &Func {
+        unsafe { mem::transmute(self._func) }
     }
-    fn get_signature(self) -> &'a Ty {
-        unsafe { from_ptr(jit_function_get_signature(self.into())) }
+}
+impl<'a> DerefMut for CompiledFunction<'a> {
+    fn deref_mut(&mut self) -> &mut Func {
+        unsafe { mem::transmute(self._func) }
     }
 }
 impl<'a> fmt::Debug for CompiledFunction<'a> {
@@ -169,15 +145,6 @@ impl<'a> From<jit_function_t> for UncompiledFunction<'a> {
         }
     }
 }
-impl<'a> Function<'a> for &'a UncompiledFunction<'a> {
-    fn is_compiled(self) -> bool {
-        false
-    }
-
-    fn get_signature(self) -> &'a Ty {
-        unsafe { from_ptr(jit_function_get_signature(self.into())) }
-    }
-}
 impl<'a> fmt::Debug for UncompiledFunction<'a> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", try!(util::dump(|fd| unsafe {
@@ -185,13 +152,19 @@ impl<'a> fmt::Debug for UncompiledFunction<'a> {
         })))
     }
 }
-impl<'a> fmt::Display for UncompiledFunction<'a> {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "{}", try!(util::dump(|fd| unsafe {
-            jit_dump_function(mem::transmute(fd), self.into(), ptr::null());
-        })))
+
+impl<'a> Deref for UncompiledFunction<'a> {
+    type Target = Func;
+    fn deref(&self) -> &Func {
+        unsafe { mem::transmute(self._func) }
     }
 }
+impl<'a> DerefMut for UncompiledFunction<'a> {
+    fn deref_mut(&mut self) -> &mut Func {
+        unsafe { mem::transmute(self._func) }
+    }
+}
+
 #[unsafe_destructor]
 impl<'a> Drop for UncompiledFunction<'a> {
     #[inline(always)]
@@ -644,8 +617,8 @@ impl<'a> UncompiledFunction<'a> {
     }
 
     /// Call the function, which may or may not be translated yet
-    pub fn insn_call<F>(&self, name:Option<&str>, func:F, sig:Option<&Ty>,
-        args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> where F:Function<'a> {
+    pub fn insn_call(&self, name:Option<&str>, func:&Func, sig:Option<&Ty>,
+        args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> {
         unsafe {
             let mut native_args:Vec<_> = args.iter().map(|arg| arg.into()).collect();
             let c_name = name.map(|name| CString::new(name.as_bytes()).unwrap());

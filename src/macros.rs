@@ -96,6 +96,30 @@ macro_rules! compile_prims(
 );
 
 macro_rules! native_ref(
+    (&$name:ident = $alias:ty) => (
+        use std::mem::transmute as cast;
+        impl Eq for $name {}
+        impl PartialEq for $name {
+            fn eq(&self, other: &$name) -> bool {
+                unsafe { cast::<_, isize>(self) == cast(other) }
+            }
+        }
+        impl<'a> From<&'a $name> for $alias {
+            fn from(ty: &'a $name) -> $alias {
+                unsafe { cast(ty) }
+            }
+        }
+        impl<'a> From<&'a mut $name> for $alias {
+            fn from(ty: &'a mut $name) -> $alias {
+                unsafe { cast(ty) }
+            }
+        }
+        impl<'a> From<$alias> for &'a $name {
+            fn from(ty: $alias) -> &'a $name {
+                unsafe { cast(ty) }
+            }
+        }
+    );
     ($name:ident, $field:ident: $pointer_ty:ty) => (
         impl<'a> From<&'a mut $name> for $pointer_ty {
             /// Convert into a native pointer

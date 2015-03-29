@@ -1,5 +1,5 @@
 use raw::*;
-use function::AnyFunction;
+use function::Func;
 use types::Ty;
 use util::{from_ptr, from_ptr_opt};
 use value::Value;
@@ -46,7 +46,7 @@ impl<'a> Instruction<'a> {
 		}
 	}
 	/// Get the function containing this value
-	pub fn get_function(self) -> Option<AnyFunction<'a>> {
+	pub fn get_function(self) -> Option<&'a Func> {
 		unsafe {
 			from_ptr_opt(jit_insn_get_function(self._insn))
 		}
@@ -99,7 +99,7 @@ native_ref!(contra Block, _block: jit_block_t);
 impl<'a> Copy for Block<'a> {}
 impl<'a> Block<'a> {
 	/// Get the function containing this block
-	pub fn get_function(self) -> AnyFunction<'a> {
+	pub fn get_function(self) -> &'a Func {
 		unsafe {
 			from_ptr(jit_block_get_function(self._block))
 		}
