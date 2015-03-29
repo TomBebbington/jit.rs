@@ -181,7 +181,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                     self_type
                 ]
             )));
-            let lit_usize = LitIntType::UnsignedIntLit(UintTy::TyUs);
+            let lit_usize = LitIntType::UnsignedIntLit(UintTy::TyUs(false));
             if def.fields.len() > 1 {
                 compiler.push(cx.stmt_let(sp, true, offset, cx.expr_lit(sp, Lit_::LitInt(0, lit_usize))));
             }
