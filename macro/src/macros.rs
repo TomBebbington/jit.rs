@@ -20,38 +20,40 @@ use syntax::ptr::P;
 use syntax::owned_slice::OwnedSlice;
 use rustc::plugin::Registry;
 
-static BAD_RETURN:&'static str = "bad return type";
-static BAD_ABI:&'static str = "jit-compilable functions must have Rust or C ABI";
 static BAD_EXPR:&'static str = "bad jit expression";
 static BAD_STRUCT:&'static str = "jit-compatible structs must be packed, mark with #[repr(packed)] to fix";
 static BAD_ITEM:&'static str = "only structs can be compatible with LibJIT";
 
-fn simple_type(cx: &mut ExtCtxt, name: &'static str) -> Option<P<Expr>> {
+fn simple_type(cx: &mut ExtCtxt, name: &'static str, as_cow:bool) -> Option<P<Expr>> {
     let new_name = format!("get_{}", name);
     let name = cx.ident_of(&new_name);
-    Some(quote_expr!(cx, jit::typecs::$name()))
+    let mut expr = quote_expr!(cx, jit::typecs::$name());
+    if as_cow {
+        expr = quote_expr!(cx, $expr.into())
+    }
+    Some(expr)
 }
-fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
+fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>, as_cow: bool) -> Option<P<Expr>> {
     match ty.node {
-        Ty_::TyParen(ref ty) => type_expr(cx, sp, ty.clone()),
-        Ty_::TyPtr(_) | Ty_::TyRptr(_, _) => simple_type(cx, "VOID_PTR"),
+        Ty_::TyParen(ref ty) => type_expr(cx, sp, ty.clone(), as_cow),
+        Ty_::TyPtr(_) | Ty_::TyRptr(_, _) => simple_type(cx, "VOID_PTR", as_cow),
         Ty_::TyPath(ref self_, ref path) => {
             if self_.is_none() && path.segments.len() == 1 {
                 match path.segments[0].identifier.as_str() {
-                    "i8" => return simple_type(cx, "sbyte"),
-                    "u8" => return simple_type(cx, "ubyte"),
-                    "i16" => return simple_type(cx, "short"),
-                    "u16" => return simple_type(cx, "ushort"),
-                    "i32" => return simple_type(cx, "int"),
-                    "u32" => return simple_type(cx, "uint"),
-                    "i64" => return simple_type(cx, "long"),
-                    "u64" => return simple_type(cx, "ulong"),
-                    "isize" => return simple_type(cx, "nint"),
-                    "usize" => return simple_type(cx, "nuint"),
-                    "f32" => return simple_type(cx, "float32"),
-                    "f64" => return simple_type(cx, "float64"),
-                    "bool" => return simple_type(cx, "sys_bool"),
-                    "char" => return simple_type(cx, "sys_char"),
+                    "i8" => return simple_type(cx, "sbyte", as_cow),
+                    "u8" => return simple_type(cx, "ubyte", as_cow),
+                    "i16" => return simple_type(cx, "short", as_cow),
+                    "u16" => return simple_type(cx, "ushort", as_cow),
+                    "i32" => return simple_type(cx, "int", as_cow),
+                    "u32" => return simple_type(cx, "uint", as_cow),
+                    "i64" => return simple_type(cx, "long", as_cow),
+                    "u64" => return simple_type(cx, "ulong", as_cow),
+                    "isize" => return simple_type(cx, "nint", as_cow),
+                    "usize" => return simple_type(cx, "nuint", as_cow),
+                    "f32" => return simple_type(cx, "float32", as_cow),
+                    "f64" => return simple_type(cx, "float64", as_cow),
+                    "bool" => return simple_type(cx, "sys_bool", as_cow),
+                    "char" => return simple_type(cx, "sys_char", as_cow),
                     _ => {/* fall through */}
                 }
             }
@@ -61,7 +63,6 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
                         vec![cx.ident_of("jit"),
                              cx.ident_of("Compile"),
                              cx.ident_of("get_type")]);
-            // <ty as jit::Compile>::get_type
             let qpath = cx.expr(sp, Expr_::ExprPath(
                 Some(QSelf {
                     ty: ty.clone(),
@@ -70,7 +71,11 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>) -> Option<P<Expr>> {
                     position: get_type.segments.len() - 1
                 }),
                 get_type));
-            Some(quote_expr!(cx, &*$qpath()))
+            Some(if as_cow {
+                qpath
+            } else {
+                quote_expr!(cx, &$qpath())
+            })
         },
         _ => {
             let error = format!("could not resolve type {}", ty.to_source());
@@ -87,80 +92,95 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
     let jit_compile = cx.path_all(sp, false, vec![jit, cx.ident_of("Compile")], vec![jit_life], vec![], vec![]);
     let jit_cow_type = cx.path_all(sp, false, vec![jit, cx.ident_of("CowType")], vec![cx.lifetime(sp, token::intern("'static"))], vec![], vec![]);
     let jit_func = cx.path_all(sp, false, vec![jit, cx.ident_of("UncompiledFunction")], vec![jit_life], vec![], vec![]);
-    let jit_value = cx.path_all(sp, false, vec![jit, cx.ident_of("Val")], vec![jit_life], vec![], vec![]);
-    let jit_value_new = cx.path(sp, vec![jit, cx.ident_of("Val"), cx.ident_of("new")]);
+    let jit_val = cx.path(sp, vec![jit, cx.ident_of("Val")]);
+    let jit_val_new = cx.path(sp, vec![jit, cx.ident_of("Val"), cx.ident_of("new")]);
+    let jit_value = cx.ty_rptr(sp, cx.ty_path(jit_val), Some(jit_life), Mutability::MutImmutable);
     let new_struct = cx.path(sp, vec![jit, cx.ident_of("Type"), cx.ident_of("new_struct")]);
     let func = cx.ident_of("func");
     let value = cx.ident_of("value");
     let offset = cx.ident_of("offset");
-    let mut is_packed = false;
+    let mut repr = None;
     push(cx.item_use_simple(sp, Visibility::Inherited, cx.path(sp, vec![cx.ident_of("std"), cx.ident_of("convert"), cx.ident_of("Into")])));
     for attr in item.attrs.iter() {
         if let MetaItem_::MetaList(ref name, ref items) = attr.node.value.node {
             if &**name == "repr" && items.len() == 1 {
                 if let MetaItem_::MetaWord(ref text) = items[0].node {
-                    if &**text == "packed" {
-                        is_packed = true;
-                    }
+                    repr = Some(&**text)
                 }
             }
         }
     }
     match item.node {
-        Item_::ItemFn(ref dec, Unsafety::Normal, abi, _, ref _block) => {
-            if !matches!(abi, Abi::Rust | Abi::C | Abi::Cdecl) {
-                cx.span_err(sp, BAD_ABI);
-                return;
+        Item_::ItemEnum(ref def, _) => {
+            if let Some(kind) = repr {
+                let inner_ty = cx.ty_ident(sp, cx.ident_of(kind));
+                let type_expr = type_expr(cx, sp, inner_ty.clone(), true).unwrap();
+                let expr = quote_expr!(cx, (self as $inner_ty).compile(&func));
+                let item = cx.item(sp, name, vec![], Item_::ItemImpl(
+                    Unsafety::Normal,
+                    ImplPolarity::Positive,
+                    Generics {
+                        lifetimes: vec![ LifetimeDef {lifetime: jit_life, bounds: vec![]}],
+                        ty_params: OwnedSlice::empty(),
+                        where_clause: WhereClause {
+                            id: DUMMY_NODE_ID,
+                            predicates: vec![]
+                        }
+                    },
+                    Some(cx.trait_ref(jit_compile)),
+                    cx.ty_ident(sp, name),
+                    vec![
+                        P(ImplItem {
+                            attrs: vec![],
+                            id: DUMMY_NODE_ID,
+                            span: sp,
+                            ident: cx.ident_of("get_type"),
+                            vis: Visibility::Inherited,
+                            node: ImplItem_::MethodImplItem(
+                                MethodSig {
+                                    unsafety: Unsafety::Normal,
+                                    abi: Abi::Rust,
+                                    explicit_self: respan(sp, ExplicitSelf_::SelfStatic),
+                                    decl: cx.fn_decl(vec![], cx.ty_path(jit_cow_type)),
+                                    generics: empty_generics(),
+                                },
+                                cx.block_expr(type_expr))
+                        }),
+                        P(ImplItem {
+                            attrs: vec![],
+                            id: DUMMY_NODE_ID,
+                            span: sp,
+                            ident: cx.ident_of("compile"),
+                            vis: Visibility::Inherited,
+                            node: ImplItem_::MethodImplItem(
+                                MethodSig {
+                                    unsafety: Unsafety::Normal,
+                                    abi: Abi::Rust,
+                                    explicit_self: respan(
+                                        sp,
+                                        ExplicitSelf_::SelfValue(cx.ident_of("b"))),
+                                    decl: cx.fn_decl(
+                                        vec![
+                                            Arg::new_self(sp, Mutability::MutImmutable,
+                                                          cx.ident_of("self")),
+                                            cx.arg(sp, func, cx.ty_rptr(sp, cx.ty_path(jit_func),
+                                                                        None, Mutability::MutImmutable))],
+                                        jit_value),
+                                    generics: empty_generics(),
+                                },
+                                cx.block_expr(expr)
+                            )
+                        })
+                    ]
+                ));
+                println!("{}", item.to_source());
+                push(item);
+            } else {
+                cx.span_err(sp, BAD_ITEM)
             }
-            let ret = match dec.output {
-                FunctionRetTy::NoReturn(_) => {
-                    quote_expr!(cx, jit::typecs::get_void_ptr())
-                },
-                FunctionRetTy::Return(ref ty) => {
-                    if let Some(ex) = type_expr(cx, sp, ty.clone()) {
-                        ex
-                    } else {
-                        return;
-                    }
-                },
-                FunctionRetTy::DefaultReturn(sp) => {
-                    cx.span_err(sp, BAD_RETURN);
-                    return;
-                }
-            };
-            let mut should_ret = false;
-            let args = dec.inputs.iter().map(|arg| {
-                if let Some(ex) = type_expr(cx, sp, arg.ty.clone()) {
-                    ex
-                } else {
-                    should_ret = true;
-                    cx.expr_int(sp, 32)
-                }
-            }).collect::<Vec<_>>();
-            if should_ret {
-                return;
-            }
-            let args = cx.expr_vec(sp, args);
-            let sig = quote_expr!(cx, jit::Type::new_signature(jit::Abi::CDecl, $ret, &mut $args));
-            let mut block = vec![];
-            for (index, arg) in dec.inputs.iter().enumerate() {
-                let index = cx.expr_int(sp, index as isize);
-                if let Pat_::PatIdent(BindingMode::BindByValue(_), ident, _) = arg.pat.node {
-                    let name = ident.node;
-                    block.push(quote_stmt!(cx, let $name = func[$index]).unwrap())
-                }
-            }
-            let block = cx.block(sp, block, None);
-            let block = cx.block_expr(quote_expr!(cx, ctx.build_func(*$sig, |func| $block)));
-            let args = vec![
-                cx.arg(sp, cx.ident_of("ctx"), quote_ty!(cx, &jit::Context))
-            ];
-            let item = cx.item_fn(sp, cx.ident_of(&*format!("jit_{:?}", name)), args, quote_ty!(cx, jit::CompiledFunction), block);
-            println!("{}", item.to_source());
-            push(item);
         },
         Item_::ItemStruct(ref def, _) => {
-            if !is_packed {
+            if !matches!(repr, Some("packed") | Some("c") | Some("C")) {
                 cx.span_err(sp, BAD_STRUCT);
                 return;
             }
@@ -168,14 +188,14 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
             let mut names = Some(Vec::with_capacity(fields.len()));
             let mut compiler = Vec::with_capacity(def.fields.len() + 1);
             let self_ty = cx.ty_ident(sp, name);
-            let self_type = if let Some(expr) = type_expr(cx, sp, self_ty) {
+            let self_type = if let Some(expr) = type_expr(cx, sp, self_ty, false) {
                 expr
             } else {
                 return
             };
             compiler.push(cx.stmt_let(sp, false, value, cx.expr_call(
                 sp,
-                cx.expr_path(jit_value_new),
+                cx.expr_path(jit_val_new),
                 vec![
                     cx.expr_ident(sp, func),
                     self_type
@@ -186,7 +206,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                 compiler.push(cx.stmt_let(sp, true, offset, cx.expr_lit(sp, Lit_::LitInt(0, lit_usize))));
             }
             for (index, field) in def.fields.iter().enumerate() {
-                if let Some(expr) = type_expr(cx, sp, field.node.ty.clone()) {
+                if let Some(expr) = type_expr(cx, sp, field.node.ty.clone(), false) {
                     fields.push(expr);
                     let has_name = field.node.ident().is_some();
                     if has_name && names.is_some() {
@@ -267,7 +287,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                                                       cx.ident_of("self")),
                                         cx.arg(sp, func, cx.ty_rptr(sp, cx.ty_path(jit_func),
                                                                     None, Mutability::MutImmutable))],
-                                    cx.ty_path(jit_value)),
+                                    jit_value),
                                 generics: empty_generics(),
                             },
                             cx.block(sp, compiler, Some(cx.expr_ident(sp, value))))

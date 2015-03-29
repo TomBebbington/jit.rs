@@ -1,4 +1,4 @@
-#![feature(test, plugin)]
+#![feature(custom_attribute, convert, test, plugin)]
 #![plugin(jit_macros)]
 #[no_link] #[macro_use]
 extern crate jit_macros;
@@ -54,9 +54,15 @@ test_compile!(u16, test_compile_u16, get_ushort, UShort);
 test_compile!(i8, test_compile_i8, get_sbyte, SByte);
 test_compile!(u8, test_compile_u8, get_ubyte,  UByte);
 #[repr(i8)]
-#[derive(Compile)]
+#[jit]
+#[derive(Copy, Debug, PartialEq, Eq)]
 enum Kind {
     Int,
     Bool
+}
+impl Default for Kind {
+    fn default() -> Kind {
+        Kind::Bool
+    }
 }
 test_compile_adv!(Kind, test_compile_repr_enum, SByte);

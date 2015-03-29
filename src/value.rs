@@ -5,11 +5,12 @@ use util::from_ptr;
 use std::marker::PhantomData;
 use std::fmt;
 use std::ops::*;
-/// Vals form the backbone of the storage system in `libjit`
+/// Vals form the backbone of the storage system in `LibJIT`
 ///
 /// Every value in the system, be it a constant, a local variable, or a
 /// temporary result, is represented by an object of type `Val`. The JIT then
-/// allocates registers or memory locations to the values as appropriate.
+/// allocates registers or memory locations to the values as appropriate. This is
+/// why `Val` is always behind a reference
 pub struct Val(PhantomData<[()]>);
 native_ref!(&Val = jit_value_t);
 impl fmt::Debug for Val {

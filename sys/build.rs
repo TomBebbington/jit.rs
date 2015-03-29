@@ -36,9 +36,11 @@ fn main() {
 	if cfg!(windows) && !Path::new(MINGW).exists() {
 		panic!("{}", INSTALL_COMPILER_MSG);
 	} else if pkg_config::find_library("jit").is_ok() {
+		println!("Copy of LibJIT found on system - no need to build");
 		return;
 	}
 	let out_dir = env::var("OUT_DIR").ok().expect(USE_CARGO_MSG);
+	let num_jobs = env::var("NUM_JOBS").ok().expect(USE_CARGO_MSG);
 	let out_dir = Path::new(&*out_dir);
 	let submod_path = Path::new("libjit");
 	let final_lib_dir = submod_path.join("jit/.libs");
@@ -50,15 +52,15 @@ fn main() {
 		}
 		run_nice(parse("sh auto_gen.sh").current_dir(submod_path), INSTALL_AUTOTOOLS_MSG);
 		run_nice(parse("sh configure --enable-static --disable-shared CC=clang CFLAGS=-fPIC").current_dir(submod_path), INSTALL_COMPILER_MSG);
-		run(Command::new("make").current_dir(submod_path));
+		run(Command::new("make").arg(&format!("j{}", num_jobs)).current_dir(submod_path));
 	}
 	let from = final_lib_dir.join(FINAL_LIB);
 	let to = out_dir.join(FINAL_LIB);
-    println!("{:?} -> {:?}", from, to);
 	if let Err(error) = fs::copy(&from, &to) {
 		panic!("Failed to copy library from {:?} to {:?} due to {}", from, to, error)
 	}
-    println!("cargo:rustc-flags=-l jit:static -L {}", out_dir.display());
+	println!("cargo:rustc-link-lib=jit");
+	println!("cargo:rustc-link-search=native={:?}", out_dir);
 }
 fn run_nice(cmd: &mut Command, text: &str) {
 	if !cmd.status().unwrap().success() {
