@@ -36,7 +36,7 @@ impl<'a> Loop<'a> {
     }
 }
 
-fn count<'a, I>(func: &UncompiledFunction<'a>, code: &mut Peekable<I>, curr:char) -> Value<'a> where I:Iterator<Item=char> {
+fn count<'a, I>(func: &UncompiledFunction<'a>, code: &mut Peekable<I>, curr:char) -> &'a Val where I:Iterator<Item=char> {
     let mut amount = 1;
     while code.peek() == Some(&curr) {
         amount += 1;
@@ -46,17 +46,11 @@ fn count<'a, I>(func: &UncompiledFunction<'a>, code: &mut Peekable<I>, curr:char
 }
 
 fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
-    println!("Getting ubyte");
     let ubyte = typecs::get_ubyte();
-    println!("Getting fn(u8)");
     let putchar_sig = get::<fn(u8)>();
-    println!("Getting fn() -> u8");
     let readchar_sig = get::<fn() -> u8>();
-    println!("Getting first argument");
-    let data = func[0];
-    println!("initialising crrent loop");
+    let ref data = func[0];
     let mut current_loop = None;
-    println!("making peeky iter");
     let mut code = code.chars().peekable();
     while let Some(c) = code.next() {
         println!("Processing {}", c);

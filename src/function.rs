@@ -4,7 +4,7 @@ use compile::Compile;
 use label::Label;
 use types::Ty;
 use insn::Block;
-use value::Value;
+use value::Val;
 use util::{self, from_ptr, from_ptr_opt, from_ptr_oom};
 use libc::{
     c_char,
@@ -111,7 +111,7 @@ impl<'a> CompiledFunction<'a> {
 /// user calls `function.compile()` to convert it into its executable form.
 pub struct UncompiledFunction<'a> {
     _func: jit_function_t,
-    args: Vec<Value<'a>>,
+    marker: PhantomData<&'a ()>,
     owned: bool
 }
 impl<'a, 'b> From<&'a UncompiledFunction<'b>> for jit_function_t {
@@ -134,14 +134,10 @@ impl<'a> From<UncompiledFunction<'a>> for jit_function_t {
 }
 impl<'a> From<jit_function_t> for UncompiledFunction<'a> {
     fn from(ptr: jit_function_t) -> UncompiledFunction<'a> {
-        unsafe {
-            let sig = jit_function_get_signature(ptr);
-            let args = (0 .. jit_type_num_params(sig)).map(|i| from_ptr(jit_value_get_param(ptr, i))).collect::<Vec<_>>();
-            UncompiledFunction {
-                _func: ptr,
-                args: args,
-                owned: false
-            }
+        UncompiledFunction {
+            _func: ptr,
+            marker: PhantomData,
+            owned: false
         }
     }
 }
@@ -177,10 +173,15 @@ impl<'a> Drop for UncompiledFunction<'a> {
     }
 }
 impl<'a> Index<usize> for UncompiledFunction<'a> {
-    type Output = Value<'a>;
+    type Output = Val;
     /// Get the value that corresponds to a specified function parameter.
-    fn index(&self, param: usize) -> &Value<'a> {
-        &self.args[param]
+    fn index(&self, param: usize) -> &Val {
+        let ptr = unsafe { jit_value_get_param(self.into(), param as u32) };
+        if let Some(val) = from_ptr_opt(ptr) {
+            val
+        } else {
+            panic!("Function {:?} has no parameter {}", self, param)
+        }
     }
 }
 impl<'a> UncompiledFunction<'a> {
@@ -233,8 +234,8 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that converts the value to the type given
-    pub fn insn_convert(&self, v: Value<'a>,
-                            t:&Ty, overflow_check:bool) -> Value<'a> {
+    pub fn insn_convert(&self, v: &'a Val,
+                            t:&Ty, overflow_check:bool) -> &'a Val {
         unsafe {
             from_ptr(jit_insn_convert(
                 self.into(),
@@ -246,7 +247,7 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instructional representation of a Rust value
-    pub fn insn_of<T>(&self, val:T) -> Value<'a> where T:Compile<'a> {
+    pub fn insn_of<T>(&self, val:T) -> &'a Val where T:Compile<'a> {
         val.compile(self)
     }
     #[inline(always)]
@@ -259,14 +260,14 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Throw an exception from the function with the value given
-    pub fn insn_throw(&self, retval: Value<'a>) {
+    pub fn insn_throw(&self, retval: &'a Val) {
         unsafe {
             jit_insn_throw(self.into(), retval.into());
         }
     }
     #[inline(always)]
     /// Return from the function with the value given
-    pub fn insn_return(&self, retval: Value<'a>) {
+    pub fn insn_return(&self, retval: &'a Val) {
         unsafe {
             jit_insn_return(self.into(), retval.into());
         }
@@ -280,122 +281,122 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that multiplies the values
-    pub fn insn_mul(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_mul(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_mul)
     }
     #[inline(always)]
     /// Make an instruction that multiplies the values and throws upon overflow
-    pub fn insn_mul_ovf(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_mul_ovf(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_mul_ovf)
     }
     #[inline(always)]
     /// Make an instruction that adds the values
-    pub fn insn_add(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_add(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_add)
     }
     #[inline(always)]
     /// Make an instruction that adds the values and throws upon overflow
-    pub fn insn_add_ovf(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_add_ovf(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_add_ovf)
     }
     #[inline(always)]
     /// Make an instruction that subtracts the second value from the first
-    pub fn insn_sub(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_sub(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_sub)
     }
     #[inline(always)]
     /// Make an instruction that subtracts the second value from the first and throws upon overflow
-    pub fn insn_sub_ovf(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_sub_ovf(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_sub_ovf)
     }
     #[inline(always)]
     /// Make an instruction that divides the first number by the second
-    pub fn insn_div(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_div(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_div)
     }
     #[inline(always)]
     /// Make an instruction that finds the remainder when the first number is
     /// divided by the second
-    pub fn insn_rem(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_rem(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_rem)
     }
     #[inline(always)]
     /// Make an instruction that checks if the first value is lower than or
     /// equal to the second
-    pub fn insn_leq(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_leq(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_le)
     }
     #[inline(always)]
     /// Make an instruction that checks if the first value is greater than or
     /// equal to the second
-    pub fn insn_geq(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_geq(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_ge)
     }
     #[inline(always)]
     /// Make an instruction that checks if the first value is lower than the second
-    pub fn insn_lt(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_lt(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_lt)
     }
     #[inline(always)]
     /// Make an instruction that checks if the first value is greater than the second
-    pub fn insn_gt(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_gt(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_gt)
     }
     #[inline(always)]
     /// Make an instruction that checks if the values are equal
-    pub fn insn_eq(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_eq(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_eq)
     }
     #[inline(always)]
     /// Make an instruction that checks if the values are not equal
-    pub fn insn_neq(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_neq(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_ne)
     }
     #[inline(always)]
     /// Make an instruction that performs a bitwise and on the two values
-    pub fn insn_and(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_and(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_and)
     }
     #[inline(always)]
     /// Make an instruction that performs a bitwise or on the two values
-    pub fn insn_or(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_or(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_or)
     }
     #[inline(always)]
     /// Make an instruction that performs a bitwise xor on the two values
-    pub fn insn_xor(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_xor(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_xor)
     }
     #[inline(always)]
     /// Make an instruction that performs a bitwise not on the two values
-    pub fn insn_not(&self, value: Value<'a>) -> Value<'a> {
+    pub fn insn_not(&self, value: &'a Val) -> &'a Val {
         self.insn_unop(value, jit_insn_not)
     }
     #[inline(always)]
     /// Make an instruction that performs a left bitwise shift on the first
     /// value by the second value
-    pub fn insn_shl(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_shl(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_shl)
     }
     #[inline(always)]
     /// Make an instruction that performs a right bitwise shift on the first
     /// value by the second value
-    pub fn insn_shr(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_shr(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_shr)
     }
     /// Make an instruction that performs a right bitwise shift on the first
     /// value by the second value
-    pub fn insn_ushr(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_ushr(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_ushr)
     }
     #[inline(always)]
     /// Make an instruction that performs a bitwise negate on the value
-    pub fn insn_neg(&self, value: Value<'a>) -> Value<'a> {
+    pub fn insn_neg(&self, value: &'a Val) -> &'a Val {
         self.insn_unop(value, jit_insn_neg)
     }
     #[inline(always)]
     /// Make an instruction that duplicates the value given
-    pub fn insn_dup(&self, value: Value<'a>) -> Value<'a> {
+    pub fn insn_dup(&self, value: &'a Val) -> &'a Val {
         unsafe {
             let dup_value = jit_insn_load(self.into(), value.into());
             from_ptr(dup_value)
@@ -403,12 +404,12 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that loads a value from a src value
-    pub fn insn_load(&self, src: Value<'a>) -> Value<'a> {
+    pub fn insn_load(&self, src: &'a Val) -> &'a Val {
         self.insn_unop(src, jit_insn_load)
     }
     #[inline(always)]
     /// Make an instruction that loads a value from a src value
-    pub fn insn_load_relative(&self, src: Value<'a>, offset: usize, ty: &Ty) -> Value<'a> {
+    pub fn insn_load_relative(&self, src: &'a Val, offset: usize, ty: &Ty) -> &'a Val {
         unsafe {
             from_ptr(jit_insn_load_relative(
                 self.into(),
@@ -420,7 +421,7 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that stores a value at a destination value
-    pub fn insn_store(&self, dest: Value<'a>, src: Value<'a>) {
+    pub fn insn_store(&self, dest: &'a Val, src: &'a Val) {
         unsafe {
             jit_insn_store(self.into(), dest.into(), src.into());
         }
@@ -428,8 +429,8 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that stores a value a certain offset away from a
     /// destination value
-    pub fn insn_store_relative(&self, dest: Value<'a>, offset: usize,
-                               src: Value<'a>) {
+    pub fn insn_store_relative(&self, dest: &'a Val, offset: usize,
+                               src: &'a Val) {
         unsafe {
             jit_insn_store_relative(self.into(), dest.into(), offset as jit_nint, src.into());
         }
@@ -450,21 +451,21 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that branches to a certain label if the value is true
-    pub fn insn_branch_if(&self, value: Value<'a>, label: &mut Label<'a>) {
+    pub fn insn_branch_if(&self, value: &'a Val, label: &mut Label<'a>) {
         unsafe {
             jit_insn_branch_if(self.into(), value.into(), &mut **label);
         }
     }
     #[inline(always)]
     /// Make an instruction that branches to a certain label if the value is false
-    pub fn insn_branch_if_not(&self, value: Value<'a>, label: &mut Label<'a>) {
+    pub fn insn_branch_if_not(&self, value: &'a Val, label: &mut Label<'a>) {
         unsafe {
             jit_insn_branch_if_not(self.into(), value.into(), &mut **label);
         }
     }
     #[inline(always)]
     /// Make an instruction that branches to a label in the table
-    pub fn insn_jump_table(&self, value: Value<'a>, labels: &mut [Label<'a>]) {
+    pub fn insn_jump_table(&self, value: &'a Val, labels: &mut [Label<'a>]) {
         unsafe {
             let mut native_labels: Vec<_> = labels.iter()
                 .map(|label| **label).collect();
@@ -478,156 +479,156 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that gets the inverse cosine of the number given
-    pub fn insn_acos(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_acos(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_acos)
     }
     #[inline(always)]
     /// Make an instruction that gets the inverse sine of the number given
-    pub fn insn_asin(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_asin(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_asin)
     }
     #[inline(always)]
     /// Make an instruction that gets the inverse tangent of the number given
-    pub fn insn_atan(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_atan(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_atan)
     }
     #[inline(always)]
     /// Make an instruction that gets the inverse tangent of the numbers given
-    pub fn insn_atan2(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_atan2(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_atan2)
     }
     #[inline(always)]
     /// Make an instruction that finds the nearest integer above a number
-    pub fn insn_ceil(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_ceil(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_ceil)
     }
     #[inline(always)]
     /// Make an instruction that gets the consine of the number given
-    pub fn insn_cos(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_cos(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_cos)
     }
     #[inline(always)]
     /// Make an instruction that gets the hyperbolic consine of the number given
-    pub fn insn_cosh(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_cosh(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_cosh)
     }
     #[inline(always)]
     /// Make an instruction that gets the natural logarithm rased to the power
     /// of the number
-    pub fn insn_exp(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_exp(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_exp)
     }
     #[inline(always)]
     /// Make an instruction that finds the nearest integer below a number
-    pub fn insn_floor(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_floor(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_floor)
     }
     #[inline(always)]
     /// Make an instruction that gets the natural logarithm of the number
-    pub fn insn_log(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_log(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_log)
     }
     #[inline(always)]
     /// Make an instruction that gets the base 10 logarithm of the number
-    pub fn insn_log10(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_log10(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_log10)
     }
     #[inline(always)]
     /// Make an instruction the gets the result of raising the first value to
     /// the power of the second value
-    pub fn insn_pow(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_pow(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_pow)
     }
     #[inline(always)]
     /// Make an instruction the gets the result of rounding the value to the
     /// nearest integer
-    pub fn insn_rint(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_rint(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_rint)
     }
     #[inline(always)]
     /// Make an instruction the gets the result of rounding the value to the
     /// nearest integer
-    pub fn insn_round(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_round(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_round)
     }
     #[inline(always)]
     /// Make an instruction the gets the sine of the number
-    pub fn insn_sin(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_sin(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_sin)
     }
     #[inline(always)]
     /// Make an instruction the gets the hyperbolic sine of the number
-    pub fn insn_sinh(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_sinh(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_sinh)
     }
     #[inline(always)]
     /// Make an instruction the gets the square root of a number
-    pub fn insn_sqrt(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_sqrt(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_sqrt)
     }
     #[inline(always)]
     /// Make an instruction the gets the tangent of a number
-    pub fn insn_tan(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_tan(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_tan)
     }
     #[inline(always)]
     /// Make an instruction the gets the hyperbolic tangent of a number
-    pub fn insn_tanh(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_tanh(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_tanh)
     }
     #[inline(always)]
     /// Make an instruction that truncates the value
-    pub fn insn_trunc(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_trunc(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_trunc)
     }
     #[inline(always)]
     /// Make an instruction that checks if the number is NaN
-    pub fn insn_is_nan(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_is_nan(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_is_nan)
     }
     #[inline(always)]
     /// Make an instruction that checks if the number is finite
-    pub fn insn_is_finite(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_is_finite(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_is_finite)
     }
     #[inline(always)]
     /// Make an instruction that checks if the number is  infinite
-    pub fn insn_is_inf(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_is_inf(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_is_inf)
     }
     #[inline(always)]
     /// Make an instruction that gets the absolute value of a number
-    pub fn insn_abs(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_abs(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_abs)
     }
     #[inline(always)]
     /// Make an instruction that gets the smallest of two numbers
-    pub fn insn_min(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_min(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_min)
     }
     #[inline(always)]
     /// Make an instruction that gets the biggest of two numbers
-    pub fn insn_max(&self, v1: Value<'a>, v2: Value<'a>) -> Value<'a> {
+    pub fn insn_max(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_max)
     }
     #[inline(always)]
     /// Make an instruction that gets the sign of a number
-    pub fn insn_sign(&self, v: Value<'a>) -> Value<'a>{
+    pub fn insn_sign(&self, v: &'a Val) -> &'a Val{
         self.insn_unop(v, jit_insn_sign)
     }
 
     /// Call the function, which may or may not be translated yet
     pub fn insn_call(&self, name:Option<&str>, func:&Func, sig:Option<&Ty>,
-        args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> {
+        args: &mut [&'a Val], flags: flags::CallFlags) -> &'a Val {
         unsafe {
-            let mut native_args:Vec<_> = args.iter().map(|arg| arg.into()).collect();
+            let mut native_args:&mut [jit_value_t] = mem::transmute(args);
             let c_name = name.map(|name| CString::new(name.as_bytes()).unwrap());
-            let sig = sig.map(|sig| sig.into()).unwrap_or(ptr::null_mut());
+            let sig = mem::transmute(sig);
             from_ptr(jit_insn_call(
                 self.into(),
                 c_name.map(|name| name.as_bytes().as_ptr() as *mut c_char).unwrap_or(ptr::null_mut()),
                 func.into(), sig, native_args.as_mut_ptr(),
-                args.len() as c_uint,
+                native_args.len() as c_uint,
                 flags.bits()
             ))
         }
@@ -635,21 +636,27 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that calls a function that has the signature given
     /// with some arguments through a pointer to the fucntion
-    pub fn insn_call_indirect(&self, func:Value<'a>, signature: &Ty,
-                               args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> {
+    pub fn insn_call_indirect(&self, func:&'a Val, signature: &Ty,
+                               args: &mut [&'a Val], flags: flags::CallFlags) -> &'a Val {
         unsafe {
-            let mut native_args:Vec<_> = args.iter().map(|arg| arg.into()).collect();
-            from_ptr(jit_insn_call_indirect(self.into(), func.into(), signature.into(), native_args.as_mut_ptr(), args.len() as c_uint, flags.bits()))
+            let mut native_args: &mut [jit_value_t] = mem::transmute(args);
+            from_ptr(jit_insn_call_indirect(
+                self.into(),
+                func.into(),
+                signature.into(),
+                native_args.as_mut_ptr(),
+                native_args.len() as c_uint,
+                flags.bits()
+            ))
         }
     }
     /// Make an instruction that calls a native function that has the signature
     /// given with some arguments
     fn insn_call_native(&self, name: Option<&str>,
                         native_func: *mut c_void, signature: &Ty,
-                        args: &mut [Value<'a>], flags: flags::CallFlags) -> Value<'a> {
+                        args: &mut [&'a Val], flags: flags::CallFlags) -> &'a Val {
         unsafe {
-            let mut native_args:Vec<_> = args.iter()
-                .map(|arg| arg.into()).collect();
+            let mut native_args:&mut [jit_value_t] = mem::transmute(args);
             let c_name = name.map(|name| CString::new(name.as_bytes()).unwrap());
             from_ptr(jit_insn_call_native(
                 self.into(),
@@ -657,7 +664,7 @@ impl<'a> UncompiledFunction<'a> {
                 native_func,
                 signature.into(),
                 native_args.as_mut_ptr(),
-                args.len() as c_uint,
+                native_args.len() as c_uint,
                 flags.bits()
             ))
         }
@@ -668,7 +675,7 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_call_native0<R>(&self, name: Option<&str>,
                             native_func: extern fn() -> R,
                             signature: &Ty,
-                            flags: flags::CallFlags) -> Value<'a> {
+                            flags: flags::CallFlags) -> &'a Val {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, &mut [], flags)
     }
@@ -678,8 +685,8 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_call_native1<A,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A) -> R,
                                 signature: &Ty,
-                                mut args: [Value<'a>; 1],
-                                flags: flags::CallFlags) -> Value<'a> {
+                                mut args: [&'a Val; 1],
+                                flags: flags::CallFlags) -> &'a Val {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, &mut args, flags)
     }
@@ -689,8 +696,8 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_call_native2<A,B,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A, B) -> R,
                                 signature: &Ty,
-                                mut args: [Value<'a>; 2],
-                                flags: flags::CallFlags) -> Value<'a> {
+                                mut args: [&'a Val; 2],
+                                flags: flags::CallFlags) -> &'a Val {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, &mut args, flags)
     }
@@ -700,8 +707,8 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_call_native3<A,B,C,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A, B, C) -> R,
                                 signature: &Ty,
-                                mut args: [Value<'a>; 3],
-                                flags: flags::CallFlags) -> Value<'a> {
+                                mut args: [&'a Val; 3],
+                                flags: flags::CallFlags) -> &'a Val {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, &mut args, flags)
     }
@@ -711,73 +718,73 @@ impl<'a> UncompiledFunction<'a> {
     pub fn insn_call_native4<A,B,C,D,R>(&self, name: Option<&str>,
                                 native_func: extern fn(A, B, C, D) -> R,
                                 signature: &Ty,
-                                mut args: [Value<'a>; 4],
-                                flags: flags::CallFlags) -> Value<'a> {
+                                mut args: [&'a Val; 4],
+                                flags: flags::CallFlags) -> &'a Val {
         let func_ptr = unsafe { mem::transmute(native_func) };
         self.insn_call_native(name, func_ptr, signature, &mut args
             , flags)
     }
     #[inline(always)]
     /// Make an instruction that copies memory from a source address to a destination address
-    pub fn insn_memcpy(&self, dest: Value<'a>, source: Value<'a>, size: Value<'a>) -> bool {
+    pub fn insn_memcpy(&self, dest: &'a Val, source: &'a Val, size: &'a Val) -> bool {
         unsafe {
             jit_insn_memcpy(self.into(), dest.into(), source.into(), size.into()) != 0
         }
     }
     #[inline(always)]
     /// Make an instruction that moves memory from a source address to a destination address
-    pub fn insn_memmove(&self, dest: Value<'a>, source: Value<'a>, size: Value<'a>) -> bool {
+    pub fn insn_memmove(&self, dest: &'a Val, source: &'a Val, size: &'a Val) -> bool {
         unsafe {
             jit_insn_memmove(self.into(), dest.into(), source.into(), size.into()) != 0
         }
     }
     #[inline(always)]
     /// Make an instruction that sets memory at the destination address
-    pub fn insn_memset(&self, dest: Value<'a>, source: Value<'a>, size: Value<'a>) -> bool {
+    pub fn insn_memset(&self, dest: &'a Val, source: &'a Val, size: &'a Val) -> bool {
         unsafe {
             jit_insn_memset(self.into(), dest.into(), source.into(), size.into()) != 0
         }
     }
     #[inline(always)]
     /// Make an instruction that allocates some space
-    pub fn insn_alloca(&self, size: Value<'a>) -> Value<'a> {
+    pub fn insn_alloca(&self, size: &'a Val) -> &'a Val {
         unsafe {
             from_ptr(jit_insn_alloca(self.into(), size.into()))
         }
     }
     #[inline(always)]
     /// Make an instruction that gets the address of a value
-    pub fn insn_address_of(&self, value: Value<'a>) -> Value<'a> {
+    pub fn insn_address_of(&self, value: &'a Val) -> &'a Val {
         unsafe {
             from_ptr(jit_insn_address_of(self.into(), value.into()))
         }
     }
     #[inline(always)]
     fn insn_binop(&self,
-                    v1: Value<'a>, v2: Value<'a>,
+                    v1: &'a Val, v2: &'a Val,
                     f: unsafe extern "C" fn(
                         jit_function_t,
                         jit_value_t,
                         jit_value_t) -> jit_value_t)
-                    -> Value<'a> {
+                    -> &'a Val {
         unsafe {
             from_ptr(f(self.into(), v1.into(), v2.into()))
         }
     }
     #[inline(always)]
     fn insn_unop(&self,
-                    value: Value<'a>,
+                    value: &'a Val,
                     f: unsafe extern "C" fn(
                         jit_function_t,
                         jit_value_t) -> jit_value_t)
-                    -> Value<'a> {
+                    -> &'a Val {
         unsafe {
             from_ptr(f(self.into(), value.into()))
         }
     }
     #[inline(always)]
     /// Make instructions to run the block if the condition is met
-    pub fn insn_if<B>(&self, cond: Value<'a>, block: B) where B:FnOnce() {
+    pub fn insn_if<B>(&self, cond: &'a Val, block: B) where B:FnOnce() {
         let mut after = Label::new(self);
         self.insn_branch_if_not(cond, &mut after);
         block();
@@ -785,7 +792,7 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make instructions to run the block if the condition is not met
-    pub fn insn_if_not<B>(&self, cond: Value<'a>, block: B) where B:FnOnce() {
+    pub fn insn_if_not<B>(&self, cond: &'a Val, block: B) where B:FnOnce() {
         let mut after = Label::new(self);
         self.insn_branch_if(cond, &mut after);
         block();
@@ -801,7 +808,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make instructions to run the block and continue running it so long
     /// as the condition is met
     pub fn insn_loop_while<C, B>(&self, cond: C, block: B)
-        where C:FnOnce() -> Value<'a>, B:FnOnce()  {
+        where C:FnOnce() -> &'a Val, B:FnOnce()  {
         let mut start = Label::new(self);
         self.insn_label(&mut start);
         block();
@@ -810,7 +817,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Make instructions to run the block and continue running it so long
     /// as the condition is met
     pub fn insn_while<C, B>(&self, cond: C, block: B)
-        where C:FnOnce() -> Value<'a>, B:FnOnce() {
+        where C:FnOnce() -> &'a Val, B:FnOnce() {
         let mut start = Label::new(self);
         self.insn_label(&mut start);
         let mut after = Label::new(self);

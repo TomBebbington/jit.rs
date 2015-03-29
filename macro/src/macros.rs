@@ -87,8 +87,8 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
     let jit_compile = cx.path_all(sp, false, vec![jit, cx.ident_of("Compile")], vec![jit_life], vec![], vec![]);
     let jit_cow_type = cx.path_all(sp, false, vec![jit, cx.ident_of("CowType")], vec![cx.lifetime(sp, token::intern("'static"))], vec![], vec![]);
     let jit_func = cx.path_all(sp, false, vec![jit, cx.ident_of("UncompiledFunction")], vec![jit_life], vec![], vec![]);
-    let jit_value = cx.path_all(sp, false, vec![jit, cx.ident_of("Value")], vec![jit_life], vec![], vec![]);
-    let jit_value_new = cx.path(sp, vec![jit, cx.ident_of("Value"), cx.ident_of("new")]);
+    let jit_value = cx.path_all(sp, false, vec![jit, cx.ident_of("Val")], vec![jit_life], vec![], vec![]);
+    let jit_value_new = cx.path(sp, vec![jit, cx.ident_of("Val"), cx.ident_of("new")]);
     let new_struct = cx.path(sp, vec![jit, cx.ident_of("Type"), cx.ident_of("new_struct")]);
     let func = cx.ident_of("func");
     let value = cx.ident_of("value");
@@ -325,13 +325,13 @@ macro_rules! jit_union(
 macro_rules! jit_fn(
     ($($arg:ty),* -> $ret:ty) => ({
         use std::default::Default;
-        Type::new_signature(Default::default(), get::<$ret>().get(), &mut [
+        Type::new_signature(Default::default(), &get::<$ret>(), &mut [
             $(&get::<$arg>()),*
         ])
     });
     (raw $($arg:expr),* -> $ret:expr) => ({
         use std::default::Default;
-        Type::new_signature(Default::default(), $ret, &mut [
+        Type::new_signature(Default::default(), &$ret, &mut [
             $(&$arg),*
         ])
     });
@@ -411,7 +411,7 @@ macro_rules! jit_func(
             let mut i = 0;
             $(let $arg = {
                 i += 1;
-                $func[i - 1]
+                &$func[i - 1]
             };)*
             $value
         })
@@ -429,7 +429,7 @@ macro_rules! jit_func(
             let mut i = 0;
             $(let $arg = {
                 i += 1;
-                $func[i - 1]
+                &$func[i - 1]
             };)*
             $value
         }).with::<($($arg_ty),*), $ret, _>(|$comp_func|

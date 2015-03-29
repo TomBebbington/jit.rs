@@ -67,7 +67,7 @@ pub use insn::{Block, Instruction, InstructionIter};
 pub use types::kind::TypeKind;
 pub use types::{kind, get, Type, Field, Fields, Params, CowType, StaticType, Ty, TaggedType};
 pub use types::consts as typecs;
-pub use value::Value;
+pub use value::Val;
 
 
 extern fn free_data<T>(data: *mut c_void) {

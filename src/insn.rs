@@ -2,7 +2,7 @@ use raw::*;
 use function::Func;
 use types::Ty;
 use util::{from_ptr, from_ptr_opt};
-use value::Value;
+use value::Val;
 use std::{ffi, fmt, mem, str};
 use std::marker::PhantomData;
 
@@ -22,7 +22,7 @@ impl<'a> Instruction<'a> {
 		}
 	}
 	/// Get the destination value
-	pub fn get_dest(self) -> Option<Value<'a>> {
+	pub fn get_dest(self) -> Option<&'a Val> {
 		unsafe {
 			from_ptr_opt(jit_insn_get_dest(self._insn))
 		}
@@ -34,13 +34,13 @@ impl<'a> Instruction<'a> {
 		}
 	}
 	/// Get the left value
-	pub fn get_value1(self) -> Option<Value<'a>> {
+	pub fn get_value1(self) -> Option<&'a Val> {
 		unsafe {
 			from_ptr_opt(jit_insn_get_value1(self._insn))
 		}
 	}
 	/// Get the right value
-	pub fn get_value2(self) -> Option<Value<'a>> {
+	pub fn get_value2(self) -> Option<&'a Val> {
 		unsafe {
 			from_ptr_opt(jit_insn_get_value2(self._insn))
 		}

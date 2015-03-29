@@ -2,7 +2,7 @@ macro_rules! compile_prim(
     ($ty:ty, $type_name:ident, $make_constant:ident) => (
 impl<'a> Compile<'a> for $ty {
     #[inline(always)]
-    fn compile(self, func:&UncompiledFunction<'a>) -> Value<'a> {
+    fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
         use types::consts;
         unsafe {
             from_ptr($make_constant(func.into(), consts::$type_name.into(), self) )
@@ -18,7 +18,7 @@ impl<'a> Compile<'a> for $ty {
 #[allow(trivial_numeric_casts)]
 impl<'a> Compile<'a> for $ty {
     #[inline(always)]
-    fn compile(self, func:&UncompiledFunction<'a>) -> Value<'a> {
+    fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
         use types::consts;
         unsafe {
             from_ptr($make_constant(func.into(), consts::$type_name().into(), self as $cast) )
@@ -42,7 +42,7 @@ macro_rules! compile_func(
     (fn($($arg:ident),*) -> $ret:ty, $sig:ty, $ext_sig:ty) => (
         impl<'a, $($arg:Compile<'a>,)* R:Compile<'a>> Compile<'a> for $sig {
             #[inline(always)]
-            fn compile(self, func:&UncompiledFunction<'a>) -> Value<'a> {
+            fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
                 compile_ptr!(func, self)
             }
             #[inline(always)]
@@ -52,7 +52,7 @@ macro_rules! compile_func(
         }
         impl<'a, $($arg:Compile<'a>,)* R:Compile<'a>> Compile<'a> for $ext_sig {
             #[inline(always)]
-            fn compile(self, func:&UncompiledFunction<'a>) -> Value<'a> {
+            fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
                 compile_ptr!(func, self)
             }
             #[inline(always)]
@@ -66,10 +66,10 @@ macro_rules! compile_tuple(
     ($($ty:ident),+ => $($name:ident),+) => (
         impl<'a, $($ty),+> Compile<'a> for ($($ty),+) where $($ty:Compile<'a>),+ {
             #[inline(always)]
-            fn compile(self, func:&UncompiledFunction<'a>) -> Value<'a> {
+            fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
                 let ($($name),+) = self;
                 let ty = get::<($($ty),+)>();
-                let tuple = Value::new(func, &ty);
+                let tuple = Val::new(func, &ty);
                 let ($($name),+) = ($(func.insn_of($name)),+);
                 let mut fields = ty.fields();
                 $(func.insn_store_relative(tuple, fields.next().unwrap().get_offset(), $name);)+

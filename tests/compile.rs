@@ -7,12 +7,30 @@ extern crate test;
 use jit::*;
 use std::default::Default;
 macro_rules! test_compile(
-    ($ty:ty, $test_name:ident, $id:ident, $kind:expr) => (
+    ($ty:ty, $test_name:ident, $id:ident, $kind:ident) => (
         #[test]
         fn $test_name() {
             let default_value:$ty = Default::default();
             let ty = get::<$ty>();
+            assert!(ty.get_kind().contains(kind::$kind));
             assert_eq!(typecs::$id(), &*ty);
+            let mut ctx = Context::<()>::new();
+            jit_func!(ctx, func, gen_value() -> $ty, {
+                let val = func.insn_of(default_value);
+                func.insn_return(val);
+            }, |func| {
+                assert_eq!(func(()), default_value);
+            });
+        }
+    );
+);
+macro_rules! test_compile_adv(
+    ($ty:ty, $test_name:ident, $kind:ident) => (
+        #[test]
+        fn $test_name() {
+            let default_value:$ty = Default::default();
+            let ty = get::<$ty>();
+            assert!(ty.get_kind().contains(kind::$kind));
             let mut ctx = Context::<()>::new();
             jit_func!(ctx, func, gen_value() -> $ty, {
                 let val = func.insn_of(default_value);
@@ -35,3 +53,10 @@ test_compile!(i16, test_compile_i16, get_short, Short);
 test_compile!(u16, test_compile_u16, get_ushort, UShort);
 test_compile!(i8, test_compile_i8, get_sbyte, SByte);
 test_compile!(u8, test_compile_u8, get_ubyte,  UByte);
+#[repr(i8)]
+#[derive(Compile)]
+enum Kind {
+    Int,
+    Bool
+}
+test_compile_adv!(Kind, test_compile_repr_enum, SByte);

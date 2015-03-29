@@ -5,7 +5,7 @@ use types::get;
 use libc::c_long;
 use types::{consts, CowType, Type};
 use util::from_ptr;
-use value::Value;
+use value::Val;
 use std::ffi::CStr;
 use std::mem;
 /// A type that can be compiled into a LibJIT representation
@@ -13,14 +13,14 @@ use std::mem;
 /// The lifetime is the context's lifetime
 pub trait Compile<'a> {
     /// Get a JIT representation of this value
-    fn compile(self, func:&UncompiledFunction<'a>) -> Value<'a>;
+    fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val;
     /// Get the type descriptor that represents this type
     fn get_type() -> CowType<'a>;
 }
 impl<'a> Compile<'a> for () {
     #[inline(always)]
-    fn compile(self, func:&UncompiledFunction<'a>) -> Value<'a> {
-        Value::new(func, consts::get_void())
+    fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
+        Val::new(func, consts::get_void())
     }
     #[inline(always)]
     fn get_type() -> CowType<'a> {
@@ -45,7 +45,7 @@ compile_prims!{
 }
 impl<'a, T> Compile<'a> for &'a T where T:Compile<'a>+Sized {
     #[inline(always)]
-    fn compile(self, func:&UncompiledFunction<'a>) -> Value<'a> {
+    fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
         unsafe {
             let ty = <&'a T as Compile<'a>>::get_type();
             from_ptr(jit_value_create_nint_constant(
@@ -63,13 +63,13 @@ impl<'a, T> Compile<'a> for &'a T where T:Compile<'a>+Sized {
 
 impl<'a> Compile<'a> for &'a str {
     #[inline(always)]
-    fn compile(self, func:&UncompiledFunction<'a>) -> Value<'a> {
+    fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
         unsafe {
             use std::raw::Repr;
             use std::mem::transmute as cast;
             let slice = self.repr();
             let ty = <Self as Compile<'a>>::get_type();
-            let structure = Value::new(func, &ty);
+            let structure = Val::new(func, &ty);
             let offset_data = cast::<_, usize>(&slice.data) - cast(&slice);
             let offset_len = cast::<_, usize>(&slice.len) - cast(&slice);
             func.insn_store_relative(structure, offset_data, func.insn_of(mem::transmute::<_, isize>(slice.data)));
@@ -89,7 +89,7 @@ impl<'a> Compile<'a> for &'a str {
 }
 impl<'a> Compile<'a> for &'a CStr {
     #[inline(always)]
-    fn compile(self, func:&UncompiledFunction<'a>) -> Value<'a> {
+    fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
         let bytes = self.to_bytes();
         unsafe { mem::transmute::<_, isize>(bytes.as_ptr()) }.compile(func)
     }
