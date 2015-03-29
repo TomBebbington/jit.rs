@@ -100,7 +100,6 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
     let value = cx.ident_of("value");
     let offset = cx.ident_of("offset");
     let mut repr = None;
-    push(cx.item_use_simple(sp, Visibility::Inherited, cx.path(sp, vec![cx.ident_of("std"), cx.ident_of("convert"), cx.ident_of("Into")])));
     for attr in item.attrs.iter() {
         if let MetaItem_::MetaList(ref name, ref items) = attr.node.value.node {
             if &**name == "repr" && items.len() == 1 {
@@ -173,13 +172,12 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                         })
                     ]
                 ));
-                println!("{}", item.to_source());
                 push(item);
             } else {
                 cx.span_err(sp, BAD_ITEM)
             }
         },
-        Item_::ItemStruct(ref def, _) => {
+        Item_::ItemStruct(ref def, ref gen) => {
             if !matches!(repr, Some("packed") | Some("c") | Some("C")) {
                 cx.span_err(sp, BAD_STRUCT);
                 return;
@@ -187,8 +185,9 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
             let mut fields = Vec::with_capacity(def.fields.len());
             let mut names = Some(Vec::with_capacity(fields.len()));
             let mut compiler = Vec::with_capacity(def.fields.len() + 1);
-            let self_ty = cx.ty_ident(sp, name);
-            let self_type = if let Some(expr) = type_expr(cx, sp, self_ty, false) {
+            let types = gen.ty_params.iter().map(|param| cx.ty_ident(sp, param.ident)).collect();
+            let self_ty = cx.ty_path(cx.path_all(sp, false, vec![name], vec![], types, vec![]));
+            let self_type = if let Some(expr) = type_expr(cx, sp, self_ty.clone(), false) {
                 expr
             } else {
                 return
@@ -234,23 +233,40 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
             let fields = cx.expr_mut_addr_of(sp, cx.expr_vec(sp, fields));
             let mut type_expr = cx.expr_call(sp, cx.expr_path(new_struct), vec![fields]);
             if let Some(names) = names {
-                let names = cx.expr_addr_of(sp, cx.expr_vec(sp, names));
-                cx.expr_method_call(sp, type_expr.clone(), cx.ident_of("set_names"), vec![names]);
+                let names = cx.expr_vec(sp, names);
+                type_expr = quote_expr!(cx, {
+                    let mut ty: Type = $type_expr;
+                    ty.set_names(&$names);
+                    ty.into()
+                })
             }
-            type_expr = quote_expr!(cx, $type_expr.into());
             let item = cx.item(sp, name, vec![], Item_::ItemImpl(
                 Unsafety::Normal,
                 ImplPolarity::Positive,
                 Generics {
                     lifetimes: vec![ LifetimeDef {lifetime: jit_life, bounds: vec![]}],
-                    ty_params: OwnedSlice::empty(),
+                    ty_params: gen.ty_params.clone(),
                     where_clause: WhereClause {
                         id: DUMMY_NODE_ID,
-                        predicates: vec![]
+                        predicates: gen.ty_params.iter()
+                            .map(|param| WherePredicate::BoundPredicate(
+                                WhereBoundPredicate {
+                                    span: sp,
+                                    bound_lifetimes: vec![],
+                                    bounded_ty: cx.ty_ident(sp, param.ident),
+                                    bounds: OwnedSlice::from_vec(vec![
+                                        TyParamBound::TraitTyParamBound(
+                                            cx.poly_trait_ref(sp, jit_compile.clone()),
+                                            TraitBoundModifier::None
+                                        ),
+                                    ])
+                                }
+                            ))
+                            .collect()
                     }
                 },
                 Some(cx.trait_ref(jit_compile)),
-                cx.ty_ident(sp, name),
+                self_ty,
                 vec![
                     P(ImplItem {
                         attrs: vec![],
@@ -266,7 +282,8 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                                 decl: cx.fn_decl(vec![], cx.ty_path(jit_cow_type)),
                                 generics: empty_generics(),
                             },
-                            cx.block_expr(type_expr))
+                            cx.block_expr(type_expr)
+                        )
                     }),
                     P(ImplItem {
                         attrs: vec![],
