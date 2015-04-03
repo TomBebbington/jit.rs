@@ -23,15 +23,6 @@ static INSTALL_COMPILER_MSG:&'static str = "Failed to configure the library for 
 #[cfg(not(windows))]
 static INSTALL_COMPILER_MSG:&'static str = "Failed to configure the library for your platform. Did you forget to install a C compiler?";
 
-fn parse(cmd: &str) -> Command {
-	let mut words = cmd.split(' ');
-	let mut command = Command::new(words.next().unwrap());
-	for arg in words {
-		command.arg(arg);
-	}
-	command
-}
-
 fn main() {
 	if cfg!(windows) && !Path::new(MINGW).exists() {
 		panic!("{}", INSTALL_COMPILER_MSG);
@@ -41,18 +32,46 @@ fn main() {
 	}
 	let out_dir = env::var("OUT_DIR").ok().expect(USE_CARGO_MSG);
 	let num_jobs = env::var("NUM_JOBS").ok().expect(USE_CARGO_MSG);
+	let target = env::var("TARGET").ok().expect(USE_CARGO_MSG);
 	let out_dir = Path::new(&*out_dir);
     let submod_path = Path::new(&env::var("CARGO_MANIFEST_DIR").ok().expect(USE_CARGO_MSG)).join("libjit");
 	let final_lib_dir = submod_path.join("jit/.libs");
 	if !final_lib_dir.join(FINAL_LIB).exists() {
-		run_wocare(&mut parse("git submodule init"));
-		run(&mut parse("git submodule update"));
+		Command::new("git")
+			.args(&["submodule", "init"])
+			.status().unwrap();
+		run(Command::new("git")
+			.args(&["submodule", "update"]),
+			None
+		);
 		if !submod_path.exists() {
-			run(Command::new("git").args(&["clone", "git://git.savannah.gnu.org/libjit.git", submod_path.to_str().unwrap()]))
+			run(Command::new("git")
+				.args(&["clone", "git://git.savannah.gnu.org/libjit.git", submod_path.to_str().unwrap()]),
+				None
+			)
 		}
-		run_nice(parse("sh auto_gen.sh").current_dir(&submod_path), INSTALL_AUTOTOOLS_MSG);
-		run_nice(parse("sh configure --enable-static --disable-shared CFLAGS=-fPIC").current_dir(&submod_path), INSTALL_COMPILER_MSG);
-		run(Command::new("make").arg(&format!("-j{}", num_jobs)).current_dir(submod_path));
+		run(
+			Command::new("sh")
+				.current_dir(&submod_path)
+				.arg("auto_gen.sh"),
+			Some(INSTALL_AUTOTOOLS_MSG)
+		);
+		run(
+			Command::new("sh")
+				.current_dir(&submod_path)
+				.env("CFLAGS", "-fPIC")
+				.args(&[
+					"configure", "--enable-static", "--disable-shared", &format!("--host={}", target)
+				]),
+			Some(INSTALL_COMPILER_MSG)
+		);
+		run(Command::new("make")
+			.arg(&format!("-j{}", num_jobs))
+			.current_dir(submod_path),
+			None
+		);
+	} else {
+		println!("LibJIT has already been built")
 	}
 	let from = final_lib_dir.join(FINAL_LIB);
 	let to = out_dir.join(FINAL_LIB);
@@ -62,16 +81,9 @@ fn main() {
 	println!("cargo:rustc-link-search=native={:?}", out_dir);
 	println!("cargo:rustc-link-lib=static=jit");
 }
-fn run_nice(cmd: &mut Command, text: &str) {
+fn run(cmd: &mut Command, text: Option<&str>) {
 	if !cmd.status().unwrap().success() {
-		panic!("{:?} failed - {}", cmd, text)
+		let text = text.map(|text| format!(" - {}", text)).unwrap_or(String::new());
+		panic!("{:?} failed{}", cmd, text)
 	}
-}
-fn run(cmd: &mut Command) {
-	if !cmd.status().unwrap().success() {
-		panic!("{:?} failed", cmd)
-	}
-}
-fn run_wocare(cmd: &mut Command) {
-	cmd.status().unwrap();
 }
