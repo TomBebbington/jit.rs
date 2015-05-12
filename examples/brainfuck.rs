@@ -86,7 +86,7 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
                     output.flush().unwrap()
                 }
                 let value = func.insn_load_relative(data, 0, ubyte);
-                func.insn_call_native1(Some("putchar"), putchar, &putchar_sig, [value], flags::NO_THROW);
+                func.insn_call_native1(Some("putchar"), putchar, &putchar_sig, [value], flags::CallFlags::NO_THROW);
             },
             ',' => {
                 extern fn readchar() -> u8 {
@@ -98,7 +98,7 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
                     }
                     buf[0]
                 }
-                let value = func.insn_call_native0(Some("readchar"), readchar, &readchar_sig, flags::NO_THROW);
+                let value = func.insn_call_native0(Some("readchar"), readchar, &readchar_sig, flags::CallFlags::NO_THROW);
                 func.insn_store_relative(data, 0, value);
             },
             '[' => {
