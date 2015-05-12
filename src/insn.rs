@@ -7,12 +7,12 @@ use std::{ffi, fmt, mem, str};
 use std::marker::PhantomData;
 
 /// Represents a single LibJIT instruction
+#[derive(Clone, Copy)]
 pub struct Instruction<'a> {
     _insn: jit_insn_t,
     marker: PhantomData<&'a ()>
 }
 native_ref!(contra Instruction, _insn: jit_insn_t);
-impl<'a> Copy for Instruction<'a> {}
 
 impl<'a> Instruction<'a> {
 	/// Get the opcode of the instruction
@@ -91,12 +91,12 @@ impl<'a> Iterator for InstructionIter<'a> {
 }
 
 /// Represents a single LibJIT block
+#[derive(Clone, Copy)]
 pub struct Block<'a> {
     _block: jit_block_t,
     marker: PhantomData<&'a ()>
 }
 native_ref!(contra Block, _block: jit_block_t);
-impl<'a> Copy for Block<'a> {}
 impl<'a> Block<'a> {
 	/// Get the function containing this block
 	pub fn get_function(self) -> &'a Func {

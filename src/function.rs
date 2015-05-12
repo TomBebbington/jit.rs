@@ -20,7 +20,7 @@ use std::ffi::CString;
 use std::marker::PhantomData;
 /// A platform's application binary interface
 #[repr(C)]
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub enum Abi {
     /// The C application binary interface
     CDecl,
@@ -69,7 +69,7 @@ impl Func {
 ///
 /// A function persists for the lifetime of its containing context. This is
 /// a function which has already been compiled and is now in executable form.
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub struct CompiledFunction<'a> {
     _func: jit_function_t,
     marker: PhantomData<&'a ()>
