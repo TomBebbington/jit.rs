@@ -28,7 +28,7 @@
 #![deny(unused_attributes, dead_code, unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
 #![feature(alloc, libc, core, convert, plugin, unboxed_closures, optin_builtin_traits, associated_consts)]
 #![plugin(rustc_bitflags)]
-#![stable]
+
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
 //!
