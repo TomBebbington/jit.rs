@@ -320,7 +320,6 @@ impl Clone for Type {
         }
     }
 }
-#[unsafe_destructor]
 impl Drop for Type {
     #[inline(always)]
     /// Free a type descriptor by decreasing its reference count.
@@ -569,7 +568,6 @@ impl<T> TaggedType<T> {
         }
     }
 }
-#[unsafe_destructor]
 impl<T> Drop for TaggedType<T> {
     #[inline(always)]
     /// Free a type descriptor by decreasing its reference count.

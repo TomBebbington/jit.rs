@@ -161,7 +161,6 @@ impl<'a> DerefMut for UncompiledFunction<'a> {
     }
 }
 
-#[unsafe_destructor]
 impl<'a> Drop for UncompiledFunction<'a> {
     #[inline(always)]
     fn drop(&mut self) {

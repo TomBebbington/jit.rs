@@ -106,7 +106,6 @@ impl<'a, T> IntoIterator for &'a Context<T> {
         self.functions()
     }
 }
-#[unsafe_destructor]
 impl<T> Drop for Context<T> {
     #[inline(always)]
     fn drop(&mut self) {

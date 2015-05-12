@@ -143,7 +143,6 @@ impl ReadElf {
         Needed::new(self)
     }
 }
-#[unsafe_destructor]
 impl Drop for ReadElf {
     #[inline]
     fn drop(&mut self) {
@@ -193,7 +192,6 @@ impl WriteElf {
         }
     }
 }
-#[unsafe_destructor]
 impl Drop for WriteElf {
     #[inline]
     fn drop(&mut self) {
