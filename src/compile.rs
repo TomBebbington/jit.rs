@@ -68,10 +68,10 @@ impl<'a> Compile<'a> for &'a str {
             use std::raw::Repr;
             use std::mem::transmute as cast;
             let slice = self.repr();
-            let ty = <Self as Compile<'a>>::get_type();
+            let ty = <&'a str as Compile<'a>>::get_type();
             let structure = Val::new(func, &ty);
-            let offset_data = cast::<_, usize>(&slice.data) - cast(&slice);
-            let offset_len = cast::<_, usize>(&slice.len) - cast(&slice);
+            let offset_data = cast::<_, usize>(&slice.data) - cast::<_, usize>(&slice);
+            let offset_len = cast::<_, usize>(&slice.len) - cast::<_, usize>(&slice);
             func.insn_store_relative(structure, offset_data, func.insn_of(mem::transmute::<_, isize>(slice.data)));
             func.insn_store_relative(structure, offset_len, func.insn_of(slice.len));
             structure

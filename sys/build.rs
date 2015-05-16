@@ -78,7 +78,8 @@ fn main() {
 	if let Err(error) = fs::copy(&from, &to) {
 		panic!("Failed to copy library from {:?} to {:?} due to {}", from, to, error)
 	}
-	println!("cargo:rustc-link-search=native={:?}", out_dir);
+	println!("cargo:rustc-link-search=native={}",
+                 out_dir.to_str().expect("non-unicode characters in path"));
 	println!("cargo:rustc-link-lib=static=jit");
 }
 fn run(cmd: &mut Command, text: Option<&str>) {

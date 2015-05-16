@@ -14,7 +14,7 @@ use syntax::ast_util::empty_generics;
 use syntax::ast::*;
 use syntax::ext::base::*;
 use syntax::ext::build::*;
-use syntax::ext::quote::rt::ToSource;
+use syntax::ext::quote::rt::ToTokens;
 use syntax::ext::source_util::*;
 use syntax::ptr::P;
 use syntax::owned_slice::OwnedSlice;
@@ -78,7 +78,7 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>, as_cow: bool) -> Option<P<Ex
             })
         },
         _ => {
-            let error = format!("could not resolve type {}", ty.to_source());
+            let error = format!("could not resolve type {:?}", ty.to_tokens(cx));
             cx.span_err(sp, &*error);
             None
         }

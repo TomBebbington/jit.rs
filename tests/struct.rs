@@ -1,4 +1,4 @@
-#![feature(convert, custom_attribute, plugin)]
+#![feature(custom_attribute, plugin)]
 #![plugin(jit_macros)]
 #[no_link] #[macro_use]
 extern crate jit_macros;

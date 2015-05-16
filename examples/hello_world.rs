@@ -20,7 +20,7 @@ fn main() {
     ctx.build_func(&sig, |func| {
         let text = TEXT.compile(func);
         let sig = get::<fn(&str)>();
-        func.insn_call_native1(Some("print"), print, &sig, [text], flags::NO_THROW);
+        func.insn_call_native1(Some("print"), print, &sig, [text], flags::CallFlags::NO_THROW);
         func.insn_default_return();
         println!("{:?}", func);
     }).with(|cb| {

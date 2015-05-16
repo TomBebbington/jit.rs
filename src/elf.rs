@@ -54,6 +54,7 @@ pub struct ReadElf {
 }
 native_ref!(ReadElf, _reader: jit_readelf_t);
 #[repr(i32)]
+#[derive(Clone, Copy)]
 /// An error from trying to open the ELF
 pub enum ReadElfErrorCode {
     /// The file couldn't be opened
@@ -67,7 +68,6 @@ pub enum ReadElfErrorCode {
     /// The ELF is too big to be loaded
     Memory
 }
-impl Copy for ReadElfErrorCode {}
 impl fmt::Debug for ReadElfErrorCode {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "{}", self.description())
@@ -89,7 +89,7 @@ impl Error for ReadElfErrorCode {
         }
     }
 }
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 /// An error from trying to open the ELF, including the filename
 pub struct ReadElfError<'a> {
     filename: &'a str,
@@ -143,7 +143,6 @@ impl ReadElf {
         Needed::new(self)
     }
 }
-#[unsafe_destructor]
 impl Drop for ReadElf {
     #[inline]
     fn drop(&mut self) {
@@ -193,7 +192,6 @@ impl WriteElf {
         }
     }
 }
-#[unsafe_destructor]
 impl Drop for WriteElf {
     #[inline]
     fn drop(&mut self) {

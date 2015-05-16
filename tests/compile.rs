@@ -1,4 +1,4 @@
-#![feature(custom_attribute, convert, test, plugin)]
+#![feature(custom_attribute, test, plugin)]
 #![plugin(jit_macros)]
 #[no_link] #[macro_use]
 extern crate jit_macros;
@@ -12,7 +12,7 @@ macro_rules! test_compile(
         fn $test_name() {
             let default_value:$ty = Default::default();
             let ty = get::<$ty>();
-            assert!(ty.get_kind().contains(kind::$kind));
+            assert!(ty.get_kind().contains(kind::TypeKind::$kind));
             assert_eq!(typecs::$id(), &*ty);
             let mut ctx = Context::<()>::new();
             jit_func!(ctx, func, gen_value() -> $ty, {
@@ -30,7 +30,7 @@ macro_rules! test_compile_adv(
         fn $test_name() {
             let default_value:$ty = Default::default();
             let ty = get::<$ty>();
-            assert!(ty.get_kind().contains(kind::$kind));
+            assert!(ty.get_kind().contains(kind::TypeKind::$kind));
             let mut ctx = Context::<()>::new();
             jit_func!(ctx, func, gen_value() -> $ty, {
                 let val = func.insn_of(default_value);
@@ -55,7 +55,7 @@ test_compile!(i8, test_compile_i8, get_sbyte, SByte);
 test_compile!(u8, test_compile_u8, get_ubyte,  UByte);
 #[repr(i8)]
 #[jit]
-#[derive(Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Kind {
     Int,
     Bool

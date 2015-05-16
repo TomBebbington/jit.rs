@@ -44,14 +44,14 @@ pub mod kind {
 impl fmt::Debug for Ty {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         let kind = self.get_kind();
-        if kind.contains(kind::SysChar) {
+        if kind.contains(TypeKind::SysChar) {
             fmt.write_str("char")
-        } else if kind.contains(kind::SysBool) {
+        } else if kind.contains(TypeKind::SysBool) {
             fmt.write_str("bool")
-        } else if kind.contains(kind::Pointer) {
+        } else if kind.contains(TypeKind::Pointer) {
             try!(fmt.write_str("&mut"));
             write!(fmt, "&mut {:?}", self.get_ref().unwrap())
-        } else if kind.contains(kind::Signature) {
+        } else if kind.contains(TypeKind::Signature) {
             try!(fmt.write_str("fn("));
             let params = self.params();
             let (size, _) = params.size_hint();
@@ -63,12 +63,12 @@ impl fmt::Debug for Ty {
             }
             try!(fmt.write_str(")"));
             if let Some(x) = self.get_return() {
-                if !x.get_kind().contains(kind::Void) {
+                if !x.get_kind().contains(TypeKind::Void) {
                     try!(write!(fmt, " -> {:?}", x))
                 }
             }
             Ok(())
-        } else if kind.contains(kind::Struct) {
+        } else if kind.contains(TypeKind::Struct) {
             try!(fmt.write_str("("));
             let fields = self.fields();
             let (size, _) = fields.size_hint();
@@ -79,7 +79,7 @@ impl fmt::Debug for Ty {
                 }
             }
             fmt.write_str(")")
-        } else if kind.contains(kind::Union) {
+        } else if kind.contains(TypeKind::Union) {
             try!(fmt.write_str("union("));
             let fields = self.fields();
             let (size, _) = fields.size_hint();
@@ -90,31 +90,31 @@ impl fmt::Debug for Ty {
                 }
             }
             fmt.write_str(")")
-        } else if kind.contains(kind::NFloat) {
+        } else if kind.contains(TypeKind::NFloat) {
             fmt.write_str("float")
-        } else if kind.contains(kind::Float32) {
+        } else if kind.contains(TypeKind::Float32) {
             fmt.write_str("f32")
-        } else if kind.contains(kind::Float64) {
+        } else if kind.contains(TypeKind::Float64) {
             fmt.write_str("f64")
-        } else if kind.contains(kind::ULong) {
+        } else if kind.contains(TypeKind::ULong) {
             fmt.write_str("u64")
-        } else if kind.contains(kind::Long) {
+        } else if kind.contains(TypeKind::Long) {
             fmt.write_str("i64")
-        } else if kind.contains(kind::NUInt) {
+        } else if kind.contains(TypeKind::NUInt) {
             fmt.write_str("usize")
-        } else if kind.contains(kind::NInt) {
+        } else if kind.contains(TypeKind::NInt) {
             fmt.write_str("isize")
-        } else if kind.contains(kind::UInt) {
+        } else if kind.contains(TypeKind::UInt) {
             fmt.write_str("u32")
-        } else if kind.contains(kind::Int) {
+        } else if kind.contains(TypeKind::Int) {
             fmt.write_str("i32")
-        } else if kind.contains(kind::UShort) {
+        } else if kind.contains(TypeKind::UShort) {
             fmt.write_str("u16")
-        } else if kind.contains(kind::Short) {
+        } else if kind.contains(TypeKind::Short) {
             fmt.write_str("i16")
-        } else if kind.contains(kind::UByte) {
+        } else if kind.contains(TypeKind::UByte) {
             fmt.write_str("u8")
-        } else if kind.contains(kind::SByte) {
+        } else if kind.contains(TypeKind::SByte) {
             fmt.write_str("i8")
         } else {
             fmt.write_str("()")
@@ -320,7 +320,6 @@ impl Clone for Type {
         }
     }
 }
-#[unsafe_destructor]
 impl Drop for Type {
     #[inline(always)]
     /// Free a type descriptor by decreasing its reference count.
@@ -569,7 +568,6 @@ impl<T> TaggedType<T> {
         }
     }
 }
-#[unsafe_destructor]
 impl<T> Drop for TaggedType<T> {
     #[inline(always)]
     /// Free a type descriptor by decreasing its reference count.
