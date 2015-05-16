@@ -10,7 +10,7 @@ use std::ffi::CStr;
 use std::mem;
 /// A type that can be compiled into a LibJIT representation
 ///
-/// The lifetime is the context's lifetime
+/// The lifetime is the lifetime of the value
 pub trait Compile<'a> {
     /// Get a JIT representation of this value
     fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val;
@@ -43,7 +43,7 @@ compile_prims!{
     (bool, c_long) => (get_sys_bool, jit_value_create_nint_constant),
     (char, c_long) => (get_sys_char, jit_value_create_nint_constant)
 }
-impl<'a, T> Compile<'a> for &'a T where T:Compile<'a>+Sized {
+impl<'a, T> Compile<'a> for &'a T where T:Compile<'a> + Sized {
     #[inline(always)]
     fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
         unsafe {

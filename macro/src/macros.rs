@@ -20,7 +20,6 @@ use syntax::ptr::P;
 use syntax::owned_slice::OwnedSlice;
 use rustc::plugin::Registry;
 
-static BAD_EXPR:&'static str = "bad jit expression";
 static BAD_STRUCT:&'static str = "jit-compatible structs must be packed, mark with #[repr(packed)] to fix";
 static BAD_ITEM:&'static str = "only structs can be compatible with LibJIT";
 
@@ -85,7 +84,8 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>, as_cow: bool) -> Option<P<Ex
     }
 }
 
-fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut push: &mut FnMut(P<Item>)) {
+fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: Annotatable, push: &mut FnMut(Annotatable)) {
+    let item = item.expect_item();
     let name = item.ident;
     let jit = cx.ident_of("jit");
     let jit_life = cx.lifetime(sp, token::intern("'a"));
@@ -100,7 +100,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
     let value = cx.ident_of("value");
     let offset = cx.ident_of("offset");
     let mut repr = None;
-    for attr in item.attrs.iter() {
+    for attr in &item.attrs {
         if let MetaItem_::MetaList(ref name, ref items) = attr.node.value.node {
             if &**name == "repr" && items.len() == 1 {
                 if let MetaItem_::MetaWord(ref text) = items[0].node {
@@ -110,7 +110,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
         }
     }
     match item.node {
-        Item_::ItemEnum(ref def, _) => {
+        Item_::ItemEnum(_, _) => {
             if let Some(kind) = repr {
                 let inner_ty = cx.ty_ident(sp, cx.ident_of(kind));
                 let type_expr = type_expr(cx, sp, inner_ty.clone(), true).unwrap();
@@ -172,7 +172,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                         })
                     ]
                 ));
-                push(item);
+                push(Annotatable::Item(item));
             } else {
                 cx.span_err(sp, BAD_ITEM)
             }
@@ -311,7 +311,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
                     })
                 ]
             ));
-            push(item);
+            push(Annotatable::Item(item));
         },
         _ => {
             cx.span_err(sp, BAD_ITEM);
@@ -321,7 +321,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, mut pus
 }
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(token::intern("jit"), SyntaxExtension::Decorator(Box::new(expand_jit)));
+    reg.register_syntax_extension(token::intern("jit"), SyntaxExtension::MultiDecorator(Box::new(expand_jit)));
 }
 
 #[macro_export]

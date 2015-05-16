@@ -124,7 +124,7 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
     func.insn_default_return();
 }
 fn run(ctx: &mut Context, code: &str) {
-    let sig = get::<fn(&u8)>();
+    let sig = get::<fn(&'static u8)>();
     let func = ctx.build_func(&sig, |func| compile(func, code));
     func.with(|func:extern fn(*mut u8)| {
         let mut data: [u8; 3000] = unsafe { mem::zeroed() };

@@ -11,7 +11,7 @@ license = "MIT"
 [lib]
 name = "jit_macros"
 path = "src/macros.rs"
-crate-type = ["dylib"]
+crate-type = ["rlib", "dylib"]
 
 [dependencies]
 matches = "*"

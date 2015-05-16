@@ -33,20 +33,17 @@
 //! For example, here's a quick example which makes a multiply function using LibJIT:
 //!
 //! ```rust
-//! #![feature(plugin)]
-//! #![plugin(jit_macros)]
 //! extern crate jit;
-//! #[no_link] #[macro_use]
-//! extern crate jit_macros;
-//! use jit::{Context, get, Type};
+//! use jit::*;
 //! fn main() {
 //!     // make a new context to make functions on
 //!     let mut ctx = Context::<()>::new();
-//!     jit_func!(ctx, func, mul(x: isize, y: isize) -> isize, {
-//!         func.insn_return(x * y);
-//!     }, |mul| {
-//!         assert_eq!(mul((4, 5)), 20);
-//!     });
+//!     let sig = get::<fn(isize, isize) -> isize>();
+//!     ctx.build_func(&sig, |func| {
+//!         func.insn_return(&func[0] * &func[1])
+//!     }).with(|mul:extern fn((isize, isize)) -> isize|
+//!         assert_eq!(mul((4, 5)), 20)
+//!     )
 //! }
 //! ```
 #[no_link] #[macro_use]
