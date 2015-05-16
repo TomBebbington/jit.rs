@@ -14,11 +14,11 @@ fn bench_gcd(b: &mut Bencher) {
         func.insn_if(func.insn_eq(x, y), || func.insn_return(x));
         func.insn_if(func.insn_lt(x, y), || {
             let mut args = [x, y - x];
-            let v = func.insn_call(Some("gcd"), func, None, args.as_mut_slice(), flags::NO_THROW);
+            let v = func.insn_call(Some("gcd"), func, None, args.as_mut_slice(), flags::CallFlags::NO_THROW);
             func.insn_return(v);
         });
         let mut args = [x - y, y];
-        let temp4 = func.insn_call(Some("gcd"), func, None, args.as_mut_slice(), flags::NO_THROW);
+        let temp4 = func.insn_call(Some("gcd"), func, None, args.as_mut_slice(), flags::CallFlags::NO_THROW);
         func.insn_return(temp4);
     }, |gcd| {
         b.iter(|| {
