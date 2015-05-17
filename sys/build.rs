@@ -1,5 +1,3 @@
-#[cfg(not(windows))]
-extern crate pkg_config;
 use std::io;
 use std::fs;
 use std::env;
@@ -35,9 +33,6 @@ fn exists<P: AsRef<Path>>(path: P) -> io::Result<bool> {
 fn main() {
 	if cfg!(windows) && !exists(&Path::new(MINGW)).unwrap() {
 		panic!("{}", INSTALL_COMPILER_MSG);
-	} else if pkg_config::find_library("jit").is_ok() {
-		println!("Copy of LibJIT found on system - no need to build");
-		return;
 	}
 	let out_dir = env::var("OUT_DIR").ok().expect(USE_CARGO_MSG);
 	let num_jobs = env::var("NUM_JOBS").ok().expect(USE_CARGO_MSG);
