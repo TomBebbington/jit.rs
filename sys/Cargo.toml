@@ -14,5 +14,8 @@ build = "build.rs"
 name = "libjit_sys"
 path = "lib.rs"
 
+[dependencies]
+libc = "*"
+
 [build-dependencies]
 pkg-config = "*"

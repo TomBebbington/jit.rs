@@ -1,7 +1,7 @@
-#![feature(path_ext)]
 #[cfg(not(windows))]
 extern crate pkg_config;
-use std::fs::{self, PathExt};
+use std::io;
+use std::fs;
 use std::env;
 use std::path::Path;
 use std::process::Command;
@@ -23,8 +23,17 @@ static INSTALL_COMPILER_MSG:&'static str = "Failed to configure the library for 
 #[cfg(not(windows))]
 static INSTALL_COMPILER_MSG:&'static str = "Failed to configure the library for your platform. Did you forget to install a C compiler?";
 
+// PathExt::exists isn't stable, so fake it by querying file metadata.
+fn exists<P: AsRef<Path>>(path: P) -> io::Result<bool> {
+    match fs::metadata(path) {
+        Ok(_) => Ok(true),
+        Err(ref err) if err.kind() == io::ErrorKind::NotFound => Ok(false),
+        Err(err) => Err(err)
+    }
+}
+
 fn main() {
-	if cfg!(windows) && !Path::new(MINGW).exists() {
+	if cfg!(windows) && !exists(&Path::new(MINGW)).unwrap() {
 		panic!("{}", INSTALL_COMPILER_MSG);
 	} else if pkg_config::find_library("jit").is_ok() {
 		println!("Copy of LibJIT found on system - no need to build");
@@ -36,7 +45,7 @@ fn main() {
 	let out_dir = Path::new(&*out_dir);
     let submod_path = Path::new(&env::var("CARGO_MANIFEST_DIR").ok().expect(USE_CARGO_MSG)).join("libjit");
 	let final_lib_dir = submod_path.join("jit/.libs");
-	if !final_lib_dir.join(FINAL_LIB).exists() {
+	if !exists(&final_lib_dir.join(FINAL_LIB)).unwrap() {
 		Command::new("git")
 			.args(&["submodule", "init"])
 			.status().unwrap();
@@ -44,7 +53,7 @@ fn main() {
 			.args(&["submodule", "update"]),
 			None
 		);
-		if !submod_path.exists() {
+		if !exists(&submod_path).unwrap() {
 			run(Command::new("git")
 				.args(&["clone", "git://git.savannah.gnu.org/libjit.git", submod_path.to_str().unwrap()]),
 				None

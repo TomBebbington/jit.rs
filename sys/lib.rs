@@ -1,5 +1,4 @@
 #![allow(bad_style, missing_copy_implementations)]
-#![feature(libc)]
 
 extern crate libc;
 use libc::*;
