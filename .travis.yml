@@ -1,16 +1,12 @@
 language: rust
-after_success:
-    - cargo doc
-    - echo '<meta http-equiv=refresh content=0;url=jit/index.html>' > target/doc/index.html
-    - pip install ghp-import
-    - ghp-import -n target/doc
-    - git push -qf https://${TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
+after_success: |
+    - curl -X POST -H "Github:TomBebbington/jit.rs" http://www.rustdox.com
 install:
-  - sudo apt-get install texinfo
+    - sudo apt-get install texinfo
 script:
-  - cargo build --verbose
-  - cargo test --verbose
-  - cargo bench --verbose
+    - cargo build --verbose
+    - cargo test --verbose
+    - cargo bench --verbose
 notifications:
   email:
     - tophattedcoder@gmail.com
