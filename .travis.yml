@@ -8,6 +8,7 @@ script:
     - cargo build --verbose
     - cargo test --verbose
     - cargo bench --verbose
+    - cd sys && cargo test --verbose
 notifications:
   email:
     - tophattedcoder@gmail.com
