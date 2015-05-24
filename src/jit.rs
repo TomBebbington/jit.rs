@@ -49,8 +49,7 @@
 #[no_link] #[macro_use]
 extern crate rustc_bitflags;
 extern crate alloc;
-extern crate libc;
-extern crate libjit_sys as raw;
+extern crate libllvm_sys as raw;
 use raw::*;
 use libc::c_void;
 use std::mem;
@@ -66,42 +65,6 @@ pub use types::{kind, get, Type, Field, Fields, Params, CowType, StaticType, Ty,
 pub use types::consts as typecs;
 pub use value::Val;
 
-
-extern fn free_data<T>(data: *mut c_void) {
-    unsafe {
-        let actual_data:Box<T> = mem::transmute(data);
-        mem::drop(actual_data);
-    }
-}
-
-/// Initialise the library and prepare for operations
-#[inline]
-pub fn init() -> () {
-    unsafe {
-        jit_init()
-    }
-}
-/// Check if the JIT is using a fallback interpreter
-#[inline]
-pub fn uses_interpreter() -> bool {
-    unsafe {
-        jit_uses_interpreter() != 0
-    }
-}
-/// Check if the JIT supports theads
-#[inline]
-pub fn supports_threads() -> bool {
-    unsafe {
-        jit_supports_threads() != 0
-    }
-}
-/// Check if the JIT supports virtual memory
-#[inline]
-pub fn supports_virtual_memory() -> bool {
-    unsafe {
-        jit_supports_virtual_memory() != 0
-    }
-}
 #[macro_use]
 mod macros;
 mod context;

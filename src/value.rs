@@ -12,7 +12,7 @@ use std::ops::*;
 /// allocates registers or memory locations to the values as appropriate. This is
 /// why `Val` is always behind a reference
 pub struct Val(PhantomData<[()]>);
-native_ref!(&Val = jit_value_t);
+native_ref!(&Val = LLVMValueRef);
 impl fmt::Debug for Val {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         write!(fmt, "v({:?})", self.get_type())

@@ -2,7 +2,7 @@
 
 exclude = [ ".gitmodules", ".gitignore", ".travis.yml" ]
 authors = [ "Tom Bebbington <tophattedcoder@gmail.com>" ]
-description = "Just-In-Time Compilation in Rust using LibJIT bindings"
+description = "Just-In-Time Compilation in Rust using LLVM"
 documentation = "http://tombebbington.github.io/jit.rs/"
 keywords = [ "compile", "compiler", "jit", "interpreter" ]
 license = "MIT"
@@ -17,11 +17,7 @@ name = "jit"
 path = "src/jit.rs"
 
 [dependencies]
-libc = "*"
-
-[dependencies.libjit-sys]
-path = "sys"
-version = "*"
+llvm_sys = "*"
 
 [dependencies.jit_macros]
 path = "macro"

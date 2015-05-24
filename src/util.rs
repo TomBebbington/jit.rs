@@ -2,7 +2,7 @@ use libc::*;
 use std::fmt::Error;
 use std::{mem, str};
 
-pub fn dump<F>(cb: F) -> Result<String, Error> where F:FnOnce(*mut FILE) {
+pub unsafe fn to_string(text: *mut c_char) -> String {
     unsafe {
         let mut pair = [0, 0];
         if pipe(pair.as_mut_ptr()) == -1 {

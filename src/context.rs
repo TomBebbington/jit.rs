@@ -9,72 +9,57 @@ use std::ops::{Deref, Index, IndexMut};
 use std::iter::IntoIterator;
 /// Holds all of the functions you have built and compiled. There can be
 /// multiple, but normally there is only one.
-pub struct Context<T = ()> {
-    _context: jit_context_t,
-    marker: PhantomData<T>
+pub struct Context {
+    _context: LLVMContextRef
 }
-native_ref!(Context<T>, _context: jit_context_t, marker = PhantomData);
+native_ref!(Context, _context: LLVMContextRef);
 
 /// A context that is in the build phase while generating IR
-pub struct Builder<T> {
-    _context: jit_context_t,
-    marker: PhantomData<T>
+pub struct Builder {
+    _context: LLVMContextRef,
+    _builder: LLVMBuilderRef
 }
-impl<T> Deref for Builder<T> {
-    type Target = Context<T>;
-    fn deref(&self) -> &Context<T> {
+impl Deref for Builder {
+    type Target = Context;
+    fn deref(&self) -> &Context {
         unsafe {
-            mem::transmute(self)
+            mem::transmute(&self._context)
         }
     }
 }
-native_ref!(Builder<T>, _context: jit_context_t, marker = PhantomData);
+impl Drop for Builder {
+    fn drop(&mut self) {
+        LLVMDisposeBuilder(self._builder)
+    }
+}
+impl From<Builder> for LLVMContextRef {
+    fn from(builder: Builder) -> LLVMContextRef {
+        builder._context
+    }
+}
+impl From<Builder> for LLVMBuilderRef {
+    fn from(builder: Builder) -> LLVMBuilderRef {
+        builder._builder
+    }
+}
+native_ref!(Builder, _context: LLVMContextRef);
 
-impl<T = ()> Index<i32> for Context<T> {
-    type Output = T;
-    fn index(&self, index: i32) -> &T {
-        unsafe {
-            let meta = jit_context_get_meta(self.into(), index);
-            if meta.is_null() {
-                panic!("No such index {} on Context", index)
-            }
-            mem::transmute(meta)
-        }
-    }
-}
-impl<T = ()> IndexMut<i32> for Context<T> {
-    fn index_mut(&mut self, index: i32) -> &mut T {
-        unsafe {
-            let meta = jit_context_get_meta(self.into(), index);
-            if meta.is_null() {
-                let boxed = Box::new(mem::uninitialized::<T>());
-                if jit_context_set_meta(self.into(), index, mem::transmute(boxed), Some(::free_data::<T>)) == 0 {
-                    oom()
-                } else {
-                    mem::transmute(jit_context_get_meta(self.into(), index))
-                }
-            } else {
-                mem::transmute(meta)
-            }
-        }
-    }
-}
-impl<T = ()> Context<T> {
+impl Context {
     #[inline(always)]
-    /// Create a new JIT Context
-    pub fn new() -> Context<T> {
+    /// Create a new Context
+    pub fn new() -> Context {
         unsafe {
-            from_ptr(jit_context_create())
+            from_ptr(LLVMContextCreate())
         }
     }
     #[inline(always)]
     /// Lock the context so you can safely generate IR
-    pub fn build<'a, R, F:FnOnce(Builder<T>) -> R>(&'a mut self, cb: F) -> R {
+    pub fn build<'a, R, F:FnOnce(Builder) -> R>(&'a mut self, cb: F) -> R {
         unsafe {
-            jit_context_build_start(self.into());
-            let r = cb(Builder { _context: self.into(), marker: PhantomData});
-            jit_context_build_end(self.into());
-            r
+            cb(Builder {
+                _context: self.into(),
+                _builder: LLVMCreateBuilderInContext(self.into())
+            })
         }
     }
     #[inline(always)]
@@ -99,14 +84,14 @@ impl<T = ()> Context<T> {
         }
     }
 }
-impl<'a, T> IntoIterator for &'a Context<T> {
+impl<'a, T> IntoIterator for &'a Context {
     type IntoIter = Functions<'a>;
     type Item = &'a Func;
     fn into_iter(self) -> Functions<'a> {
         self.functions()
     }
 }
-impl<T> Drop for Context<T> {
+impl<T> Drop for Context {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe {
@@ -116,7 +101,7 @@ impl<T> Drop for Context<T> {
 }
 
 pub struct Functions<'a> {
-    context: jit_context_t,
+    context: LLVMContextRef,
     last: jit_function_t,
     lifetime: PhantomData<&'a ()>
 }

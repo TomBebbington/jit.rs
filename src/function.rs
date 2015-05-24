@@ -275,7 +275,7 @@ impl<'a> UncompiledFunction<'a> {
     /// Return from the function
     pub fn insn_default_return(&self) {
         unsafe {
-            jit_insn_default_return(self.into());
+            LLVMBuildRetVoid(self.into());
         }
     }
     #[inline(always)]
@@ -291,33 +291,23 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that adds the values
     pub fn insn_add(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
-        self.insn_binop(v1, v2, jit_insn_add)
-    }
-    #[inline(always)]
-    /// Make an instruction that adds the values and throws upon overflow
-    pub fn insn_add_ovf(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
-        self.insn_binop(v1, v2, jit_insn_add_ovf)
+        self.insn_binop(v1, v2, LLVMBuildAdd)
     }
     #[inline(always)]
     /// Make an instruction that subtracts the second value from the first
     pub fn insn_sub(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
-        self.insn_binop(v1, v2, jit_insn_sub)
-    }
-    #[inline(always)]
-    /// Make an instruction that subtracts the second value from the first and throws upon overflow
-    pub fn insn_sub_ovf(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
-        self.insn_binop(v1, v2, jit_insn_sub_ovf)
+        self.insn_binop(v1, v2, LLVMBuildSub)
     }
     #[inline(always)]
     /// Make an instruction that divides the first number by the second
     pub fn insn_div(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
-        self.insn_binop(v1, v2, jit_insn_div)
+        self.insn_binop(v1, v2, LLVMBuildDiv)
     }
     #[inline(always)]
     /// Make an instruction that finds the remainder when the first number is
     /// divided by the second
     pub fn insn_rem(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
-        self.insn_binop(v1, v2, jit_insn_rem)
+        self.insn_binop(v1, v2, LLVMBuildFRem)
     }
     #[inline(always)]
     /// Make an instruction that checks if the first value is lower than or
@@ -762,12 +752,12 @@ impl<'a> UncompiledFunction<'a> {
     fn insn_binop(&self,
                     v1: &'a Val, v2: &'a Val,
                     f: unsafe extern "C" fn(
-                        jit_function_t,
-                        jit_value_t,
-                        jit_value_t) -> jit_value_t)
+                        LLVMBuilderRef,
+                        LLVMValueRef,
+                        LLVMValueRef, *const u8) -> LLVMValueRef)
                     -> &'a Val {
         unsafe {
-            from_ptr(f(self.into(), v1.into(), v2.into()))
+            from_ptr(f(self.into(), v1.into(), v2.into(), ptr::null_mut()))
         }
     }
     #[inline(always)]
