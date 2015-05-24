@@ -84,7 +84,8 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>, as_cow: bool) -> Option<P<Ex
     }
 }
 
-fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, push: &mut FnMut(P<Item>)) {
+fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: Annotatable, push: &mut FnMut(Annotatable)) {
+    let item = item.expect_item();
     let name = item.ident;
     let jit = cx.ident_of("jit");
     let jit_life = cx.lifetime(sp, token::intern("'a"));
@@ -171,7 +172,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, push: &
                         })
                     ]
                 ));
-                push(item);
+                push(Annotatable::Item(item));
             } else {
                 cx.span_err(sp, BAD_ITEM)
             }
@@ -310,7 +311,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, push: &
                     })
                 ]
             ));
-            push(item);
+            push(Annotatable::Item(item));
         },
         _ => {
             cx.span_err(sp, BAD_ITEM);
@@ -320,7 +321,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Item, push: &
 }
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(token::intern("jit"), SyntaxExtension::Decorator(Box::new(expand_jit)));
+    reg.register_syntax_extension(token::intern("jit"), SyntaxExtension::MultiDecorator(Box::new(expand_jit)));
 }
 
 #[macro_export]
