@@ -125,8 +125,9 @@ fn compile<'a>(func: &UncompiledFunction<'a>, code: &str) {
 }
 fn run(ctx: &mut Context, code: &str) {
     let sig = get::<fn(&'static u8)>();
-    let func = ctx.build_func(&sig, |func| compile(func, code));
-    func.with(|func:extern fn(*mut u8)| {
+    let func = UncompiledFunction::new(ctx, &sig);
+    compile(&func, code);
+    func.compile().with(|func:extern fn(*mut u8)| {
         let mut data: [u8; 3000] = unsafe { mem::zeroed() };
         func(data.as_mut_ptr());
     });

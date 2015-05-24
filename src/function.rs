@@ -1,5 +1,5 @@
 use raw::*;
-use context::Builder;
+use context::Context;
 use compile::Compile;
 use label::Label;
 use types::Ty;
@@ -191,7 +191,7 @@ impl<'a> UncompiledFunction<'a> {
     ///
     /// This will protect the JIT's internal data structures within a
     /// multi-threaded environment.
-    pub fn new<T>(context:&'a mut Builder<T>, signature:&Ty) -> UncompiledFunction<'a> {
+    pub fn new<T>(context:&'a mut Context<T>, signature:&Ty) -> UncompiledFunction<'a> {
         unsafe {
             let mut me:UncompiledFunction = from_ptr_oom(jit_function_create(
                 context.into(),
@@ -215,7 +215,7 @@ impl<'a> UncompiledFunction<'a> {
     /// never be called by anyone except its parent and sibling functions.
     /// The front end is also responsible for ensuring that the nested function
     /// is compiled before its parent.
-    pub fn new_nested<T>(context:&'a mut Builder<T>, signature: &Ty,
+    pub fn new_nested<T>(context:&'a mut Context<T>, signature: &Ty,
                         parent: &'a UncompiledFunction<'a>) -> UncompiledFunction<'a> {
         unsafe {
             let mut me:UncompiledFunction = from_ptr_oom(jit_function_create_nested(

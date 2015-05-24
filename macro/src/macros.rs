@@ -83,9 +83,8 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>, as_cow: bool) -> Option<P<Ex
         }
     }
 }
-
-fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: Annotatable, push: &mut FnMut(Annotatable)) {
-    let item = item.expect_item();
+fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Annotatable, push: &mut FnMut(Annotatable)) {
+    let item = item.clone().expect_item();
     let name = item.ident;
     let jit = cx.ident_of("jit");
     let jit_life = cx.lifetime(sp, token::intern("'a"));
@@ -436,40 +435,33 @@ macro_rules! jit(
 );
 #[macro_export]
 macro_rules! jit_func(
-    ($ctx:expr, $func:ident, $name:ident() -> $ret:ty, $value:expr) => ({
-        use std::default::Default;
-        let sig = Type::new_signature(Default::default(), &get::<$ret>(), &mut []);
-        $ctx.build_func(&sig, |$func| $value)
-    });
-    ($ctx:expr, $func:ident, $name:ident($($arg:ident:$ty:ty),+) -> $ret:ty, $value:expr) => ({
-        use std::default::Default;
-        let sig = Type::new_signature(Default::default(), &get::<$ret>(), &mut [$(&get::<$ty>()),*]);
-        $ctx.build_func(&sig, |$func| {
-            let mut i = 0;
-            $(let $arg = {
-                i += 1;
-                &$func[i - 1]
-            };)*
+    ($ctx:expr, $name:ident, fn() -> $ret:ty {$($st:stmt;)+}, $value:expr) => ({
+        use std::mem;
+        let func = UncompiledFunction::new($ctx, &get::<fn() -> $ret>());
+        {
+            let $name = &func;
+            $($st;)+
+        };
+        func.compile().with(|comp: extern fn(()) -> $ret| {
+            let $name: extern fn() -> $ret = unsafe { mem::transmute(comp) };
             $value
         })
     });
-    ($ctx:expr, $func:ident, $name:ident() -> $ret:ty, $value:expr, |$comp_func:ident| $comp:expr) => ({
-        use std::default::Default;
-        let sig = Type::new_signature(Default::default(), &get::<$ret>(), &mut []);
-        $ctx.build_func(&sig, |$func| $value)
-            .with::<(), $ret, _>(|$comp_func| $comp)
-    });
-    ($ctx:expr, $func:ident, $name:ident($($arg:ident:$arg_ty:ty),+) -> $ret:ty, $value:expr, |$comp_func:ident| $comp:expr) => ({
-        use std::default::Default;
-        let sig = Type::new_signature(Default::default(), &get::<$ret>(), &mut [$(&get::<$arg_ty>()),*]);
-        $ctx.build_func(&sig, |$func| {
+    ($ctx:expr, $name:ident, fn($($arg:ident:$ty:ty),+) -> $ret:ty {$($st:stmt;)+}, $value:expr) => ({
+        use std::mem;
+        let func = UncompiledFunction::new($ctx, &get::<fn($($ty),+) -> $ret>());
+        {
+            let $name = &func;
             let mut i = 0;
             $(let $arg = {
                 i += 1;
-                &$func[i - 1]
+                &$name[i - 1]
             };)*
+            $($st;)+
+        };
+        func.compile().with(|comp: extern fn(($($ty),+)) -> $ret| {
+            let $name: extern fn($($ty),+) -> $ret = unsafe { mem::transmute(comp) };
             $value
-        }).with::<($($arg_ty),*), $ret, _>(|$comp_func|
-            $comp)
+        })
     });
 );

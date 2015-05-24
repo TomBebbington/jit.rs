@@ -15,12 +15,10 @@ macro_rules! test_compile(
             assert!(ty.get_kind().contains(kind::TypeKind::$kind));
             assert_eq!(typecs::$id(), &*ty);
             let mut ctx = Context::<()>::new();
-            jit_func!(ctx, func, gen_value() -> $ty, {
-                let val = func.insn_of(default_value);
-                func.insn_return(val);
-            }, |func| {
-                assert_eq!(func(()), default_value);
-            });
+            jit_func!(&mut ctx, gen, fn() -> $ty {
+                let val = gen.insn_of(default_value);
+                gen.insn_return(val);
+            }, assert_eq!(gen(), default_value));
         }
     );
 );
@@ -32,12 +30,10 @@ macro_rules! test_compile_adv(
             let ty = get::<$ty>();
             assert!(ty.get_kind().contains(kind::TypeKind::$kind));
             let mut ctx = Context::<()>::new();
-            jit_func!(ctx, func, gen_value() -> $ty, {
-                let val = func.insn_of(default_value);
-                func.insn_return(val);
-            }, |func| {
-                assert_eq!(func(()), default_value);
-            });
+            jit_func!(&mut ctx, gen, fn() -> $ty {
+                let val = gen.insn_of(default_value);
+                gen.insn_return(val);
+            }, assert_eq!(gen(), default_value));
         }
     );
 );

@@ -1,11 +1,10 @@
 use raw::*;
 use alloc::oom;
-use function::{Func, CompiledFunction, UncompiledFunction};
-use types::Ty;
+use function::Func;
 use util::{from_ptr, from_ptr_opt};
 use std::marker::PhantomData;
 use std::{mem, ptr};
-use std::ops::{Deref, Index, IndexMut};
+use std::ops::{Index, IndexMut};
 use std::iter::IntoIterator;
 /// Holds all of the functions you have built and compiled. There can be
 /// multiple, but normally there is only one.
@@ -14,21 +13,6 @@ pub struct Context<T = ()> {
     marker: PhantomData<T>
 }
 native_ref!(Context<T>, _context: jit_context_t, marker = PhantomData);
-
-/// A context that is in the build phase while generating IR
-pub struct Builder<T> {
-    _context: jit_context_t,
-    marker: PhantomData<T>
-}
-impl<T> Deref for Builder<T> {
-    type Target = Context<T>;
-    fn deref(&self) -> &Context<T> {
-        unsafe {
-            mem::transmute(self)
-        }
-    }
-}
-native_ref!(Builder<T>, _context: jit_context_t, marker = PhantomData);
 
 impl<T = ()> Index<i32> for Context<T> {
     type Output = T;
@@ -67,29 +51,6 @@ impl<T = ()> Context<T> {
             from_ptr(jit_context_create())
         }
     }
-    #[inline(always)]
-    /// Lock the context so you can safely generate IR
-    pub fn build<'a, R, F:FnOnce(Builder<T>) -> R>(&'a mut self, cb: F) -> R {
-        unsafe {
-            jit_context_build_start(self.into());
-            let r = cb(Builder { _context: self.into(), marker: PhantomData});
-            jit_context_build_end(self.into());
-            r
-        }
-    }
-    #[inline(always)]
-    /// Lock the context so you can safely generate IR in a new function on the context which is
-    /// compiled for you
-    pub fn build_func<'a, F:FnOnce(&UncompiledFunction<'a>)>(&'a mut self, signature: &Ty, cb: F) -> CompiledFunction<'a> {
-        unsafe {
-            jit_context_build_start(self.into());
-            let mut builder = Builder { _context: self.into(), marker: PhantomData::<T>};
-            let func = UncompiledFunction::new::<T>(mem::transmute(&mut builder), signature);
-            cb(&func);
-            jit_context_build_end(self.into());
-            func.compile()
-        }
-    }
     /// Iterate through the functions contained inside this context
     pub fn functions(&self) -> Functions {
         Functions {
@@ -98,6 +59,9 @@ impl<T = ()> Context<T> {
             lifetime: PhantomData,
         }
     }
+}
+impl !Send for Context {
+
 }
 impl<'a, T> IntoIterator for &'a Context<T> {
     type IntoIter = Functions<'a>;

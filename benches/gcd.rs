@@ -10,7 +10,7 @@ use jit::*;
 #[bench]
 fn bench_gcd(b: &mut Bencher) {
     let mut ctx = Context::<()>::new();
-    jit_func!(ctx, func, gcd(x: usize, y:usize) -> usize, {
+    jit_func!(&mut ctx, func, fn(x: usize, y:usize) -> usize {
         func.insn_if(func.insn_eq(x, y), || func.insn_return(x));
         func.insn_if(func.insn_lt(x, y), || {
             let mut args = [x, y - x];
@@ -20,11 +20,7 @@ fn bench_gcd(b: &mut Bencher) {
         let mut args = [x - y, y];
         let temp4 = func.insn_call(Some("gcd"), func, None, &mut args, flags::CallFlags::NO_THROW);
         func.insn_return(temp4);
-    }, |gcd| {
-        b.iter(|| {
-            assert_eq!(gcd((90, 50)), 10)
-        })
-    });
+    }, b.iter(|| assert_eq!(func(90, 50), 10) ));
 }
 #[bench]
 fn bench_raw_gcd(b: &mut Bencher) {
@@ -37,7 +33,5 @@ fn bench_raw_gcd(b: &mut Bencher) {
             gcd(x - y, y)
         }
     }
-    b.iter(|| {
-        assert_eq!(gcd(90, 50), 10)
-    })
+    b.iter(|| assert_eq!(gcd(90, 50), 10));
 }

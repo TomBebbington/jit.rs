@@ -34,16 +34,18 @@
 //!
 //! ```rust
 //! extern crate jit;
+//! #[no_link] #[macro_use]
+//! extern crate jit_macros;
 //! use jit::*;
 //! fn main() {
 //!     // make a new context to make functions on
 //!     let mut ctx = Context::<()>::new();
-//!     let sig = get::<fn(isize, isize) -> isize>();
-//!     ctx.build_func(&sig, |func| {
-//!         func.insn_return(&func[0] * &func[1])
-//!     }).with(|mul:extern fn((isize, isize)) -> isize|
-//!         assert_eq!(mul((4, 5)), 20)
-//!     )
+//!     jit_func!(&mut ctx, func, fn(x: isize, y: isize) -> isize {
+//!         func.insn_return(x * y);
+//!     }, {
+//!         assert_eq!(func(4, 5), 20);
+//!         assert_eq!(func(-2, -4), 8);
+//!     });
 //! }
 //! ```
 #[no_link] #[macro_use]
@@ -55,7 +57,7 @@ use raw::*;
 use libc::c_void;
 use std::mem;
 pub use compile::Compile;
-pub use context::{Builder, Context};
+pub use context::Context;
 pub use elf::*;
 pub use function::{flags, Abi, UncompiledFunction, Func, CompiledFunction};
 pub use function::flags::CallFlags;
