@@ -1,4 +1,5 @@
 language: rust
+rust: beta
 after_success:
     - curl -X POST -H "Github:TomBebbington/jit.rs" http://www.rustdox.com
 install:
