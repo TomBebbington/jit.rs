@@ -14,7 +14,7 @@ script:
     - cargo build --verbose
     - cargo test --verbose
     - cargo bench --verbose
-    - cd sys && cargo test --verbose
+    - cd sys && cargo test --verbose && cd ..
 notifications:
   email:
     - tophattedcoder@gmail.com
