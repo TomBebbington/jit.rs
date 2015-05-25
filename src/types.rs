@@ -441,8 +441,8 @@ impl Ty {
     /// let f64_t = get::<f64>();
     /// let mut ty = Type::new_struct(&mut [&f64_t, &f64_t]);
     /// ty.set_names(&["x", "y"]);
-    /// assert!(ty.get_field("x").get_type() == &f64_t as &Ty);
-    /// assert!(ty.get_field("y").get_type() == &f64_t as &Ty);
+    /// assert_eq!(ty.get_field("x").unwrap().get_type(), &f64_t as &Ty);
+    /// assert_eq!(ty.get_field("y").unwrap().get_type(), &f64_t as &Ty);
     /// ```
     pub fn set_names(&mut self, names: &[&str]) {
         unsafe {
@@ -459,28 +459,57 @@ impl Ty {
     }
     #[inline(always)]
     /// Iterate over the type's fields
+    ///
+    /// ```rust
+    /// use jit::*;
+    /// let pos_t = get::<(f64, f64)>();
+    /// let f64_t = get::<f64>();
+    /// for field in pos_t.fields() {
+    ///     assert_eq!(field.get_type(), &f64_t as &Ty);
+    /// }
+    /// ```
     pub fn fields(&self) -> Fields {
         Fields::new(self)
     }
     #[inline(always)]
     /// Iterate over the function signature's parameters
+    ///
+    /// ```rust
+    /// use jit::*;
+    /// let sig_t = get::<fn(i32, i32) -> i32>();
+    /// let i32_t = get::<i32>();
+    /// for param in sig_t.params() {
+    ///     assert_eq!(param, &i32_t as &Ty);
+    /// }
+    /// ```
     pub fn params(&self) -> Params {
         Params::new(self)
     }
     #[inline]
     /// Find the field/parameter index for a particular name.
-    pub fn get_field(&self, name:&str) -> Field {
+    pub fn get_field(&self, name:&str) -> Option<Field> {
         unsafe {
             let c_name = CString::new(name.as_bytes()).unwrap();
-            Field {
-                index: jit_type_find_name(self.into(), c_name.as_bytes().as_ptr() as *const c_char),
-                _type: self.into(),
-                marker: PhantomData,
+            let index = jit_type_find_name(self.into(), c_name.as_bytes().as_ptr() as *const c_char);
+            if index == JIT_INVALID_NAME {
+                None
+            } else {
+                Some(Field {
+                    index: index,
+                    _type: self.into(),
+                    marker: PhantomData,
+                })
             }
         }
     }
     #[inline(always)]
-    /// Check if this is a pointer
+    /// Check if this is a primitive
+    ///
+    /// ```rust
+    /// use jit::*;
+    /// assert!(get::<i16>().is_primitive());
+    /// assert!(!get::<(i16, i16)>().is_primitive());
+    /// ```
     pub fn is_primitive(&self) -> bool {
         unsafe {
             jit_type_is_primitive(self.into()) != 0
@@ -488,6 +517,11 @@ impl Ty {
     }
     #[inline(always)]
     /// Check if this is a struct
+    ///
+    /// ```rust
+    /// use jit::*;
+    /// assert!(get::<(i16, i16)>().is_struct());
+    /// ```
     pub fn is_struct(&self) -> bool {
         unsafe {
             jit_type_is_struct(self.into()) != 0
@@ -502,6 +536,11 @@ impl Ty {
     }
     #[inline(always)]
     /// Check if this is a signature
+    ///
+    /// ```rust
+    /// use jit::*;
+    /// assert!(get::<fn(i16) -> i16>().is_signature());
+    /// ```
     pub fn is_signature(&self) -> bool {
         unsafe {
             jit_type_is_signature(self.into()) != 0
@@ -509,6 +548,11 @@ impl Ty {
     }
     #[inline(always)]
     /// Check if this is a pointer
+    ///
+    /// ```rust
+    /// use jit::*;
+    /// assert!(get::<&'static u8>().is_pointer());
+    /// ```
     pub fn is_pointer(&self) -> bool {
         unsafe {
             jit_type_is_pointer(self.into()) != 0

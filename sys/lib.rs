@@ -252,6 +252,7 @@ pub struct jit_constant_t {
     pub un: Union_Unnamed1,
 }
 pub type jit_prot_t = c_uint;
+pub static JIT_INVALID_NAME: c_uint = !0;
 pub static JIT_PROT_NONE: c_uint = 0;
 pub static JIT_PROT_READ: c_uint = 1;
 pub static JIT_PROT_READ_WRITE: c_uint = 2;
