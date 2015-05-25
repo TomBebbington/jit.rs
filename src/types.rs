@@ -275,11 +275,15 @@ impl<'a> Iterator for Params<'a> {
         ((self.length - self.index) as usize, None)
     }
 }
-/// A reference to an object that represents a native system type
-///.
-/// This represents a basic system type, be it a primitive, a struct, a
+/// An object that represents a native system type
+///
+/// Each `&Ty` represents a basic system type, be it a primitive, a struct, a
 /// union, a pointer, or a function signature. The library uses this information
 /// to lay out values in memory.
+///
+/// Types are not attached to a context so they are reference-counted by LibJIT,
+/// so internally they are represented as `Rc<Ty>`. This represents a reference
+/// to the inner `Ty`.
 pub struct Ty(PhantomData<[()]>);
 native_ref!(&Ty = jit_type_t);
 impl ToOwned for Ty {
@@ -430,7 +434,16 @@ impl Ty {
             from_ptr_opt(jit_type_get_return(self.into()))
         }
     }
-    /// Set the field or parameter names of this type.
+    /// Set the field or parameter names of this struct or union type.
+    ///
+    /// ```rust
+    /// use jit::*;
+    /// let f64_t = get::<f64>();
+    /// let mut ty = Type::new_struct(&mut [&f64_t, &f64_t]);
+    /// ty.set_names(&["x", "y"]);
+    /// assert!(ty.get_field("x").get_type() == &f64_t as &Ty);
+    /// assert!(ty.get_field("y").get_type() == &f64_t as &Ty);
+    /// ```
     pub fn set_names(&mut self, names: &[&str]) {
         unsafe {
             let names = names.iter()
@@ -445,12 +458,12 @@ impl Ty {
         }
     }
     #[inline(always)]
-    /// Iterator over the type's fields
+    /// Iterate over the type's fields
     pub fn fields(&self) -> Fields {
         Fields::new(self)
     }
     #[inline(always)]
-    /// Iterator over the function signature's parameters
+    /// Iterate over the function signature's parameters
     pub fn params(&self) -> Params {
         Params::new(self)
     }

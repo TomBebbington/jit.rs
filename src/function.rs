@@ -19,6 +19,8 @@ use std::{mem, ptr};
 use std::ffi::CString;
 use std::marker::PhantomData;
 /// A platform's application binary interface
+///
+/// This describes how the function should be called
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub enum Abi {
@@ -55,7 +57,7 @@ pub mod flags {
 pub struct Func(PhantomData<[()]>);
 native_ref!(&Func = jit_function_t);
 impl Func {
-    /// Check if the given function is compiled
+    /// Check if the given function has been compiled
     pub fn is_compiled(&self) -> bool {
         unsafe { jit_function_is_compiled(self.into()) != 0 }
     }
@@ -64,7 +66,7 @@ impl Func {
         unsafe { from_ptr(jit_function_get_signature(self.into())) }
     }
 }
-/// A function which has already been compiled from an `UncompiledFunction`. This can
+/// A function which has already been compiled from an `UncompiledFunction`, so it can
 /// be called but not added to.
 ///
 /// A function persists for the lifetime of its containing context. This is
@@ -258,14 +260,14 @@ impl<'a> UncompiledFunction<'a> {
         }
     }
     #[inline(always)]
-    /// Throw an exception from the function with the value given
+    /// Make an instruction to throw an exception from the function with the value given
     pub fn insn_throw(&self, retval: &'a Val) {
         unsafe {
             jit_insn_throw(self.into(), retval.into());
         }
     }
     #[inline(always)]
-    /// Return from the function with the value given
+    /// Make an instruction that will return from the function with the value given
     pub fn insn_return(&self, retval: &'a Val) {
         unsafe {
             jit_insn_return(self.into(), retval.into());

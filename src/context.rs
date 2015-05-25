@@ -8,6 +8,27 @@ use std::ops::{Index, IndexMut};
 use std::iter::IntoIterator;
 /// Holds all of the functions you have built and compiled. There can be
 /// multiple, but normally there is only one.
+///
+/// The type parameter `T` represents the type of the tagged data on the
+/// context, which can be indexed to get this data. If you do not want
+/// to tag the context with data, make sure to instantiate it with a
+/// unit (`()`) for `T`, like so:
+///
+/// ```rust
+/// use jit::Context;
+/// let ctx = Context::<()>::new();
+/// ```
+/// However, if you do want to set tagged data on it, simply put the type
+/// of the data as the `T` parameter when you instantiate it, like so:
+///
+/// ```rust
+/// use jit::Context;
+/// let mut ctx = Context::<usize>::new();
+/// ctx[0] = 42;
+/// ctx[1] = 21;
+/// assert_eq!(ctx[0], 42);
+/// assert_eq!(ctx[1], 21);
+/// ```
 pub struct Context<T = ()> {
     _context: jit_context_t,
     marker: PhantomData<T>
