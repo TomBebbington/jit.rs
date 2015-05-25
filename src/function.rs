@@ -618,8 +618,14 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction the gets the square root of a number
-    pub fn insn_sqrt(&self, v: &'a Val) -> &'a Val{
-        self.insn_unop(v, jit_insn_sqrt)
+    pub fn insn_sqrt(&self, value: &'a Val) -> &'a Val{
+        if cfg!(not(ndebug)) {
+            let ty = value.get_type();
+            if !ty.is_float() {
+                panic!("Value given to insn_sqrt should be float, got {:?}", ty);
+            }
+        }
+        self.insn_unop(value, jit_insn_sqrt)
     }
     #[inline(always)]
     /// Make an instruction the gets the tangent of a number

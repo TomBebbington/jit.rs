@@ -8,6 +8,7 @@ fn test_sqrt() {
     let mut ctx = Context::<()>::new();
     assert_eq!(ctx.functions().count(), 0);
     jit_func!(&mut ctx, func, fn(num: usize) -> usize {
+        let num = func.insn_convert(num, &get::<f32>(), false);
         let sqrt = func.insn_sqrt(num);
         let sqrt_arg_ui = func.insn_convert(sqrt, &get::<usize>(), false);
         func.insn_return(sqrt_arg_ui);

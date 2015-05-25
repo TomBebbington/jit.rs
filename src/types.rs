@@ -516,6 +516,28 @@ impl Ty {
         }
     }
     #[inline(always)]
+    /// Check if this is a floating-point number
+    ///
+    /// ```rust
+    /// use jit::*;
+    /// assert!(get::<f64>().is_float());
+    /// assert!(!get::<i16>().is_float());
+    /// ```
+    pub fn is_float(&self) -> bool {
+        let kind = self.get_kind();
+        kind.contains(TypeKind::NFloat) || kind.contains(TypeKind::Float32) || kind.contains(TypeKind::Float64)
+    }
+    /// Check if this is an integer
+    ///
+    /// ```rust
+    /// use jit::*;
+    /// assert!(get::<i16>().is_int());
+    /// assert!(!get::<f32>().is_int());
+    /// ```
+    pub fn is_int(&self) -> bool {
+        self.is_primitive() && !self.is_float()
+    }
+    #[inline(always)]
     /// Check if this is a struct
     ///
     /// ```rust

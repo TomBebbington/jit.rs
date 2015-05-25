@@ -136,6 +136,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Annotatable, 
                             vis: Visibility::Inherited,
                             node: ImplItem_::MethodImplItem(
                                 MethodSig {
+                                    constness: Constness::NotConst,
                                     unsafety: Unsafety::Normal,
                                     abi: Abi::Rust,
                                     explicit_self: respan(sp, ExplicitSelf_::SelfStatic),
@@ -152,6 +153,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Annotatable, 
                             vis: Visibility::Inherited,
                             node: ImplItem_::MethodImplItem(
                                 MethodSig {
+                                    constness: Constness::NotConst,
                                     unsafety: Unsafety::Normal,
                                     abi: Abi::Rust,
                                     explicit_self: respan(
@@ -275,6 +277,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Annotatable, 
                         vis: Visibility::Inherited,
                         node: ImplItem_::MethodImplItem(
                             MethodSig {
+                                constness: Constness::NotConst,
                                 unsafety: Unsafety::Normal,
                                 abi: Abi::Rust,
                                 explicit_self: respan(sp, ExplicitSelf_::SelfStatic),
@@ -292,6 +295,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Annotatable, 
                         vis: Visibility::Inherited,
                         node: ImplItem_::MethodImplItem(
                             MethodSig {
+                                constness: Constness::NotConst,
                                 unsafety: Unsafety::Normal,
                                 abi: Abi::Rust,
                                 explicit_self: respan(
