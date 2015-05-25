@@ -140,6 +140,20 @@ macro_rules! expect(
             }
         }
     );
+    ($name:ident, $dest:expr, $source:expr, $size:expr) => (
+        if cfg!(not(ndebug)) {
+            let dest_t = $dest.get_type();
+            let source_t = $source.get_type();
+            let size_t = $size.get_type();
+            if !size_t.is_int() {
+                panic!("Expected integer size for {}, but got {:?}", stringify!($name), size_t);
+            } else if !dest_t.is_pointer() {
+                panic!("Expected pointer destination for {}, but got {:?}", stringify!($name), size_t);
+            } else if !source_t.is_pointer() {
+                panic!("Expected pointer source for {}, but got {:?}", stringify!($name), size_t);
+            }
+        }
+    )
 );
 
 #[derive(PartialEq)]
@@ -826,8 +840,9 @@ impl<'a> UncompiledFunction<'a> {
             , flags)
     }
     #[inline(always)]
-    /// Make an instruction that copies memory from a source address to a destination address
+    /// Make an instruction that copies `size` bytes from the `source` address to the `dest` address
     pub fn insn_memcpy(&self, dest: &'a Val, source: &'a Val, size: &'a Val) -> bool {
+        expect!(insn_memcpy, dest, source, size);
         unsafe {
             jit_insn_memcpy(self.into(), dest.into(), source.into(), size.into()) != 0
         }
@@ -835,6 +850,7 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that moves memory from a source address to a destination address
     pub fn insn_memmove(&self, dest: &'a Val, source: &'a Val, size: &'a Val) -> bool {
+        expect!(insn_memmove, dest, source, size);
         unsafe {
             jit_insn_memmove(self.into(), dest.into(), source.into(), size.into()) != 0
         }
@@ -842,12 +858,13 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that sets memory at the destination address
     pub fn insn_memset(&self, dest: &'a Val, source: &'a Val, size: &'a Val) -> bool {
+        expect!(insn_memset, dest, source, size);
         unsafe {
             jit_insn_memset(self.into(), dest.into(), source.into(), size.into()) != 0
         }
     }
     #[inline(always)]
-    /// Make an instruction that allocates some space
+    /// Make an instruction that allocates `size` bytes of memory from the stack
     pub fn insn_alloca(&self, size: &'a Val) -> &'a Val {
         expect!(insn_alloca, size, int);
         unsafe {
