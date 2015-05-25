@@ -104,6 +104,44 @@ impl<'a> CompiledFunction<'a> {
     }
 }
 
+macro_rules! expect(
+    ($name:ident, $value:expr, float) => (
+        if cfg!(not(ndebug)) {
+            let ty = $value.get_type();
+            if !ty.is_float() {
+                panic!("Value given to {} should be float, got {:?}", stringify!($name), ty);
+            }
+        }
+    );
+    ($name:ident, $value:expr, primitive) => (
+        if cfg!(not(ndebug)) {
+            let ty = $value.get_type();
+            if !ty.is_primitive() {
+                panic!("Value given to {} should be primitive, got {:?}", stringify!($name), ty);
+            }
+        }
+    );
+    ($name:ident, $v1:expr, $v2:expr, primitive) => (
+        if cfg!(not(ndebug)) {
+            let ty1 = $v1.get_type();
+            let ty2 = $v2.get_type();
+            if !ty1.is_primitive() {
+                panic!("Values given to {} should be primitive, got {:?}", stringify!($name), ty1);
+            } else if !ty2.is_primitive() {
+                panic!("Values given to {} should be primitive, got {:?}", stringify!($name), ty2);
+            }
+        }
+    );
+    ($name:ident, $value:expr, int) => (
+        if cfg!(not(ndebug)) {
+            let ty = $value.get_type();
+            if !ty.is_int() {
+                panic!("Value given to {} should be integer, got {:?}", stringify!($name), ty);
+            }
+        }
+    );
+);
+
 #[derive(PartialEq)]
 /// A function which has not been compiled yet, so it can have instructions added to it.
 ///
@@ -618,18 +656,13 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction the gets the square root of a number
-    pub fn insn_sqrt(&self, value: &'a Val) -> &'a Val{
-        if cfg!(not(ndebug)) {
-            let ty = value.get_type();
-            if !ty.is_float() {
-                panic!("Value given to insn_sqrt should be float, got {:?}", ty);
-            }
-        }
+    pub fn insn_sqrt(&self, value: &'a Val) -> &'a Val {
+        expect!(insn_sqrt, value, float);
         self.insn_unop(value, jit_insn_sqrt)
     }
     #[inline(always)]
     /// Make an instruction the gets the tangent of a number
-    pub fn insn_tan(&self, v: &'a Val) -> &'a Val{
+    pub fn insn_tan(&self, v: &'a Val) -> &'a Val {
         self.insn_unop(v, jit_insn_tan)
     }
     #[inline(always)]
@@ -639,42 +672,49 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that truncates the value
-    pub fn insn_trunc(&self, v: &'a Val) -> &'a Val{
+    pub fn insn_trunc(&self, v: &'a Val) -> &'a Val {
         self.insn_unop(v, jit_insn_trunc)
     }
     #[inline(always)]
     /// Make an instruction that checks if the number is NaN
-    pub fn insn_is_nan(&self, v: &'a Val) -> &'a Val{
+    pub fn insn_is_nan(&self, v: &'a Val) -> &'a Val {
+        expect!(insn_is_nan, v, float);
         self.insn_unop(v, jit_insn_is_nan)
     }
     #[inline(always)]
     /// Make an instruction that checks if the number is finite
-    pub fn insn_is_finite(&self, v: &'a Val) -> &'a Val{
+    pub fn insn_is_finite(&self, v: &'a Val) -> &'a Val {
+        expect!(insn_is_finite, v, float);
         self.insn_unop(v, jit_insn_is_finite)
     }
     #[inline(always)]
     /// Make an instruction that checks if the number is  infinite
-    pub fn insn_is_inf(&self, v: &'a Val) -> &'a Val{
+    pub fn insn_is_inf(&self, v: &'a Val) -> &'a Val {
+        expect!(insn_is_inf, v, float);
         self.insn_unop(v, jit_insn_is_inf)
     }
     #[inline(always)]
     /// Make an instruction that gets the absolute value of a number
-    pub fn insn_abs(&self, v: &'a Val) -> &'a Val{
+    pub fn insn_abs(&self, v: &'a Val) -> &'a Val {
+        expect!(insn_abs, v, primitive);
         self.insn_unop(v, jit_insn_abs)
     }
     #[inline(always)]
     /// Make an instruction that gets the smallest of two numbers
     pub fn insn_min(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
+        expect!(insn_min, v1, v2, primitive);
         self.insn_binop(v1, v2, jit_insn_min)
     }
     #[inline(always)]
     /// Make an instruction that gets the biggest of two numbers
     pub fn insn_max(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
+        expect!(insn_max, v1, v2, primitive);
         self.insn_binop(v1, v2, jit_insn_max)
     }
     #[inline(always)]
     /// Make an instruction that gets the sign of a number
-    pub fn insn_sign(&self, v: &'a Val) -> &'a Val{
+    pub fn insn_sign(&self, v: &'a Val) -> &'a Val {
+        expect!(insn_sign, v, primitive);
         self.insn_unop(v, jit_insn_sign)
     }
 
@@ -809,6 +849,7 @@ impl<'a> UncompiledFunction<'a> {
     #[inline(always)]
     /// Make an instruction that allocates some space
     pub fn insn_alloca(&self, size: &'a Val) -> &'a Val {
+        expect!(insn_alloca, size, int);
         unsafe {
             from_ptr(jit_insn_alloca(self.into(), size.into()))
         }
