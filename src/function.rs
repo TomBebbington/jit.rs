@@ -193,6 +193,12 @@ impl<'a> UncompiledFunction<'a> {
     ///
     /// This will protect the JIT's internal data structures within a
     /// multi-threaded environment.
+    ///
+    /// ```rust
+    /// use jit::*;
+    /// let mut ctx = Context::<()>::new();
+    /// let func = UncompiledFunction::new(&mut ctx, &get::<fn(f64) -> f64>());
+    /// ```
     pub fn new<T>(context:&'a mut Context<T>, signature:&Ty) -> UncompiledFunction<'a> {
         unsafe {
             let mut me:UncompiledFunction = from_ptr_oom(jit_function_create(
@@ -248,6 +254,12 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instructional representation of a Rust value
+    /// ```rust
+    /// use jit::*;
+    /// let mut ctx = Context::<()>::new();
+    /// let func = UncompiledFunction::new(&mut ctx, &get::<fn() -> i32>());
+    /// func.insn_return(func.insn_of(42i32));
+    /// ```
     pub fn insn_of<T>(&self, val:T) -> &'a Val where T:Compile<'a> {
         val.compile(self)
     }
@@ -292,6 +304,9 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that adds the values
+    ///
+    /// You can also just use `v1 + v2` in your code instead of running this method,
+    /// `&Val` has the `Add` trait implemented so it can be added with normal operators.
     pub fn insn_add(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_add)
     }
@@ -302,6 +317,9 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that subtracts the second value from the first
+    ///
+    /// You can also just use `v1 - v2` in your code instead of running this method,
+    /// `&Val` has the `Sub` trait implemented so it can be subtracted with normal operators.
     pub fn insn_sub(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_sub)
     }
@@ -312,12 +330,18 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that divides the first number by the second
+    ///
+    /// You can also just use `v1 / v2` in your code instead of running this method,
+    /// `&Val` has the `Div` trait implemented so it can be divided with normal operators.
     pub fn insn_div(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_div)
     }
     #[inline(always)]
     /// Make an instruction that finds the remainder when the first number is
     /// divided by the second
+    ///
+    /// You can also just use `v1 % v2` in your code instead of running this method,
+    /// `&Val` has the `Rem` trait implemented so it can be done with normal operators.
     pub fn insn_rem(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_rem)
     }
@@ -355,33 +379,51 @@ impl<'a> UncompiledFunction<'a> {
     }
     #[inline(always)]
     /// Make an instruction that performs a bitwise and on the two values
+    ///
+    /// You can also just use `v1 & v2` in your code instead of running this method,
+    /// `&Val` has the `BitAnd` trait implemented so it can be done with normal operators.
     pub fn insn_and(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_and)
     }
     #[inline(always)]
     /// Make an instruction that performs a bitwise or on the two values
+    ///
+    /// You can also just use `v1 | v2` in your code instead of running this method,
+    /// `&Val` has the `BitOr` trait implemented so it can be done with normal operators.
     pub fn insn_or(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_or)
     }
     #[inline(always)]
     /// Make an instruction that performs a bitwise xor on the two values
+    ///
+    /// You can also just use `v1 ^ v2` in your code instead of running this method,
+    /// `&Val` has the `BitXor` trait implemented so it can be done with normal operators.
     pub fn insn_xor(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_xor)
     }
     #[inline(always)]
     /// Make an instruction that performs a bitwise not on the two values
+    ///
+    /// You can also just use `!value` in your code instead of running this method.
+    /// `&Val` has the `Not` trait implemented so it can be inversed with normal operators.
     pub fn insn_not(&self, value: &'a Val) -> &'a Val {
         self.insn_unop(value, jit_insn_not)
     }
     #[inline(always)]
     /// Make an instruction that performs a left bitwise shift on the first
     /// value by the second value
+    ///
+    /// You can also just use `v1 << v2` in your code instead of running this method,
+    /// `&Val` has the `Shl` trait implemented so it can be shifted with normal operators.
     pub fn insn_shl(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_shl)
     }
     #[inline(always)]
     /// Make an instruction that performs a right bitwise shift on the first
     /// value by the second value
+    ///
+    /// You can also just use `v1 >> v2` in your code instead of running this method,
+    /// `&Val` has the `Shr` trait implemented so it can be shifted with normal operators.
     pub fn insn_shr(&self, v1: &'a Val, v2: &'a Val) -> &'a Val {
         self.insn_binop(v1, v2, jit_insn_shr)
     }
@@ -391,12 +433,17 @@ impl<'a> UncompiledFunction<'a> {
         self.insn_binop(v1, v2, jit_insn_ushr)
     }
     #[inline(always)]
-    /// Make an instruction that performs a bitwise negate on the value
+    /// Make an instruction that performs a negation on the value
+    ///
+    /// You can also just use `-value` in your code instead of running this method.
+    /// `&Val` has the `Neg` trait implemented so it can be negatedd with normal operators.
     pub fn insn_neg(&self, value: &'a Val) -> &'a Val {
         self.insn_unop(value, jit_insn_neg)
     }
     #[inline(always)]
     /// Make an instruction that duplicates the value given
+    ///
+    /// This is the same as load
     pub fn insn_dup(&self, value: &'a Val) -> &'a Val {
         unsafe {
             let dup_value = jit_insn_load(self.into(), value.into());
@@ -404,36 +451,43 @@ impl<'a> UncompiledFunction<'a> {
         }
     }
     #[inline(always)]
-    /// Make an instruction that loads a value from a src value
+    /// Make an instruction that loads the contents of `src` into a temporary
     pub fn insn_load(&self, src: &'a Val) -> &'a Val {
         self.insn_unop(src, jit_insn_load)
     }
     #[inline(always)]
-    /// Make an instruction that loads a value from a src value
-    pub fn insn_load_relative(&self, src: &'a Val, offset: usize, ty: &Ty) -> &'a Val {
+    /// Make an instruction that loads a value of the given type from `value + offset`, where
+    /// `value` must be a pointer
+    pub fn insn_load_relative(&self, value: &'a Val, offset: usize, ty: &Ty) -> &'a Val {
+        if cfg!(not(ndebug)) && !value.get_type().is_pointer() {
+            panic!("Value given to insn_load_relative should be pointer, got {:?}", value.get_type());
+        }
         unsafe {
             from_ptr(jit_insn_load_relative(
                 self.into(),
-                src.into(),
+                value.into(),
                 offset as jit_nint,
                 ty.into()
             ))
         }
     }
     #[inline(always)]
-    /// Make an instruction that stores a value at a destination value
-    pub fn insn_store(&self, dest: &'a Val, src: &'a Val) {
+    /// Make an instruction that stores the contents of `val` into `dest`, where `dest` is a
+    /// temporary value or local value
+    pub fn insn_store(&self, dest: &'a Val, val: &'a Val) {
         unsafe {
-            jit_insn_store(self.into(), dest.into(), src.into());
+            jit_insn_store(self.into(), dest.into(), val.into());
         }
     }
     #[inline(always)]
-    /// Make an instruction that stores a value a certain offset away from a
-    /// destination value
-    pub fn insn_store_relative(&self, dest: &'a Val, offset: usize,
-                               src: &'a Val) {
+    /// Make an instruction that stores the `value` at the address `dest + offset`, where `dest`
+    /// must be a pointer
+    pub fn insn_store_relative(&self, dest: &'a Val, offset: usize, value: &'a Val) {
+        if cfg!(not(ndebug)) && !dest.get_type().is_pointer() {
+            panic!("Destination given to insn_store_relative should be pointer, got {:?}", value.get_type());
+        }
         unsafe {
-            jit_insn_store_relative(self.into(), dest.into(), offset as jit_nint, src.into());
+            jit_insn_store_relative(self.into(), dest.into(), offset as jit_nint, value.into());
         }
     }
     #[inline(always)]
