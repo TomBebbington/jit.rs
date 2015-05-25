@@ -1,19 +1,19 @@
-#![feature(custom_attribute, plugin)]
+#![feature(custom_derive, custom_attribute, plugin)]
 #![plugin(jit_macros)]
 #[no_link] #[macro_use]
 extern crate jit_macros;
 extern crate jit;
 use jit::*;
 
-#[jit]
 #[repr(packed)]
+#[derive(Compile)]
 pub struct Position {
     x: f64,
     y: f64
 }
 
-#[jit]
 #[repr(packed)]
+#[derive(Compile)]
 pub struct Vector2<T> {
     a: T,
     b: T

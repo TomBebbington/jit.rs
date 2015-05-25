@@ -83,7 +83,7 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>, as_cow: bool) -> Option<P<Ex
         }
     }
 }
-fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Annotatable, push: &mut FnMut(Annotatable)) {
+fn expand_derive_compile(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Annotatable, push: &mut FnMut(Annotatable)) {
     let item = item.clone().expect_item();
     let name = item.ident;
     let jit = cx.ident_of("jit");
@@ -324,7 +324,7 @@ fn expand_jit(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &Annotatable, 
 }
 #[plugin_registrar]
 pub fn plugin_registrar(reg: &mut Registry) {
-    reg.register_syntax_extension(token::intern("jit"), SyntaxExtension::MultiDecorator(Box::new(expand_jit)));
+    reg.register_syntax_extension(token::intern("derive_Compile"), SyntaxExtension::MultiDecorator(Box::new(expand_derive_compile)));
 }
 
 #[macro_export]

@@ -46,7 +46,7 @@ How do I use the macro?
 -----------------------
 Just annotate your types you want to pass into LibJIT like this
 ``` rust
-#[jit]
+#[derive(Compile)]
 struct Position {
   x: f64,
   y: f64

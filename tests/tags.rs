@@ -1,4 +1,4 @@
-#![feature(plugin, custom_attribute)]
+#![feature(plugin, custom_derive, custom_attribute)]
 #![plugin(jit_macros)]
 #[no_link] #[macro_use]
 extern crate jit_macros;
@@ -37,7 +37,7 @@ fn test_panic_tags() {
     let pos_t = TaggedType::new(&pos_t, kind, Box::new(PanicDrop(42)));
     assert_eq!(pos_t.get_tagged_data(), Some(&PanicDrop(42)));
 }
-#[jit]
+#[derive(Compile)]
 #[repr(packed)]
 struct Pos {
     x: f64,
