@@ -770,6 +770,22 @@ impl<'a> UncompiledFunction<'a> {
     fn insn_call_native(&self, name: Option<&str>,
                         native_func: *mut c_void, signature: &Ty,
                         args: &mut [&'a Val], flags: flags::CallFlags) -> &'a Val {
+        if cfg!(not(ndebug)) {
+            let name = name.unwrap_or("unnamed function");
+            if !signature.is_signature() {
+                panic!("Bad signature for {} - expected signature, got {:?}", name, signature)
+            }
+            let num_sig_args = signature.params().count();
+            if args.len() != num_sig_args {
+                panic!("Bad arguments to {} - expected {}, got {}", name, num_sig_args, args.len());
+            }
+            for (index, (arg, param)) in args.iter().zip(signature.params()).enumerate() {
+                let ty = arg.get_type();
+                if ty != param {
+                    panic!("Bad argument #{} to {} - expected {:?}, got {:?}", index, name, param, ty);
+                }
+            }
+        }
         unsafe {
             let mut native_args:&mut [jit_value_t] = mem::transmute(args);
             let c_name = name.map(|name| CString::new(name.as_bytes()).unwrap());
