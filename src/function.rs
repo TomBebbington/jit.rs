@@ -933,21 +933,24 @@ impl<'a> UncompiledFunction<'a> {
         block();
         self.insn_label(&mut after);
     }
+    #[inline(always)]
+    /// Make instructions to run the block if the condition is met
+    pub fn insn_if_else<A, B>(&self, cond: &'a Val, if_block: A, else_block: B) where A:FnOnce(), B:FnOnce() {
+        let mut after = Label::new(self);
+        let mut end = Label::new(self);
+        self.insn_branch_if_not(cond, &mut after);
+        if_block();
+        self.insn_branch(&mut end);
+        self.insn_label(&mut after);
+        else_block();
+        self.insn_label(&mut end)
+    }
     /// Make instructions to run the block forever
     pub fn insn_loop<B>(&self, block: B) where B:FnOnce() {
         let mut start = Label::new(self);
         self.insn_label(&mut start);
         block();
         self.insn_branch(&mut start);
-    }
-    /// Make instructions to run the block and continue running it so long
-    /// as the condition is met
-    pub fn insn_loop_while<C, B>(&self, cond: C, block: B)
-        where C:FnOnce() -> &'a Val, B:FnOnce()  {
-        let mut start = Label::new(self);
-        self.insn_label(&mut start);
-        block();
-        self.insn_branch_if(cond(), &mut start);
     }
     /// Make instructions to run the block and continue running it so long
     /// as the condition is met
