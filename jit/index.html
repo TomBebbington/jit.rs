@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `jit` crate.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, jit">
+
+    <title>jit - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'></p><script>window.sidebarCurrent = {name: 'jit', ty: 'mod', relpath: '../'};</script>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content mod">
+<h1 class='fqn'><span class='in-band'>Crate <a class='mod' href=''>jit</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-0' class='srclink' href='../src/jit/jit.rs.html#26-117' title='goto source code'>[src]</a></span></h1>
+<div class='docblock'><p>This crate wraps LibJIT in an idiomatic style.
+For example, here&#39;s a quick example which makes a multiply function using LibJIT:</p>
+<pre class='rust rust-example-rendered'>
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>jit</span>;
+<span class='attribute'>#[<span class='ident'>no_link</span>]</span> <span class='attribute'>#[<span class='ident'>macro_use</span>]</span>
+<span class='kw'>extern</span> <span class='kw'>crate</span> <span class='ident'>jit_macros</span>;
+<span class='kw'>use</span> <span class='ident'>jit</span>::<span class='op'>*</span>;
+<span class='kw'>fn</span> <span class='ident'>main</span>() {
+    <span class='comment'>// make a new context to make functions on</span>
+    <span class='kw'>let</span> <span class='kw-2'>mut</span> <span class='ident'>ctx</span> <span class='op'>=</span> <span class='ident'>Context</span>::<span class='op'>&lt;</span>()<span class='op'>&gt;</span>::<span class='ident'>new</span>();
+    <span class='macro'>jit_func</span><span class='macro'>!</span>(<span class='kw-2'>&amp;</span><span class='kw-2'>mut</span> <span class='ident'>ctx</span>, <span class='ident'>func</span>, <span class='kw'>fn</span>(<span class='ident'>x</span>: <span class='ident'>isize</span>, <span class='ident'>y</span>: <span class='ident'>isize</span>) <span class='op'>-&gt;</span> <span class='ident'>isize</span> {
+        <span class='ident'>func</span>.<span class='ident'>insn_return</span>(<span class='ident'>x</span> <span class='op'>*</span> <span class='ident'>y</span>);
+    }, {
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>func</span>(<span class='number'>4</span>, <span class='number'>5</span>), <span class='number'>20</span>);
+        <span class='macro'>assert_eq</span><span class='macro'>!</span>(<span class='ident'>func</span>(<span class='op'>-</span><span class='number'>2</span>, <span class='op'>-</span><span class='number'>4</span>), <span class='number'>8</span>);
+    });
+}
+</pre>
+</div><h2 id='modules' class='section-header'><a href="#modules">Modules</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='mod' href='flags/index.html'
+                               title='jit::flags'>flags</a></td>
+                        <td class='docblock short'>
+                             <p>Call flags to a function</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='mod' href='kind/index.html'
+                               title='jit::kind'>kind</a></td>
+                        <td class='docblock short'>
+                             <p>The integer representation of a type</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='mod' href='typecs/index.html'
+                               title='jit::typecs'>typecs</a></td>
+                        <td class='docblock short'>
+                             <p>Type constants</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='structs' class='section-header'><a href="#structs">Structs</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Block.html'
+                               title='jit::Block'>Block</a></td>
+                        <td class='docblock short'>
+                             <p>Represents a single LibJIT block</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.CallFlags.html'
+                               title='jit::CallFlags'>CallFlags</a></td>
+                        <td class='docblock short'>
+                             
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.CompiledFunction.html'
+                               title='jit::CompiledFunction'>CompiledFunction</a></td>
+                        <td class='docblock short'>
+                             <p>A function which has already been compiled from an <code>UncompiledFunction</code>, so it can
+be called but not added to.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Context.html'
+                               title='jit::Context'>Context</a></td>
+                        <td class='docblock short'>
+                             <p>Holds all of the functions you have built and compiled. There can be
+multiple, but normally there is only one.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Field.html'
+                               title='jit::Field'>Field</a></td>
+                        <td class='docblock short'>
+                             <p>A single field of a struct</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Fields.html'
+                               title='jit::Fields'>Fields</a></td>
+                        <td class='docblock short'>
+                             <p>Iterates through all the fields of a struct</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Func.html'
+                               title='jit::Func'>Func</a></td>
+                        <td class='docblock short'>
+                             <p>A function</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Instruction.html'
+                               title='jit::Instruction'>Instruction</a></td>
+                        <td class='docblock short'>
+                             <p>Represents a single LibJIT instruction</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.InstructionIter.html'
+                               title='jit::InstructionIter'>InstructionIter</a></td>
+                        <td class='docblock short'>
+                             
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Label.html'
+                               title='jit::Label'>Label</a></td>
+                        <td class='docblock short'>
+                             <p>A label in the code that can be branched to in instructions</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Needed.html'
+                               title='jit::Needed'>Needed</a></td>
+                        <td class='docblock short'>
+                             <p>An ELF dependency iterator</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Params.html'
+                               title='jit::Params'>Params</a></td>
+                        <td class='docblock short'>
+                             <p>Iterator through all the arguments a function takes</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.ReadElf.html'
+                               title='jit::ReadElf'>ReadElf</a></td>
+                        <td class='docblock short'>
+                             <p>An ELF binary reader</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.ReadElfError.html'
+                               title='jit::ReadElfError'>ReadElfError</a></td>
+                        <td class='docblock short'>
+                             <p>An error from trying to open the ELF, including the filename</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.TaggedType.html'
+                               title='jit::TaggedType'>TaggedType</a></td>
+                        <td class='docblock short'>
+                             
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Ty.html'
+                               title='jit::Ty'>Ty</a></td>
+                        <td class='docblock short'>
+                             <p>An object that represents a native system type</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Type.html'
+                               title='jit::Type'>Type</a></td>
+                        <td class='docblock short'>
+                             <p>An owned object that represents a native system type.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.TypeKind.html'
+                               title='jit::TypeKind'>TypeKind</a></td>
+                        <td class='docblock short'>
+                             
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.UncompiledFunction.html'
+                               title='jit::UncompiledFunction'>UncompiledFunction</a></td>
+                        <td class='docblock short'>
+                             <p>A function which has not been compiled yet, so it can have instructions added to it.</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.Val.html'
+                               title='jit::Val'>Val</a></td>
+                        <td class='docblock short'>
+                             <p>Vals form the backbone of the storage system in <code>LibJIT</code></p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='struct' href='struct.WriteElf.html'
+                               title='jit::WriteElf'>WriteElf</a></td>
+                        <td class='docblock short'>
+                             <p>An ELF binary reader</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='enums' class='section-header'><a href="#enums">Enums</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.Abi.html'
+                               title='jit::Abi'>Abi</a></td>
+                        <td class='docblock short'>
+                             <p>A platform&#39;s application binary interface</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='enum' href='enum.ReadElfErrorCode.html'
+                               title='jit::ReadElfErrorCode'>ReadElfErrorCode</a></td>
+                        <td class='docblock short'>
+                             <p>An error from trying to open the ELF</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='traits' class='section-header'><a href="#traits">Traits</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='trait' href='trait.Compile.html'
+                               title='jit::Compile'>Compile</a></td>
+                        <td class='docblock short'>
+                             <p>A type that can be compiled into a LibJIT representation</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='functions' class='section-header'><a href="#functions">Functions</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='fn' href='fn.get.html'
+                               title='jit::get'>get</a></td>
+                        <td class='docblock short'>
+                             <p>Get the Rust type given as a type descriptor</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='fn' href='fn.init.html'
+                               title='jit::init'>init</a></td>
+                        <td class='docblock short'>
+                             <p>Initialise the library and prepare for operations</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='fn' href='fn.supports_threads.html'
+                               title='jit::supports_threads'>supports_threads</a></td>
+                        <td class='docblock short'>
+                             <p>Check if the JIT supports theads</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='fn' href='fn.supports_virtual_memory.html'
+                               title='jit::supports_virtual_memory'>supports_virtual_memory</a></td>
+                        <td class='docblock short'>
+                             <p>Check if the JIT supports virtual memory</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='fn' href='fn.uses_interpreter.html'
+                               title='jit::uses_interpreter'>uses_interpreter</a></td>
+                        <td class='docblock short'>
+                             <p>Check if the JIT is using a fallback interpreter</p>
+
+                        </td>
+                    </tr>
+                </table><h2 id='types' class='section-header'><a href="#types">Type Definitions</a></h2>
+<table>
+                    <tr class=' module-item'>
+                        <td><a class='type' href='type.CowType.html'
+                               title='jit::CowType'>CowType</a></td>
+                        <td class='docblock short'>
+                             <p>A copy-on-write type</p>
+
+                        </td>
+                    </tr>
+                
+                    <tr class=' module-item'>
+                        <td><a class='type' href='type.StaticType.html'
+                               title='jit::StaticType'>StaticType</a></td>
+                        <td class='docblock short'>
+                             <p>A static type</p>
+
+                        </td>
+                    </tr>
+                </table></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div class="shortcuts">
+            <h1>Keyboard shortcuts</h1>
+            <dl>
+                <dt>?</dt>
+                <dd>Show this help dialog</dd>
+                <dt>S</dt>
+                <dd>Focus the search field</dd>
+                <dt>&larrb;</dt>
+                <dd>Move up in search results</dd>
+                <dt>&rarrb;</dt>
+                <dd>Move down in search results</dd>
+                <dt>&#9166;</dt>
+                <dd>Go to active search result</dd>
+            </dl>
+        </div>
+        <div class="infos">
+            <h1>Search tricks</h1>
+            <p>
+                Prefix searches with a type followed by a colon (e.g.
+                <code>fn:</code>) to restrict the search to a given type.
+            </p>
+            <p>
+                Accepted types are: <code>fn</code>, <code>mod</code>,
+                <code>struct</code>, <code>enum</code>,
+                <code>trait</code>, <code>typedef</code> (or
+                <code>tdef</code>).
+            </p>
+            <p>
+                Search functions by type signature (e.g.
+                <code>vec -> usize</code>)
+            </p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "jit";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Val","Vals form the backbone of the storage system in `LibJIT`"]]});

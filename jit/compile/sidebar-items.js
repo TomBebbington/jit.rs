@@ -1,0 +1,1 @@
+initSidebarItems({"trait":[["Compile","A type that can be compiled into a LibJIT representation"]]});

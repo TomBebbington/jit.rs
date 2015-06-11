@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Val` struct in crate `jit`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Val">
+
+    <title>jit::Val - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <section class="sidebar">
+        
+        <p class='location'><a href='index.html'>jit</a></p><script>window.sidebarCurrent = {name: 'Val', ty: 'struct', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </section>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press 'S' to search, '?' for more options..."
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content struct">
+<h1 class='fqn'><span class='in-band'>Struct <a href='index.html'>jit</a>::<wbr><a class='struct' href=''>Val</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-14406' class='srclink' href='../src/jit/value.rs.html#14' title='goto source code'>[src]</a></span></h1>
+<pre class='rust struct'>pub struct Val(_);</pre><div class='docblock'><p>Vals form the backbone of the storage system in <code>LibJIT</code></p>
+
+<p>Every value in the system, be it a constant, a local variable, or a
+temporary result, is represented by an object of type <code>Val</code>. The JIT then
+allocates registers or memory locations to the values as appropriate. This is
+why <code>Val</code> is always behind a reference</p>
+</div><h2 id='methods'>Methods</h2><h3 class='impl'><code>impl <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='method.new' class='method'><code>fn <a href='#method.new' class='fnname'>new</a>&lt;'a&gt;(func: &amp;<a class='struct' href='../jit/struct.UncompiledFunction.html' title='jit::UncompiledFunction'>UncompiledFunction</a>&lt;'a&gt;, value_type: &amp;<a class='struct' href='../jit/struct.Ty.html' title='jit::Ty'>Ty</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<div class='docblock'><p>Create a new value in the context of a function&#39;s current block.</p>
+
+<p>The value initially starts off as a block-specific temporary. It will be
+converted into a function-wide local variable if it is ever referenced
+from a different block.</p>
+</div><h4 id='method.get_type' class='method'><code>fn <a href='#method.get_type' class='fnname'>get_type</a>(&amp;self) -&gt; &amp;<a class='struct' href='../jit/struct.Ty.html' title='jit::Ty'>Ty</a></code></h4>
+<div class='docblock'><p>Get the type of the value</p>
+</div><h4 id='method.get_function' class='method'><code>fn <a href='#method.get_function' class='fnname'>get_function</a>(&amp;self) -&gt; <a class='struct' href='../jit/struct.UncompiledFunction.html' title='jit::UncompiledFunction'>UncompiledFunction</a></code></h4>
+<div class='docblock'><p>Get the function which made this value</p>
+</div><h4 id='method.is_temp' class='method'><code>fn <a href='#method.is_temp' class='fnname'>is_temp</a>(&amp;self) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>Determine if a value is temporary.  i.e. its scope extends over a single
+block within its function.</p>
+</div><h4 id='method.is_addressable' class='method'><code>fn <a href='#method.is_addressable' class='fnname'>is_addressable</a>(&amp;self) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<div class='docblock'><p>Determine if a value is addressable.</p>
+</div><h4 id='method.set_addressable' class='method'><code>fn <a href='#method.set_addressable' class='fnname'>set_addressable</a>(&amp;self)</code></h4>
+<div class='docblock'><p>Set a flag on a value to indicate that it is addressable.
+This should be used when you want to take the address of a value (e.g.
+<code>&amp;variable</code> in Rust/C).  The value is guaranteed to not be stored in a
+register across a function call.</p>
+</div></div><h2 id='implementations'>Trait Implementations</h2><h3 class='impl'><code>impl <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.Eq.html' title='core::cmp::Eq'>Eq</a> for <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'></div><h3 class='impl'><code>impl <a class='trait' href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html' title='core::cmp::PartialEq'>PartialEq</a> for <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='method.eq' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.eq' class='fnname'>eq</a>(&amp;self, other: &amp;<a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+<h4 id='method.ne' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/cmp/trait.PartialEq.html#method.ne' class='fnname'>ne</a>(&amp;self, other: &amp;Rhs) -&gt; <a href='http://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/convert/trait.From.html' title='core::convert::From'>From</a>&lt;<a class='type' href='../libjit_sys/type.jit_value_t.html' title='libjit_sys::jit_value_t'>jit_value_t</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='method.from' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/convert/trait.From.html#method.from' class='fnname'>from</a>(ty: <a class='type' href='../libjit_sys/type.jit_value_t.html' title='libjit_sys::jit_value_t'>jit_value_t</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl <a class='trait' href='http://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html' title='core::fmt::Debug'>Debug</a> for <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='method.fmt' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/fmt/trait.Debug.html#method.fmt' class='fnname'>fmt</a>(&amp;self, fmt: &amp;mut <a class='struct' href='http://doc.rust-lang.org/nightly/core/fmt/struct.Formatter.html' title='core::fmt::Formatter'>Formatter</a>) -&gt; <a class='type' href='http://doc.rust-lang.org/nightly/core/fmt/type.Result.html' title='core::fmt::Result'>Result</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Add.html' title='core::ops::Add'>Add</a>&lt;&amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.add' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.Add.html#method.add' class='fnname'>add</a>(self, other: &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.BitAnd.html' title='core::ops::BitAnd'>BitAnd</a>&lt;&amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.bitand' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.BitAnd.html#method.bitand' class='fnname'>bitand</a>(self, other: &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.BitOr.html' title='core::ops::BitOr'>BitOr</a>&lt;&amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.bitor' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.BitOr.html#method.bitor' class='fnname'>bitor</a>(self, other: &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.BitXor.html' title='core::ops::BitXor'>BitXor</a>&lt;&amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.bitxor' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.BitXor.html#method.bitxor' class='fnname'>bitxor</a>(self, other: &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Div.html' title='core::ops::Div'>Div</a>&lt;&amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.div' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.Div.html#method.div' class='fnname'>div</a>(self, other: &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Mul.html' title='core::ops::Mul'>Mul</a>&lt;&amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.mul' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.Mul.html#method.mul' class='fnname'>mul</a>(self, other: &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Rem.html' title='core::ops::Rem'>Rem</a>&lt;&amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.rem' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.Rem.html#method.rem' class='fnname'>rem</a>(self, other: &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Shl.html' title='core::ops::Shl'>Shl</a>&lt;&amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.shl' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.Shl.html#method.shl' class='fnname'>shl</a>(self, other: &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Shr.html' title='core::ops::Shr'>Shr</a>&lt;&amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.shr' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.Shr.html#method.shr' class='fnname'>shr</a>(self, other: &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Sub.html' title='core::ops::Sub'>Sub</a>&lt;&amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>&gt; for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.sub' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.Sub.html#method.sub' class='fnname'>sub</a>(self, other: &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a>) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Neg.html' title='core::ops::Neg'>Neg</a> for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.neg' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.Neg.html#method.neg' class='fnname'>neg</a>(self) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div><h3 class='impl'><code>impl&lt;'a&gt; <a class='trait' href='http://doc.rust-lang.org/nightly/core/ops/trait.Not.html' title='core::ops::Not'>Not</a> for &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h3><div class='impl-items'><h4 id='assoc_type.Output' class='type'><code>type Output = &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+<h4 id='method.not' class='method'><code>fn <a href='http://doc.rust-lang.org/nightly/core/ops/trait.Not.html#method.not' class='fnname'>not</a>(self) -&gt; &amp;'a <a class='struct' href='../jit/struct.Val.html' title='jit::Val'>Val</a></code></h4>
+</div></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <div id="help" class="hidden">
+        <div class="shortcuts">
+            <h1>Keyboard shortcuts</h1>
+            <dl>
+                <dt>?</dt>
+                <dd>Show this help dialog</dd>
+                <dt>S</dt>
+                <dd>Focus the search field</dd>
+                <dt>&larrb;</dt>
+                <dd>Move up in search results</dd>
+                <dt>&rarrb;</dt>
+                <dd>Move down in search results</dd>
+                <dt>&#9166;</dt>
+                <dd>Go to active search result</dd>
+            </dl>
+        </div>
+        <div class="infos">
+            <h1>Search tricks</h1>
+            <p>
+                Prefix searches with a type followed by a colon (e.g.
+                <code>fn:</code>) to restrict the search to a given type.
+            </p>
+            <p>
+                Accepted types are: <code>fn</code>, <code>mod</code>,
+                <code>struct</code>, <code>enum</code>,
+                <code>trait</code>, <code>typedef</code> (or
+                <code>tdef</code>).
+            </p>
+            <p>
+                Search functions by type signature (e.g.
+                <code>vec -> usize</code>)
+            </p>
+        </div>
+    </div>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "jit";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script async src="../search-index.js"></script>
+</body>
+</html>
