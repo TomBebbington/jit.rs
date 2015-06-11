@@ -3,6 +3,10 @@ JIT.rs
 [![Build Status](https://travis-ci.org/TomBebbington/jit.rs.svg?branch=master)](https://travis-ci.org/TomBebbington/jit.rs)
 [![Latest Version](https://img.shields.io/crates/v/jit.svg)](https://crates.io/crates/jit)
 
+NOTE
+----
+Because LibJIT has been inactive for a year, it seems there won't be any more updates. On the other hand, LLVM is still very active, so I have been working on bindings for a couple of days now. There will be news soon about a replacement.
+
 What is LibJIT?
 ---------------
 LibJIT is a portable, lightweight JIT library developed by GNU in C. It aims to
