@@ -9,7 +9,7 @@ license = "MIT"
 name = "jit"
 readme = "README.md"
 repository = "http://wwww.rustdox.com/TomBebbington/jit.rs/"
-version = "0.9.0"
+version = "0.9.1"
 
 [lib]
 
@@ -23,6 +23,6 @@ libc = "*"
 path = "sys"
 version = "*"
 
-[dependencies.jit_macros]
+[dev-dependencies.jit_macros]
 path = "macro"
 version = "*"
