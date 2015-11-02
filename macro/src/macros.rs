@@ -1,4 +1,4 @@
-#![feature(rustc_private, plugin_registrar, quote, plugin)]
+#![feature(rustc_private, plugin_registrar, quote, plugin, convert)]
 #![plugin(matches)]
 extern crate syntax;
 extern crate rustc;
@@ -38,7 +38,8 @@ fn type_expr(cx: &mut ExtCtxt, sp: Span, ty: P<Ty>, as_cow: bool) -> P<Expr> {
         Ty_::TyPtr(_) | Ty_::TyRptr(_, _) => simple_type(cx, "VOID_PTR", as_cow),
         Ty_::TyPath(ref self_, ref path) => {
             if self_.is_none() && path.segments.len() == 1 {
-                match path.segments[0].identifier.as_str() {
+                let ident = path.segments[0].identifier;
+                match format!("{}", ident).as_str() {
                     "i8" => return simple_type(cx, "sbyte", as_cow),
                     "u8" => return simple_type(cx, "ubyte", as_cow),
                     "i16" => return simple_type(cx, "short", as_cow),
@@ -172,9 +173,9 @@ fn expand_derive_compile(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &An
                 cx.span_err(sp, BAD_STRUCT);
                 return;
             }
-            let mut fields = Vec::with_capacity(def.fields.len());
+            let mut fields = Vec::with_capacity(def.fields().len());
             let mut names = Some(Vec::with_capacity(fields.len()));
-            let mut compiler = Vec::with_capacity(def.fields.len() + 1);
+            let mut compiler = Vec::with_capacity(def.fields().len() + 1);
             let types = gen.ty_params.iter().map(|param| cx.ty_ident(sp, param.ident)).collect();
             let self_ty = cx.ty_path(cx.path_all(sp, false, vec![name], vec![], types, vec![]));
             let self_type = type_expr(cx, sp, self_ty.clone(), false);
@@ -187,10 +188,10 @@ fn expand_derive_compile(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &An
                 ]
             )));
             let lit_usize = LitIntType::UnsignedIntLit(UintTy::TyUs);
-            if def.fields.len() > 1 {
+            if def.fields().len() > 1 {
                 compiler.push(cx.stmt_let(sp, true, offset, cx.expr_lit(sp, Lit_::LitInt(0, lit_usize))));
             }
-            for (index, field) in def.fields.iter().enumerate() {
+            for (index, field) in def.fields().iter().enumerate() {
                 let expr = type_expr(cx, sp, field.node.ty.clone(), false);
                 fields.push(expr);
                 let has_name = field.node.ident().is_some();
@@ -209,7 +210,7 @@ fn expand_derive_compile(cx: &mut ExtCtxt, sp: Span, _meta: &MetaItem, item: &An
                 let name = field.node.ident().unwrap();
                 compiler.push(quote_stmt!(cx, func.insn_store_relative(value, $current_offset, self.$name.compile(func))).unwrap());
                 let size_of = cx.expr_path(cx.path_all(sp, false, vec![cx.ident_of("std"), cx.ident_of("mem"), cx.ident_of("size_of")], vec![], vec![field.node.ty.clone()], vec![]));
-                if def.fields.len() > 1 && index < def.fields.len() - 1 {
+                if def.fields().len() > 1 && index < def.fields().len() - 1 {
                     compiler.push(quote_stmt!(cx, offset += $size_of()).unwrap());
                 }
             }
@@ -330,7 +331,7 @@ fn compile_expr(cx: &mut ExtCtxt, ctx: &ExprCtxt, expr: P<Expr>) -> P<Expr> {
                         func.insn_load_relative(value, 0, value.get_type().get_ref().unwrap())
                     })
                 },
-                UnOp::UnUniq => quote_expr!(cx, func.insn_alloca($value)),
+                //UnOp::UnUniq => quote_expr!(cx, func.insn_alloca($value)),
                 UnOp::UnNot => quote_expr!(cx, func.insn_not($value)),
                 UnOp::UnNeg => quote_expr!(cx, func.insn_neg($value))
             }
@@ -397,7 +398,8 @@ fn compile_expr(cx: &mut ExtCtxt, ctx: &ExprCtxt, expr: P<Expr>) -> P<Expr> {
         },
         Expr_::ExprPath(None, _) => expr.clone(),
         Expr_::ExprMethodCall(name, ref tys, ref args) if tys.len() == 0 && args.len() == 1 => {
-            let name = name.node.as_str();
+            let node_str = format!("{}", name.node);
+            let name = node_str.as_str();
             let value = args[0].clone();
             let value = compile_expr(cx, ctx, value);
             match name {
