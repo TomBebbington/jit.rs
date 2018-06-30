@@ -64,8 +64,8 @@ impl<'a, T> Compile<'a> for &'a T where T:Compile<'a> + Sized {
 impl<'a> Compile<'a> for &'a str {
     #[inline(always)]
     fn compile(self, func:&UncompiledFunction<'a>) -> &'a Val {
-        unsafe {
-            use std::mem::transmute as cast;
+       // unsafe {
+            // use std::mem::transmute as cast;
             // TODO: figure out `self.repr()` and uncomment till L77
             //let slice = self.repr();
             let ty = <&'a str as Compile<'a>>::get_type();
@@ -75,14 +75,14 @@ impl<'a> Compile<'a> for &'a str {
             //func.insn_store_relative(structure, offset_data, func.insn_of(mem::transmute::<_, isize>(slice.data)));
             //func.insn_store_relative(structure, offset_len, func.insn_of(slice.len));
             structure
-        }
+        //}
     }
     #[inline(always)]
     fn get_type() -> CowType<'a> {
         let ty = Type::new_struct(&mut [&get::<&'static u8>(), &get::<usize>()]);
-        unsafe {
-            //jit_type_set_size_and_alignment((&ty).into(), mem::size_of::<Slice<u8>>() as i64, mem::align_of::<Slice<u8>>() as i64);
-        }
+        //unsafe {
+            ////jit_type_set_size_and_alignment((&ty).into(), mem::size_of::<Slice<u8>>() as i64, mem::align_of::<Slice<u8>>() as i64);
+        //}
         ty.into()
     }
 }

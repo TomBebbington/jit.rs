@@ -365,7 +365,7 @@ impl Type {
     /// Create a type descriptor for a function signature.
     pub fn new_signature(abi: Abi, return_type: &Ty, params: &mut [&Ty]) -> Type {
         unsafe {
-            let mut params:&mut [jit_type_t] = mem::transmute(params);
+            let params:&mut [jit_type_t] = mem::transmute(params);
             let signature = jit_type_create_signature(abi as jit_abi_t, return_type.into(), params.as_mut_ptr(), params.len() as c_uint, 1);
             from_ptr(signature)
         }

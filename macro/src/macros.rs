@@ -3,8 +3,8 @@
 extern crate syntax;
 extern crate rustc;
 #[no_link]
-#[macro_use]
-extern crate matches;
+//#[macro_use]
+//extern crate matches;
 
 use syntax::codemap::*;
 use syntax::parse::*;
@@ -535,13 +535,13 @@ macro_rules! jit_union(
 #[macro_export]
 /// Construct a JIT function signature with the arguments and return type given
 macro_rules! jit_fn(
-    ($($arg:ty),* -> $ret:ty) => ({
+    (($($arg:ty),*) -> $ret:ty) => ({
         use std::default::Default;
         Type::new_signature(Default::default(), &get::<$ret>(), &mut [
             $(&get::<$arg>()),*
         ])
     });
-    (raw $($arg:expr),* -> $ret:expr) => ({
+    ((raw $($arg:expr),*) -> $ret:expr) => ({
         use std::default::Default;
         Type::new_signature(Default::default(), &$ret, &mut [
             $(&$arg),*
