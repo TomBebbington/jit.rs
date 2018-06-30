@@ -41,9 +41,9 @@ pub fn from_ptr_opt<R>(ptr: *mut c_void) -> Option<R> where R:From<*mut c_void> 
     }
 }
 pub fn from_ptr_oom<R>(ptr: *mut c_void) -> R where R:From<*mut c_void> {
-    use alloc::oom;
     if ptr.is_null() {
-        oom();
+        //oom();
+        panic!()
     } else {
         from_ptr(ptr)
     }

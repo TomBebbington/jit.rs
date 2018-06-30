@@ -24,10 +24,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 #![crate_name = "jit"]
-#![allow(raw_pointer_derive, non_camel_case_types, non_upper_case_globals)]
+#![allow(non_camel_case_types, non_upper_case_globals)]
 #![deny(unused_attributes, dead_code, unused_parens, unknown_lints, unreachable_code, unused_allocation, unused_allocation, unused_must_use)]
-#![feature(alloc, core, plugin, unboxed_closures, optin_builtin_traits, associated_consts)]
-#![plugin(rustc_bitflags)]
+#![feature(alloc, plugin, unboxed_closures, optin_builtin_traits)]
 
 //! This crate wraps LibJIT in an idiomatic style.
 //! For example, here's a quick example which makes a multiply function using LibJIT:
@@ -48,8 +47,9 @@
 //!     });
 //! }
 //! ```
-#[no_link] #[macro_use]
-extern crate rustc_bitflags;
+//#[no_link]
+#[macro_use]
+extern crate bitflags;
 extern crate alloc;
 extern crate libc;
 extern crate libjit_sys as raw;
