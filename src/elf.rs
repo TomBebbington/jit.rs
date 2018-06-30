@@ -126,7 +126,7 @@ impl ReadElf {
         }
     }
     #[inline]
-    pub fn add_to_context(&self, ctx:&Context) {
+    pub fn add_to_context<T>(&self, ctx:&Context<T>) {
         unsafe {
             jit_readelf_add_to_context(self.into(), ctx.into())
         }

@@ -42,16 +42,16 @@ impl Default for Abi {
 pub mod flags {
     use libc::c_int;
     /// Call flags to a function
-    bitflags!(
-        flags CallFlags: c_int {
+    bitflags! {
+        pub struct CallFlags: c_int {
             /// When the function won't throw a value
-            const NO_THROW = 1,
+            const NO_THROW = 1;
             /// When the function won't return a value
-            const NO_RETURN = 2,
+            const NO_RETURN = 2;
             /// When the function is tail-recursive
-            const TAIL = 4
+            const TAIL = 4;
         }
-    );
+    }
 }
 /// A function
 pub struct Func(PhantomData<[()]>);

@@ -1,5 +1,4 @@
 use raw::*;
-use alloc::oom;
 use function::Func;
 use util::{from_ptr, from_ptr_opt};
 use std::marker::PhantomData;
@@ -16,7 +15,7 @@ use std::iter::IntoIterator;
 ///
 /// ```rust
 /// use jit::Context;
-/// let ctx = Context::<()>::new();
+/// let ctx = Context::<T>::new();
 /// ```
 /// However, if you do want to set tagged data on it, simply put the type
 /// of the data as the `T` parameter when you instantiate it, like so:
@@ -29,13 +28,13 @@ use std::iter::IntoIterator;
 /// assert_eq!(ctx[0], 42);
 /// assert_eq!(ctx[1], 21);
 /// ```
-pub struct Context<T = ()> {
+pub struct Context<T> {
     _context: jit_context_t,
     marker: PhantomData<T>
 }
 native_ref!(Context<T>, _context: jit_context_t, marker = PhantomData);
 
-impl<T = ()> Index<i32> for Context<T> {
+impl<T> Index<i32> for Context<T> {
     type Output = T;
     fn index(&self, index: i32) -> &T {
         unsafe {
@@ -47,24 +46,26 @@ impl<T = ()> Index<i32> for Context<T> {
         }
     }
 }
-impl<T = ()> IndexMut<i32> for Context<T> {
+impl<T> IndexMut<i32> for Context<T> {
     fn index_mut(&mut self, index: i32) -> &mut T {
         unsafe {
             let meta = jit_context_get_meta(self.into(), index);
             if meta.is_null() {
                 let boxed = Box::new(mem::uninitialized::<T>());
                 if jit_context_set_meta(self.into(), index, mem::transmute(boxed), Some(::free_data::<T>)) == 0 {
-                    oom()
+                    // oom::oom()
+                    panic!()
                 } else {
                     mem::transmute(jit_context_get_meta(self.into(), index))
                 }
+
             } else {
                 mem::transmute(meta)
             }
         }
     }
 }
-impl<T = ()> Context<T> {
+impl<T> Context<T> {
     #[inline(always)]
     /// Create a new JIT Context
     pub fn new() -> Context<T> {
@@ -81,9 +82,7 @@ impl<T = ()> Context<T> {
         }
     }
 }
-impl !Send for Context {
 
-}
 impl<'a, T> IntoIterator for &'a Context<T> {
     type IntoIter = Functions<'a>;
     type Item = &'a Func;
